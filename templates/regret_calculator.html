@@ -1,0 +1,1490 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <script>(function(){try{var s=localStorage.getItem('m3-theme');var p=matchMedia('(prefers-color-scheme: dark)').matches;var t=s||(p?'dark':'light');document.documentElement.setAttribute('data-theme',t);document.addEventListener('DOMContentLoaded',function(){if(t==='dark')document.body.classList.add('dark-mode');});}catch(e){}})();</script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Regret Calculator — Cost of Waiting | M3 Portfolio</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/design-tokens.css">
+    <link rel="stylesheet" href="/static/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+
+    <style>
+        :root {
+            --navy:    #0f0c29;
+            --navy-m:  #1a1550;
+            --gold:    #e8c84a;
+            --gold-d:  #d4a843;
+            --gold-l:  #f5d96b;
+            --gold-xl: #fdf3cc;
+            --cream:   #fdf9ee;
+            --muted:   #6b6080;
+            --red:     #ef4444;
+            --red-d:   #dc2626;
+            --red-xl:  #fef2f2;
+            --green:   #16a34a;
+            --card-shd: 0 4px 20px rgba(15,12,41,0.11), 0 1px 5px rgba(15,12,41,0.06);
+            --card-brd: 1px solid rgba(232,200,74,0.2);
+        }
+
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'DM Sans', 'Segoe UI', sans-serif;
+            background: linear-gradient(145deg, #f5edcc 0%, #fdf9ee 40%, #fffdf5 70%, #f5edcc 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: var(--navy);
+        }
+        html[data-theme="dark"] body,
+        body.dark-mode {
+            background: linear-gradient(145deg, #07060f 0%, #0f0c29 45%, #1a1550 80%, #07060f 100%) !important;
+            color: #f4eed2;
+        }
+
+        h1,h2,h3,h4 { font-family: 'Cormorant Garamond', serif; }
+
+        .calc-container { max-width: 1400px; margin: 0 auto; }
+
+        /* ── BACK BUTTON ── */
+        .btn-back {
+            display: inline-flex; align-items: center; gap: 6px;
+            padding: 9px 18px; background: var(--navy); color: var(--gold);
+            text-decoration: none; border-radius: 8px; margin-bottom: 18px;
+            font-weight: 600; font-size: 0.88em; transition: all 0.2s;
+            border: 1px solid rgba(232,200,74,0.2);
+        }
+        .btn-back:hover { background: var(--navy-m); color: var(--gold-l); }
+
+        /* ── HEADER ── */
+        .calc-header {
+            background: var(--cream); padding: 24px 30px; border-radius: 16px;
+            margin-bottom: 20px; box-shadow: var(--card-shd); border: var(--card-brd);
+            border-left: 5px solid var(--red); display: flex; align-items: center;
+            justify-content: space-between; gap: 16px; flex-wrap: wrap;
+        }
+        .calc-header-left h1 {
+            font-size: 1.7em; color: var(--navy); font-weight: 700;
+            display: flex; align-items: center; gap: 10px;
+        }
+        .calc-header-left h1 span.accent { color: var(--red); }
+        .calc-header-left p { font-size: 0.87em; color: var(--muted); margin-top: 5px; line-height: 1.5; }
+        .calc-header-badge {
+            background: var(--red); color: white; font-size: 0.72em; font-weight: 700;
+            padding: 3px 10px; border-radius: 20px; font-family: 'DM Sans', sans-serif;
+            text-transform: uppercase; letter-spacing: 0.06em;
+        }
+
+        /* ── CALC CARD ── */
+        .calc-card {
+            background: var(--cream); padding: 28px; border-radius: 16px;
+            box-shadow: var(--card-shd); margin-bottom: 18px; border: var(--card-brd);
+        }
+
+        /* ── INPUT SECTION ── */
+        .input-section {
+            background: #fdf3cc; border-radius: 14px; padding: 20px 24px;
+            margin-bottom: 18px; border: 1.5px solid rgba(232,200,74,0.4);
+        }
+        .input-section-title {
+            font-size: 0.8em; font-weight: 700; color: var(--navy);
+            text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 16px;
+            display: flex; align-items: center; gap: 7px;
+        }
+        .form-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 18px; }
+        .form-grid-1 { display: grid; grid-template-columns: 1fr; gap: 18px; margin-top: 18px; }
+        .form-group-e { display: flex; flex-direction: column; gap: 6px; }
+        .form-group-e label { font-size: 0.83em; font-weight: 700; color: var(--muted); }
+        .input-wrap {
+            display: flex; align-items: center; border: 1.5px solid rgba(212,168,67,0.3);
+            border-radius: 10px; overflow: hidden; background: white; transition: border 0.2s;
+        }
+        .input-wrap:focus-within {
+            border-color: var(--gold);
+            box-shadow: 0 0 0 3px rgba(232,200,74,0.15);
+        }
+        .input-pfx, .input-sfx {
+            padding: 0 12px; font-size: 0.88em; color: var(--muted); font-weight: 600;
+            background: #fdf6e3; height: 44px; display: flex; align-items: center; white-space: nowrap;
+        }
+        .input-pfx { border-right: 1.5px solid #f0ead0; }
+        .input-sfx { border-left: 1.5px solid #f0ead0; }
+        .e-input {
+            flex: 1; padding: 11px 14px; border: none; font-size: 0.95em;
+            color: #333; outline: none; background: transparent; width: 100%;
+            font-family: 'DM Sans', sans-serif;
+        }
+        .hint { font-size: 0.72em; color: #94a3b8; }
+
+        /* chip buttons */
+        .chip-row { display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
+        .chip {
+            font-size: 0.72em; padding: 3px 10px; border-radius: 20px;
+            background: var(--cream); color: var(--navy-m);
+            border: 1.5px solid rgba(212,168,67,0.35);
+            cursor: pointer; font-weight: 700; transition: all 0.15s;
+            font-family: 'DM Sans', sans-serif;
+        }
+        .chip:hover, .chip.active {
+            background: var(--gold-xl); border-color: var(--gold); color: var(--navy);
+        }
+
+        /* ── LIVE PREVIEW ── */
+        .live-preview {
+            background: linear-gradient(135deg, var(--cream), var(--gold-xl));
+            border-radius: 14px; padding: 20px 24px; margin-bottom: 18px;
+            border: 1.5px solid rgba(232,200,74,0.35);
+        }
+        .lp-title {
+            font-size: 0.8em; font-weight: 700; color: var(--navy);
+            text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 14px;
+        }
+        .lp-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; }
+        .lp-card {
+            background: white; border-radius: 10px; padding: 14px; text-align: center;
+            border: 1.5px solid rgba(232,200,74,0.3);
+            box-shadow: 0 2px 8px rgba(15,12,41,0.06);
+        }
+        .lp-label { font-size: 0.69em; color: var(--muted); font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }
+        .lp-value { font-size: 1.05em; font-weight: 800; color: var(--navy); margin-top: 6px; font-family: 'Cormorant Garamond', serif; }
+        .lp-value.red   { color: var(--red-d); }
+        .lp-value.green { color: var(--green); }
+        .lp-value.gold  { color: var(--gold-d); }
+
+        /* ── REVERSE CALCULATOR ── */
+        .reverse-section {
+            background: #f8f4ff; border-radius: 14px; padding: 20px 24px;
+            margin-bottom: 18px; border: 1.5px solid rgba(124,58,237,0.2);
+        }
+        .reverse-title {
+            font-size: 0.8em; font-weight: 700; color: var(--navy-m);
+            text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 14px;
+        }
+        .reverse-grid { display: grid; grid-template-columns: 1fr 1fr auto; gap: 14px; align-items: end; }
+        .btn-reverse {
+            padding: 12px 20px; background: linear-gradient(135deg, var(--navy-m), var(--navy));
+            color: var(--gold); border: none; border-radius: 10px; font-weight: 700;
+            cursor: pointer; font-size: 0.9em; white-space: nowrap;
+            transition: all 0.2s; font-family: 'DM Sans', sans-serif;
+        }
+        .btn-reverse:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(15,12,41,0.3); }
+        .reverse-result {
+            background: white; border-radius: 10px; padding: 14px 18px; margin-top: 12px;
+            border: 1.5px solid rgba(124,58,237,0.2); display: none;
+        }
+        .reverse-result.show { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
+        .rr-item { text-align: center; }
+        .rr-label { font-size: 0.78em; color: var(--muted); font-weight: 600; display: block; }
+        .rr-val   { font-size: 1.35em; font-weight: 800; color: var(--navy); font-family: 'Cormorant Garamond', serif; display: block; margin-top: 4px; }
+
+        /* ── CALCULATE BUTTON ── */
+        .btn-calculate {
+            width: 100%; padding: 15px;
+            background: linear-gradient(135deg, var(--red) 0%, var(--red-d) 100%);
+            color: white; border: none; border-radius: 12px;
+            font-size: 1.05em; font-weight: 700; cursor: pointer;
+            transition: all 0.2s; font-family: 'DM Sans', sans-serif;
+            letter-spacing: 0.02em;
+        }
+        .btn-calculate:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(239,68,68,0.4); }
+
+        /* ── ERROR BOX ── */
+        .error-box {
+            background: #fef2f2; border-left: 4px solid var(--red);
+            padding: 14px 18px; border-radius: 8px; margin: 16px 0;
+            color: #991b1b; font-size: 0.9em;
+        }
+
+        /* ── SUMMARY GRID ── */
+        .summary-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 14px; margin-bottom: 20px; }
+        .sum-card {
+            background: white; border-radius: 14px; padding: 18px 20px;
+            box-shadow: var(--card-shd); border: var(--card-brd);
+        }
+        .sum-card .sc-label {
+            font-size: 0.72em; color: var(--muted); font-weight: 700;
+            text-transform: uppercase; letter-spacing: 0.05em;
+        }
+        .sum-card .sc-val { font-size: 1.5em; font-weight: 800; color: var(--navy); margin-top: 8px; font-family: 'Cormorant Garamond', serif; }
+        .sum-card .sc-sub { font-size: 0.72em; color: #94a3b8; margin-top: 5px; }
+        .sum-card.red-top    { border-top: 4px solid var(--red); }
+        .sum-card.green-top  { border-top: 4px solid var(--green); }
+        .sum-card.orange-top { border-top: 4px solid #f97316; }
+        .sum-card.highlighted {
+            background: linear-gradient(135deg, var(--gold) 0%, var(--gold-d) 100%);
+        }
+        .sum-card.highlighted .sc-label { color: rgba(15,12,41,0.65); }
+        .sum-card.highlighted .sc-val   { color: var(--navy); font-size: 1.7em; }
+        .sum-card.highlighted .sc-sub   { color: rgba(15,12,41,0.55); }
+
+        /* ── INSIGHT BOX ── */
+        .insight-box {
+            background: #fdf3cc; border-left: 4px solid var(--gold-d);
+            padding: 16px 20px; border-radius: 8px; margin: 18px 0;
+            color: var(--navy); font-size: 0.9em; line-height: 1.6;
+        }
+        .insight-box strong { color: var(--red-d); }
+
+        /* ── WHAT-IF GRID ── */
+        .whatif-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 14px; margin-bottom: 20px; }
+        .whatif-card {
+            background: white; border-radius: 14px; padding: 18px; text-align: center;
+            box-shadow: var(--card-shd); border: var(--card-brd);
+        }
+        .wc-label { font-size: 0.72em; color: var(--muted); font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }
+        .wc-val   { font-size: 1.3em; font-weight: 800; color: var(--red-d); margin-top: 8px; font-family: 'Cormorant Garamond', serif; }
+        .wc-sub   { font-size: 0.7em; color: #94a3b8; margin-top: 5px; }
+        .whatif-card.today { border: 2px solid var(--green); background: #f0fdf4; }
+        .whatif-card.today .wc-val { color: var(--green); }
+
+        /* ── TIMELINE BAR ── */
+        .timeline-section {
+            background: white; border-radius: 14px; padding: 20px 22px;
+            box-shadow: var(--card-shd); border: var(--card-brd); margin-bottom: 20px;
+        }
+        .tl-title { font-size: 0.8em; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 14px; }
+        .tl-bar-wrap { display: flex; height: 26px; border-radius: 8px; overflow: hidden; margin-bottom: 10px; background: rgba(15,12,41,0.05); }
+        .tl-lost   { background: linear-gradient(90deg, var(--red), #f87171); transition: width 0.8s ease; width: 0; flex-shrink: 0; }
+        .tl-gained { background: linear-gradient(90deg, var(--green), #22c55e); transition: width 0.8s ease; width: 0; flex-shrink: 0; }
+        .tl-legend { display: flex; justify-content: space-between; font-size: 0.75em; color: var(--muted); }
+        .tl-legend span { font-weight: 700; }
+        .tl-legend span.red   { color: var(--red-d); }
+        .tl-legend span.green { color: var(--green); }
+        .tl-boxes {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 14px;
+        }
+        .tl-box { padding: 12px; border-radius: 10px; text-align: center; }
+        .tl-box.delayed { background: var(--red-xl); }
+        .tl-box.ontime  { background: #f0fdf4; }
+        .tl-box-label { font-size: 0.7em; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 4px; }
+        .tl-box.delayed .tl-box-label { color: var(--red-d); }
+        .tl-box.ontime  .tl-box-label { color: var(--green); }
+        .tl-box-val { font-size: 1.1em; font-weight: 800; font-family: 'Cormorant Garamond', serif; }
+        .tl-box.delayed .tl-box-val { color: var(--red-d); }
+        .tl-box.ontime  .tl-box-val { color: var(--green); }
+
+        /* ── COMPARISON CARD ── */
+        .comparison-card {
+            background: var(--cream); border-radius: 14px; padding: 22px;
+            box-shadow: var(--card-shd); border: var(--card-brd); margin-bottom: 18px;
+        }
+        .comparison-card h3 { font-size: 1.0em; color: var(--navy); margin-bottom: 5px; font-family: 'DM Sans', sans-serif; font-weight: 700; }
+        .comparison-card p  { font-size: 0.83em; color: var(--muted); margin-bottom: 14px; }
+
+        /* ── DATA TABLE ── */
+        .data-table { width: 100%; border-collapse: collapse; font-size: 0.86em; }
+        .data-table th {
+            background: var(--navy); color: var(--gold); padding: 10px 13px;
+            text-align: left; font-size: 0.78em; font-weight: 700;
+            text-transform: uppercase; letter-spacing: 0.04em;
+        }
+        .data-table th:first-child { border-radius: 8px 0 0 0; }
+        .data-table th:last-child  { border-radius: 0 8px 0 0; }
+        .data-table td { padding: 9px 13px; border-bottom: 1px solid rgba(232,200,74,0.12); vertical-align: middle; }
+        .data-table tr:last-child td { border-bottom: none; }
+        .data-table tbody tr:hover td { background: var(--gold-xl); }
+        .data-table .highlight-row td { background: #fdf3cc !important; font-weight: 700; }
+
+        /* ── CHARTS GRID ── */
+        .charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 18px; }
+        .chart-card {
+            background: var(--cream); padding: 22px; border-radius: 14px;
+            box-shadow: var(--card-shd); border: var(--card-brd);
+        }
+        .chart-card.full-width { grid-column: 1 / -1; }
+        .chart-card h3 { font-size: 0.95em; color: var(--navy); margin-bottom: 14px; font-family: 'DM Sans', sans-serif; font-weight: 700; }
+
+        /* ── TABLE CARD ── */
+        .table-card {
+            background: var(--cream); padding: 22px; border-radius: 14px;
+            box-shadow: var(--card-shd); border: var(--card-brd); margin-top: 18px;
+        }
+        .table-card h3 { font-size: 0.95em; color: var(--navy); margin-bottom: 14px; font-family: 'DM Sans', sans-serif; font-weight: 700; }
+
+        /* ── QUOTE BOX ── */
+        .quote-box {
+            background: var(--gold-xl); border-left: 4px solid var(--gold-d);
+            padding: 18px 24px; border-radius: 0 10px 10px 0; margin: 20px 0;
+        }
+        .quote-box blockquote { font-size: 0.97em; color: var(--navy); line-height: 1.7; font-style: italic; margin-bottom: 5px; }
+        .quote-box cite { font-size: 0.8em; color: var(--muted); font-style: normal; font-weight: 700; }
+
+        /* ── SUCCESS BOX ── */
+        .success-box {
+            background: #fdf3cc; border-left: 4px solid var(--red-d);
+            padding: 16px 20px; border-radius: 8px; margin: 20px 0;
+            color: var(--navy); font-size: 0.9em; line-height: 1.6;
+        }
+        .success-box strong { color: var(--red-d); }
+
+        /* ── PDF BUTTON ── */
+        .btn-pdf-download {
+            display: inline-flex; align-items: center; gap: 8px; padding: 13px 28px;
+            background: linear-gradient(135deg, var(--navy-m), var(--navy));
+            color: var(--gold); border: none; border-radius: 10px; font-size: 0.97em;
+            font-weight: 700; cursor: pointer; margin-top: 20px;
+            box-shadow: 0 4px 15px rgba(15,12,41,0.4); transition: all 0.2s;
+            width: 100%; justify-content: center; font-family: 'DM Sans', sans-serif;
+            border: 1px solid rgba(232,200,74,0.3);
+        }
+        .btn-pdf-download:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(15,12,41,0.5); color: var(--gold-l); }
+
+        /* ── RESPONSIVE ── */
+        @media (max-width: 900px) {
+            .form-grid-3   { grid-template-columns: 1fr 1fr; }
+            .lp-grid       { grid-template-columns: repeat(2,1fr); }
+            .summary-grid  { grid-template-columns: repeat(2,1fr); }
+            .charts-grid   { grid-template-columns: 1fr; }
+            .whatif-grid   { grid-template-columns: 1fr; }
+            .reverse-grid  { grid-template-columns: 1fr; }
+        }
+        @media (max-width: 600px) {
+            .form-grid-3   { grid-template-columns: 1fr; }
+            .summary-grid  { grid-template-columns: 1fr 1fr; }
+        }
+
+        /* ── DARK MODE OVERRIDES (supplement global style.css) ── */
+        body.dark-mode .reverse-section {
+            background: #0d0b1e !important;
+            border-color: rgba(124,58,237,0.2) !important;
+        }
+        body.dark-mode .reverse-title { color: #94a3b8 !important; }
+        body.dark-mode .reverse-result { background: #0f0c29 !important; border-color: rgba(232,200,74,0.12) !important; }
+        body.dark-mode .rr-val { color: #f5d96b !important; }
+        body.dark-mode .rr-label { color: #64748b !important; }
+        body.dark-mode .whatif-card { background: #0f0c29 !important; border-color: rgba(232,200,74,0.12) !important; }
+        body.dark-mode .whatif-card .wc-val { color: #f87171 !important; }
+        body.dark-mode .whatif-card.today { background: #0a1a10 !important; border-color: #16a34a !important; }
+        body.dark-mode .whatif-card.today .wc-val { color: #4ade80 !important; }
+        body.dark-mode .tl-box.delayed { background: #1a0a0a !important; }
+        body.dark-mode .tl-box.ontime  { background: #0a1a10 !important; }
+        body.dark-mode .calc-header { border-left-color: var(--red) !important; }
+        body.dark-mode .calc-header-left h1 { color: #f5d96b !important; }
+        body.dark-mode .calc-header-left h1 .accent { color: #f87171 !important; }
+        body.dark-mode .calc-header-left p { color: #64748b !important; }
+        body.dark-mode .chip {
+            background: #1a1550 !important; color: #e8c84a !important;
+            border-color: rgba(232,200,74,0.2) !important;
+        }
+        body.dark-mode .chip:hover, body.dark-mode .chip.active {
+            background: rgba(232,200,74,0.15) !important; border-color: var(--gold) !important;
+        }
+        body.dark-mode .sum-card.highlighted .sc-label,
+        body.dark-mode .sum-card.highlighted .sc-val,
+        body.dark-mode .sum-card.highlighted .sc-sub { color: #0f0c29 !important; }
+        body.dark-mode .insight-box {
+            background: #1a1000 !important;
+            border-left-color: var(--gold-d) !important;
+            color: #f5d96b !important;
+        }
+        body.dark-mode .insight-box strong { color: #f87171 !important; }
+        body.dark-mode .success-box {
+            background: #1a0a0a !important;
+            border-left-color: #f87171 !important;
+            color: #fca5a5 !important;
+        }
+        body.dark-mode .success-box strong { color: #f87171 !important; }
+        body.dark-mode .quote-box {
+            background: #1e1b4b !important; border-left-color: var(--gold-d) !important;
+        }
+        body.dark-mode .quote-box blockquote { color: #c7d2fe !important; }
+        body.dark-mode .quote-box cite { color: #94a3b8 !important; }
+        body.dark-mode .error-box { background: #1a0a0a !important; color: #fca5a5 !important; }
+    </style>
+    <script src="/static/calc-core.js"></script>
+</head>
+<body>
+<script>
+var CURRENCY_FORMAT = (function () {
+    try {
+        var v = localStorage.getItem('m3-currency');
+        if (v === 'indian' || v === 'western') return v;
+    } catch (e) {}
+    return "{{ session.get('currency_format', 'indian') }}";
+})();
+window.addEventListener('m3-currency-change', function (e) {
+    CURRENCY_FORMAT = (e && e.detail) || CURRENCY_FORMAT;
+    if (typeof updatePreview === 'function') { try { updatePreview(); } catch (err) {} }
+});
+
+function formatINR(n) {
+    n = Math.round(n);
+    if (CURRENCY_FORMAT === 'western') return '$' + n.toLocaleString('en-US');
+    var s = n.toString();
+    if (s.length <= 3) return '₹' + s;
+    var last3 = s.slice(-3), rest = s.slice(0, -3), out = '';
+    while (rest.length > 2) { out = ',' + rest.slice(-2) + out; rest = rest.slice(0, -2); }
+    return '₹' + rest + out + ',' + last3;
+}
+
+function formatCr(v) {
+    var a = Math.abs(v);
+    if (CURRENCY_FORMAT === 'western') {
+        if (a >= 1e6) return '$' + (v/1e6).toFixed(2) + 'M';
+        return '$' + Math.round(v).toLocaleString('en-US');
+    }
+    if (a >= 1e7) return '₹' + (v/1e7).toFixed(2) + ' Cr';
+    if (a >= 1e5) return '₹' + (v/1e5).toFixed(2) + ' L';
+    return '₹' + Math.round(v).toLocaleString('en-IN');
+}
+
+function parseAmt(v) { return parseFloat(String(v).replace(/,/g,'')) || 0; }
+
+function formatInputINR(num) {
+    num = Math.round(parseFloat(num) || 0);
+    if (num <= 0) return '';
+    if (CURRENCY_FORMAT === 'western') return num.toLocaleString('en-US');
+    var s = num.toString();
+    if (s.length <= 3) return s;
+    var last3 = s.slice(-3), rest = s.slice(0,-3), out = '';
+    while (rest.length > 2) { out = ',' + rest.slice(-2) + out; rest = rest.slice(0,-2); }
+    return rest + out + ',' + last3;
+}
+
+function onAmtKeyup(el) {
+    var raw = el.value.replace(/[^0-9]/g,'');
+    var num = parseInt(raw, 10);
+    var pos = el.selectionStart, oldLen = el.value.length;
+    el.value = raw === '' ? '' : formatInputINR(num);
+    var diff = el.value.length - oldLen;
+    try { el.setSelectionRange(pos + diff, pos + diff); } catch(e){}
+}
+</script>
+
+<div class="calc-container">
+
+    <a href="/dashboard" class="btn-back">← Back to Dashboard</a>
+
+    <!-- HEADER -->
+    <div class="calc-header">
+        <div class="calc-header-left">
+            <h1>⏰ Regret <span class="accent">Calculator</span></h1>
+            <p>Every month you delay costs you compounding wealth. See exactly how much waiting steals from your future — and what starting today can still give back.</p>
+        </div>
+        <span class="calc-header-badge">Cost of Delay</span>
+    </div>
+
+    <!-- MAIN CARD -->
+    <div class="calc-card">
+        <form method="POST" action="/calculator/regret">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+            <!-- INPUT SECTION -->
+            <div class="input-section">
+                <div class="input-section-title">🌱 Monthly SIP &amp; Investment Details</div>
+                <div class="form-grid-3">
+                    <!-- Monthly SIP -->
+                    <div class="form-group-e">
+                        <label>Monthly SIP Amount</label>
+                        <div class="input-wrap">
+                            <span class="input-pfx m3-cursym">₹</span>
+                            <input type="text" inputmode="numeric" class="e-input"
+                                   name="monthly_sip" id="monthlySip"
+                                   value="{{ monthly_sip or 5000 }}"
+                                   oninput="onAmtKeyup(this); updatePreview();" required>
+                        </div>
+                        <span class="hint">Your planned monthly investment</span>
+                        <div class="chip-row">
+                            <span class="chip" onclick="setChip('monthlySip', 5000, this)"><span class="m3-cursym">₹</span>5K</span>
+                            <span class="chip active" onclick="setChip('monthlySip', 10000, this)"><span class="m3-cursym">₹</span>10K</span>
+                            <span class="chip" onclick="setChip('monthlySip', 25000, this)"><span class="m3-cursym">₹</span>25K</span>
+                            <span class="chip" onclick="setChip('monthlySip', 50000, this)"><span class="m3-cursym">₹</span>50K</span>
+                        </div>
+                    </div>
+
+                    <!-- Expected Return -->
+                    <div class="form-group-e">
+                        <label>Expected Annual Return</label>
+                        <div class="input-wrap">
+                            <input type="number" class="e-input" name="exp_return" id="expReturn"
+                                   value="{{ exp_return or 12 }}" min="1" max="18" step="0.5"
+                                   oninput="updatePreview();" required>
+                            <span class="input-sfx">% p.a.</span>
+                        </div>
+                        <span class="hint">Expected CAGR from your investments · capped at 18%</span>
+                        <div class="chip-row">
+                            <span class="chip" onclick="setNumChip('expReturn', 10, this)">10%</span>
+                            <span class="chip active" onclick="setNumChip('expReturn', 12, this)">12%</span>
+                            <span class="chip" onclick="setNumChip('expReturn', 15, this)">15%</span>
+                        </div>
+                    </div>
+
+                    <!-- Investment Horizon -->
+                    <div class="form-group-e">
+                        <label>Investment Horizon</label>
+                        <div class="input-wrap">
+                            <input type="number" class="e-input" name="time_period" id="timePeriod"
+                                   value="{{ time_period or 10 }}" min="1" max="50"
+                                   oninput="updatePreview();" required>
+                            <span class="input-sfx">Years</span>
+                        </div>
+                        <span class="hint">Total investment duration (from today)</span>
+                        <div class="chip-row">
+                            <span class="chip" onclick="setNumChip('timePeriod', 5, this)">5 Yrs</span>
+                            <span class="chip active" onclick="setNumChip('timePeriod', 10, this)">10 Yrs</span>
+                            <span class="chip" onclick="setNumChip('timePeriod', 15, this)">15 Yrs</span>
+                            <span class="chip" onclick="setNumChip('timePeriod', 20, this)">20 Yrs</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Delay Duration -->
+                <div class="form-grid-1">
+                    <div class="form-group-e">
+                        <label>Delay Duration — How long are you planning to wait?</label>
+                        <div class="input-wrap" style="max-width:320px;">
+                            <input type="number" class="e-input" name="delay_months" id="delayMonths"
+                                   value="{{ delay_months or 12 }}" min="0" max="120"
+                                   oninput="updatePreview();" required>
+                            <span class="input-sfx">Months</span>
+                        </div>
+                        <span class="hint">0 = starting today (no delay)</span>
+                        <div class="chip-row">
+                            <span class="chip" onclick="setNumChip('delayMonths', 6, this)">6 Mo</span>
+                            <span class="chip active" onclick="setNumChip('delayMonths', 12, this)">12 Mo</span>
+                            <span class="chip" onclick="setNumChip('delayMonths', 24, this)">24 Mo</span>
+                            <span class="chip" onclick="setNumChip('delayMonths', 36, this)">36 Mo</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- LIVE PREVIEW -->
+            <div class="live-preview">
+                <div class="lp-title">⚡ Live Preview</div>
+                <div class="lp-grid">
+                    <div class="lp-card">
+                        <div class="lp-label">On-Time Corpus</div>
+                        <div class="lp-value green" id="lpOnTime">—</div>
+                    </div>
+                    <div class="lp-card">
+                        <div class="lp-label">Cost of Delay</div>
+                        <div class="lp-value red" id="lpDelayCost">—</div>
+                    </div>
+                    <div class="lp-card">
+                        <div class="lp-label">Delayed Corpus</div>
+                        <div class="lp-value red" id="lpDelayed">—</div>
+                    </div>
+                    <div class="lp-card">
+                        <div class="lp-label">Wealth Lost %</div>
+                        <div class="lp-value gold" id="lpLostPct">—</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- REVERSE CALCULATOR -->
+            <div class="reverse-section">
+                <div class="reverse-title">🔁 Reverse Calculator — How much extra SIP to recover the loss?</div>
+                <div class="reverse-grid">
+                    <div class="form-group-e">
+                        <label>Target Amount to Recover</label>
+                        <div class="input-wrap">
+                            <span class="input-pfx m3-cursym">₹</span>
+                            <input type="text" inputmode="numeric" class="e-input"
+                                   id="targetCorpus" placeholder="Leave blank to auto-use delay loss"
+                                   oninput="onAmtKeyup(this);">
+                        </div>
+                        <span class="hint">Leave blank to recover the exact cost of delay</span>
+                    </div>
+                    <div class="form-group-e">
+                        <label>Recovery Period</label>
+                        <div class="input-wrap">
+                            <input type="number" class="e-input" id="revYears" placeholder="10" value="10" min="1" max="40">
+                            <span class="input-sfx">Years</span>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-reverse" onclick="calcReverse()">Find Recovery SIP</button>
+                </div>
+                <div class="reverse-result" id="reverseResult">
+                    <div class="rr-item">
+                        <span class="rr-label">Monthly SIP Needed</span>
+                        <span class="rr-val" id="rrSip">—</span>
+                    </div>
+                    <div class="rr-item">
+                        <span class="rr-label">Total Invested</span>
+                        <span class="rr-val" id="rrTotal">—</span>
+                    </div>
+                    <div class="rr-item">
+                        <span class="rr-label">Amount Recovered</span>
+                        <span class="rr-val" id="rrRecovered">—</span>
+                    </div>
+                </div>
+            </div>
+
+            <button type="submit" class="btn-calculate" onclick="return validateForm();">
+                Calculate Cost of Delay
+            </button>
+        </form>
+
+        {% if error %}
+        <div class="error-box"><strong>⚠️ Error:</strong> {{ error }}</div>
+        {% endif %}
+
+        {% if result %}
+
+        <!-- SUMMARY CARDS -->
+        <div class="summary-grid" style="margin-top:28px;">
+            <div class="sum-card red-top">
+                <div class="sc-label">Cost of Delay</div>
+                <div class="sc-val" style="color:var(--red-d);">{{ '₹' if session.get('currency_format','indian')=='indian' else '$' }}{{ result.cost_of_delay | indian_currency }}</div>
+                <div class="sc-sub">{{ delay_months }} months of waiting</div>
+            </div>
+            <div class="sum-card green-top">
+                <div class="sc-label">On-Time Corpus</div>
+                <div class="sc-val" style="color:var(--green);">{{ '₹' if session.get('currency_format','indian')=='indian' else '$' }}{{ result.on_time_corpus | indian_currency }}</div>
+                <div class="sc-sub">If you start today</div>
+            </div>
+            <div class="sum-card orange-top">
+                <div class="sc-label">Wealth Lost</div>
+                <div class="sc-val" style="color:#ea580c;">{{ result.wealth_lost_pct }}%</div>
+                <div class="sc-sub">Due to {{ delay_months }}-month delay</div>
+            </div>
+            <div class="sum-card highlighted">
+                <div class="sc-label">⚡ Start TODAY</div>
+                <div class="sc-val">{{ '₹' if session.get('currency_format','indian')=='indian' else '$' }}{{ result.on_time_corpus | indian_currency }}</div>
+                <div class="sc-sub">Don't wait another month</div>
+            </div>
+        </div>
+
+        <!-- INSIGHT BOX -->
+        <div class="insight-box">
+            <strong>📌 Insight:</strong> {{ result.insight_text }}
+        </div>
+
+        <!-- WHAT-IF GRID -->
+        <div class="whatif-grid">
+            <div class="whatif-card">
+                <div class="wc-label">If Started 1 Year Earlier</div>
+                <div class="wc-val">{{ '₹' if session.get('currency_format','indian')=='indian' else '$' }}{{ result.whatif_1yr | indian_currency }}</div>
+                <div class="wc-sub">Corpus today if started 12 months ago</div>
+            </div>
+            <div class="whatif-card">
+                <div class="wc-label">If Started 2 Years Earlier</div>
+                <div class="wc-val">{{ '₹' if session.get('currency_format','indian')=='indian' else '$' }}{{ result.whatif_2yr | indian_currency }}</div>
+                <div class="wc-sub">Corpus today if started 24 months ago</div>
+            </div>
+            <div class="whatif-card today">
+                <div class="wc-label">⚡ Start TODAY</div>
+                <div class="wc-val">{{ '₹' if session.get('currency_format','indian')=='indian' else '$' }}{{ result.on_time_corpus | indian_currency }}</div>
+                <div class="wc-sub">Your future self will thank you</div>
+            </div>
+        </div>
+
+        <!-- TIMELINE BAR -->
+        <div class="timeline-section">
+            <div class="tl-title">Timeline — Wealth Lost vs Wealth Remaining</div>
+            <div class="tl-bar-wrap" id="tlBarWrap">
+                <div class="tl-lost"   id="tlLost"></div>
+                <div class="tl-gained" id="tlGained"></div>
+            </div>
+            <div class="tl-legend">
+                <span class="red">{{ result.lost_pct }}% Wealth Lost to Delay</span>
+                <span class="green">{{ result.gained_pct }}% Wealth Retained</span>
+            </div>
+            <div class="tl-boxes">
+                <div class="tl-box delayed">
+                    <div class="tl-box-label">Delayed Corpus</div>
+                    <div class="tl-box-val">{{ '₹' if session.get('currency_format','indian')=='indian' else '$' }}{{ result.delayed_corpus | indian_currency }}</div>
+                </div>
+                <div class="tl-box ontime">
+                    <div class="tl-box-label">On-Time Corpus</div>
+                    <div class="tl-box-val">{{ '₹' if session.get('currency_format','indian')=='indian' else '$' }}{{ result.on_time_corpus | indian_currency }}</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- COST OF DELAY MATRIX -->
+        <div class="comparison-card">
+            <h3>📊 Cost of Delay Matrix</h3>
+            <p>First row = On-Time corpus (baseline). Subsequent rows show <strong style="color:var(--red-d)">wealth lost</strong> by waiting at each return rate &amp; delay combination.</p>
+            <div style="overflow-x:auto;">
+                <table class="data-table" id="delayMatrixTable">
+                    <thead id="delayMatrixHead"></thead>
+                    <tbody id="delayMatrixBody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- CHARTS -->
+        <div class="charts-grid">
+            <div class="chart-card">
+                <h3>On-Time vs Delayed Portfolio</h3>
+                <canvas id="pieChart"></canvas>
+            </div>
+            <div class="chart-card">
+                <h3>Cost of Delay at Different Returns</h3>
+                <canvas id="barChart"></canvas>
+            </div>
+            <div class="chart-card full-width">
+                <h3>Portfolio Growth — On-Time vs Delayed</h3>
+                <canvas id="lineChart"></canvas>
+            </div>
+        </div>
+
+        <!-- YEAR-WISE TABLE -->
+        <div class="table-card">
+            <h3>📋 Year-wise Comparison</h3>
+            <div style="overflow-x:auto;">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Year</th>
+                            <th>Invested (On-Time)</th>
+                            <th>On-Time Value</th>
+                            <th>Invested (Delayed)</th>
+                            <th>Delayed Value</th>
+                            <th>Wealth Gap</th>
+                            <th>Multiplier</th>
+                        </tr>
+                    </thead>
+                    <tbody id="yearTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- QUOTE BOX -->
+        <div class="quote-box">
+            <blockquote>"The stock market is a device for transferring money from the impatient to the patient."</blockquote>
+            <cite>— Warren Buffett</cite>
+        </div>
+
+        <!-- SUCCESS BOX -->
+        <div class="success-box">
+            <strong>⏰ Time is your greatest asset.</strong>
+            Every month of delay costs approximately
+            {{ '₹' if session.get('currency_format','indian')=='indian' else '$' }}{{ result.monthly_cost | indian_currency }}
+            in future wealth. The best time to start was yesterday. The next best time is <strong>TODAY</strong>.
+        </div>
+
+        <button class="btn-pdf-download" onclick="downloadPdf()">📄 Download PDF Report</button>
+
+        {% endif %}
+    </div><!-- /calc-card -->
+</div><!-- /calc-container -->
+
+<script>
+// ── SIP FV FORMULA (annuity-due) ──────────────────────────────────────────
+function sipFV(pmt, annualRate, years) {
+    var n = Math.round(years * 12);
+    if (n <= 0) return 0;
+    var m = annualRate / 12 / 100;
+    if (m === 0) return pmt * n;
+    return pmt * (((Math.pow(1 + m, n) - 1) / m) * (1 + m));
+}
+
+// ── FORM VALIDATION ──────────────────────────────────────────────────────
+function validateForm() {
+    var years  = parseInt(document.getElementById('timePeriod').value) || 0;
+    var delay  = parseInt(document.getElementById('delayMonths').value) || 0;
+    var sip    = parseAmt(document.getElementById('monthlySip').value);
+    if (sip <= 0) {
+        alert('Monthly SIP amount must be greater than zero.');
+        document.getElementById('monthlySip').focus();
+        return false;
+    }
+    if (delay >= years * 12) {
+        alert('Delay (' + delay + ' months) must be less than investment horizon (' + (years * 12) + ' months).');
+        document.getElementById('delayMonths').focus();
+        return false;
+    }
+    return true;
+}
+
+// ── CHIP HELPERS ─────────────────────────────────────────────────────────
+function setChip(fieldId, val, el) {
+    var field = document.getElementById(fieldId);
+    field.value = formatInputINR(val);
+    highlightChip(el);
+    updatePreview();
+}
+function setNumChip(fieldId, val, el) {
+    document.getElementById(fieldId).value = val;
+    highlightChip(el);
+    updatePreview();
+}
+function highlightChip(el) {
+    if (!el) return;
+    el.closest('.chip-row').querySelectorAll('.chip').forEach(function(c) { c.classList.remove('active'); });
+    el.classList.add('active');
+}
+
+// ── LIVE PREVIEW ─────────────────────────────────────────────────────────
+function updatePreview() {
+    var sip    = parseAmt(document.getElementById('monthlySip').value);
+    var ret    = parseFloat(document.getElementById('expReturn').value) || 0;
+    var years  = parseInt(document.getElementById('timePeriod').value) || 0;
+    var delay  = parseInt(document.getElementById('delayMonths').value) || 0;
+
+    if (!sip || !ret || !years) {
+        ['lpOnTime','lpDelayCost','lpDelayed','lpLostPct'].forEach(function(id) {
+            document.getElementById(id).textContent = '—';
+        });
+        return;
+    }
+
+    var onTime  = sipFV(sip, ret, years);
+    var effYrs  = years - (delay / 12);
+    var delayed = effYrs > 0 ? sipFV(sip, ret, effYrs) : 0;
+    var cost    = onTime - delayed;
+    var lostPct = onTime > 0 ? (cost / onTime * 100).toFixed(1) : 0;
+
+    document.getElementById('lpOnTime').textContent    = formatINR(onTime);
+    document.getElementById('lpDelayCost').textContent = formatINR(cost);
+    document.getElementById('lpDelayed').textContent   = formatINR(delayed);
+    document.getElementById('lpLostPct').textContent   = lostPct + '%';
+}
+
+// ── REVERSE CALCULATOR (FIXED: uses target field if provided) ─────────────
+function calcReverse() {
+    var sip     = parseAmt(document.getElementById('monthlySip').value);
+    var ret     = parseFloat(document.getElementById('expReturn').value) || 12;
+    var years   = parseInt(document.getElementById('timePeriod').value) || 10;
+    var delay   = parseInt(document.getElementById('delayMonths').value) || 0;
+    var revYrs  = parseInt(document.getElementById('revYears').value) || 10;
+    var targetInput = parseAmt(document.getElementById('targetCorpus').value);
+
+    // Determine recovery target:
+    // If user provides a target amount, use it; otherwise default to the cost of delay
+    var recoveryTarget;
+    if (targetInput > 0) {
+        recoveryTarget = targetInput;
+    } else {
+        var onTime  = sipFV(sip, ret, years);
+        var effYrs  = Math.max(0, years - delay / 12);
+        var delayed = effYrs > 0 ? sipFV(sip, ret, effYrs) : 0;
+        recoveryTarget = onTime - delayed;
+    }
+
+    if (recoveryTarget <= 0 || revYrs <= 0) {
+        document.getElementById('reverseResult').classList.remove('show');
+        return;
+    }
+
+    // SIP needed to reach recoveryTarget in revYrs at ret%
+    var m = ret / 12 / 100;
+    var n = revYrs * 12;
+    var neededSIP = 0;
+    if (m > 0 && n > 0) {
+        neededSIP = recoveryTarget / (((Math.pow(1 + m, n) - 1) / m) * (1 + m));
+    } else if (n > 0) {
+        neededSIP = recoveryTarget / n;
+    }
+
+    var totalInvest = neededSIP * n;
+    document.getElementById('rrSip').textContent      = formatINR(neededSIP);
+    document.getElementById('rrTotal').textContent    = formatINR(totalInvest);
+    document.getElementById('rrRecovered').textContent = formatINR(recoveryTarget);
+    document.getElementById('reverseResult').classList.add('show');
+}
+
+// ── CHARTS ────────────────────────────────────────────────────────────────
+var chartPie, chartBar, chartLine;
+
+function buildDelayMatrix(sip, years, ret, actualDelay) {
+    var thead = document.getElementById('delayMatrixHead');
+    var tbody = document.getElementById('delayMatrixBody');
+    if (!thead || !tbody) return;
+
+    var delays = [0, 6, 12, 24, 36];
+    var rates  = [8, 10, 12, 15, 18];
+    var isDark = document.body.classList.contains('dark-mode');
+
+    thead.innerHTML = '';
+    tbody.innerHTML = '';
+
+    var hRow = document.createElement('tr');
+    hRow.innerHTML = '<th>Delay</th>' + rates.map(function(r) { return '<th>' + r + '% Return</th>'; }).join('');
+    thead.appendChild(hRow);
+
+    delays.forEach(function(d) {
+        var tr = document.createElement('tr');
+        var isBaseline = (d === 0);
+        var isYours    = (d === actualDelay && !isBaseline);
+        if (isYours) tr.className = 'highlight-row';
+
+        var label = isBaseline ? 'No Delay (Baseline)' : d + ' Months';
+        if (isYours) label += ' ✓ Your Choice';
+
+        tr.innerHTML = '<td><strong>' + label + '</strong></td>' +
+            rates.map(function(r) {
+                var onTimeC = sipFV(sip, r, years);
+                if (isBaseline) {
+                    return '<td style="color:var(--green);font-weight:700;">' + formatINR(onTimeC) + '</td>';
+                }
+                var ey      = Math.max(0, years - d / 12);
+                var delayC  = ey > 0 ? sipFV(sip, r, ey) : 0;
+                var costCell = onTimeC - delayC;
+                return '<td style="color:var(--red-d);font-weight:600;">−' + formatINR(costCell) + '</td>';
+            }).join('');
+
+        tbody.appendChild(tr);
+    });
+}
+
+function buildYearTable(sip, ret, years, delayMonths) {
+    var tbody = document.getElementById('yearTableBody');
+    if (!tbody) return;
+    tbody.innerHTML = '';
+
+    for (var y = 1; y <= years; y++) {
+        var onTimeVal  = sipFV(sip, ret, y);
+        var onTimeInv  = sip * y * 12;
+        var effYrs     = Math.max(0, y - delayMonths / 12);
+        var delayedInv = sip * Math.round(effYrs * 12);
+        var delayedVal = effYrs > 0 ? sipFV(sip, ret, effYrs) : 0;
+        var gap        = onTimeVal - delayedVal;
+        var mult       = onTimeInv > 0 ? (onTimeVal / onTimeInv).toFixed(2) + 'x' : '—';
+
+        var tr = document.createElement('tr');
+        if (y === years) tr.className = 'highlight-row';
+        tr.innerHTML =
+            '<td><strong>Year ' + y + '</strong></td>' +
+            '<td>' + formatINR(onTimeInv) + '</td>' +
+            '<td style="color:var(--green);font-weight:700;">' + formatINR(onTimeVal) + '</td>' +
+            '<td>' + formatINR(delayedInv) + '</td>' +
+            '<td style="color:var(--red-d);">' + formatINR(delayedVal) + '</td>' +
+            '<td style="color:#ea580c;font-weight:700;">' + formatINR(gap) + '</td>' +
+            '<td style="color:var(--gold-d);font-weight:700;">' + mult + '</td>';
+        tbody.appendChild(tr);
+    }
+}
+
+function buildCharts(sip, ret, years, delayMonths, onTimeCorpus, delayedCorpus, costOfDelay) {
+    var isDark     = document.body.classList.contains('dark-mode');
+    var gridColor  = isDark ? 'rgba(232,200,74,0.06)' : 'rgba(15,12,41,0.06)';
+    var tickColor  = isDark ? '#64748b' : '#6b6080';
+    var textColor  = isDark ? '#f5d96b' : '#0f0c29';
+    var bgColor    = isDark ? '#0f0c29' : '#fdf9ee';
+
+    if (chartPie)  chartPie.destroy();
+    if (chartBar)  chartBar.destroy();
+    if (chartLine) chartLine.destroy();
+
+    // Doughnut: retained vs lost  — premium navy/gold theme
+    var _lostPct  = onTimeCorpus > 0 ? ((costOfDelay / onTimeCorpus) * 100).toFixed(1) : '0.0';
+    var _centerPlugin = {
+        id: 'centerLabel',
+        afterDraw: function(chart) {
+            if (chart.config.type !== 'doughnut') return;
+            var ctx = chart.ctx;
+            var cx  = (chart.chartArea.left + chart.chartArea.right)  / 2;
+            var cy  = (chart.chartArea.top  + chart.chartArea.bottom) / 2;
+            ctx.save();
+            ctx.textAlign    = 'center';
+            ctx.textBaseline = 'middle';
+            // big percentage
+            ctx.font      = "bold 22px 'DM Sans', sans-serif";
+            ctx.fillStyle = '#dc2626';
+            ctx.fillText(_lostPct + '%', cx, cy - 10);
+            // sub-label
+            ctx.font      = "500 11px 'DM Sans', sans-serif";
+            ctx.fillStyle = textColor === '#e2e8f0' ? '#94a3b8' : '#6b6080';
+            ctx.fillText('Wealth Lost', cx, cy + 10);
+            ctx.restore();
+        }
+    };
+    chartPie = new Chart(document.getElementById('pieChart'), {
+        type: 'doughnut',
+        plugins: [_centerPlugin],
+        data: {
+            labels: ['Corpus Retained', 'Cost of Delay'],
+            datasets: [{
+                data: [Math.max(0, delayedCorpus), Math.max(0, costOfDelay)],
+                backgroundColor: ['#1a1550', '#dc2626'],
+                borderWidth: 0,
+                hoverOffset: 8,
+                hoverBackgroundColor: ['#2d2680', '#ef4444']
+            }]
+        },
+        options: {
+            responsive: true,
+            animation: false,
+            cutout: '74%',
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        color: textColor, padding: 16,
+                        font: { size: 11, family: "'DM Sans', sans-serif" },
+                        usePointStyle: true, pointStyleWidth: 10
+                    }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(ctx) {
+                            var pct = onTimeCorpus > 0 ? ((ctx.parsed / onTimeCorpus)*100).toFixed(1) : '0';
+                            return ' ' + ctx.label + ': ' + formatCr(ctx.parsed) + ' (' + pct + '%)';
+                        }
+                    }
+                }
+            }
+        }
+    });
+
+    // Bar: cost at different returns
+    var rates   = [8, 10, 12, 15, 18];
+    var barData = rates.map(function(r) {
+        var effYrs = Math.max(0, years - delayMonths / 12);
+        var otc    = sipFV(sip, r, years);
+        var dc     = effYrs > 0 ? sipFV(sip, r, effYrs) : 0;
+        return Math.round(otc - dc);
+    });
+    chartBar = new Chart(document.getElementById('barChart'), {
+        type: 'bar',
+        data: {
+            labels: rates.map(function(r) { return r + '%'; }),
+            datasets: [{
+                label: 'Cost of Delay',
+                data: barData,
+                backgroundColor: 'rgba(239,68,68,0.72)',
+                borderColor: '#ef4444',
+                borderWidth: 1,
+                borderRadius: 8,
+                borderSkipped: false
+            }]
+        },
+        options: {
+            responsive: true,
+            animation: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: { callbacks: { label: function(ctx) { return 'Loss: ' + formatCr(ctx.parsed.y); } } }
+            },
+            scales: {
+                x: { ticks: { color: tickColor }, grid: { color: gridColor } },
+                y: { ticks: { color: tickColor, callback: function(v) { return formatCr(v); } }, grid: { color: gridColor } }
+            }
+        }
+    });
+
+    // Line: growth comparison
+    var yearLabels  = [];
+    var onTimeData  = [];
+    var delayedData = [];
+    for (var y = 0; y <= years; y++) {
+        yearLabels.push(y === 0 ? 'Start' : 'Yr ' + y);
+        onTimeData.push(Math.round(sipFV(sip, ret, y)));
+        var ey = Math.max(0, y - delayMonths / 12);
+        delayedData.push(ey > 0 ? Math.round(sipFV(sip, ret, ey)) : 0);
+    }
+    chartLine = new Chart(document.getElementById('lineChart'), {
+        type: 'line',
+        data: {
+            labels: yearLabels,
+            datasets: [
+                {
+                    label: 'On-Time Portfolio',
+                    data: onTimeData,
+                    borderColor: '#16a34a',
+                    backgroundColor: 'rgba(22,163,74,0.08)',
+                    fill: true, tension: 0.4, pointRadius: 2
+                },
+                {
+                    label: 'Delayed Portfolio',
+                    data: delayedData,
+                    borderColor: '#ef4444',
+                    backgroundColor: 'rgba(239,68,68,0.06)',
+                    fill: true, tension: 0.4, pointRadius: 2,
+                    borderDash: [5, 4]
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            animation: false,
+            plugins: {
+                legend: { position: 'top', labels: { color: textColor, padding: 16, font: { size: 12 } } },
+                tooltip: { callbacks: { label: function(ctx) { return ctx.dataset.label + ': ' + formatCr(ctx.parsed.y); } } }
+            },
+            scales: {
+                x: { ticks: { color: tickColor, maxTicksLimit: 12 }, grid: { color: gridColor } },
+                y: { ticks: { color: tickColor, callback: function(v) { return formatCr(v); } }, grid: { color: gridColor } }
+            }
+        }
+    });
+}
+
+// ── PDF DOWNLOAD ──────────────────────────────────────────────────────────
+async function downloadPdf() {
+    var btn = document.querySelector('.btn-pdf-download') || document.querySelector('[onclick*="downloadPdf"]');
+    var origTxt = btn ? btn.innerHTML : '';
+    if (btn) { btn.innerHTML = '⏳ Generating PDF…'; btn.disabled = true; }
+
+    var sip   = parseAmt(document.getElementById('monthlySip').value);
+    var ret   = parseFloat(document.getElementById('expReturn').value)  || 12;
+    var years = parseInt(document.getElementById('timePeriod').value)   || 10;
+    var delay = parseInt(document.getElementById('delayMonths').value)  || 12;
+
+    if (!sip || sip <= 0 || !document.querySelector('.summary-grid')) {
+        alert('Please calculate first by filling the form and clicking "Calculate Cost of Delay"!');
+        if (btn) { btn.innerHTML = origTxt; btn.disabled = false; }
+        return;
+    }
+
+    var onTime  = sipFV(sip, ret, years);
+    var effYrs  = Math.max(0, years - delay / 12);
+    var delayed = effYrs > 0 ? sipFV(sip, ret, effYrs) : 0;
+    var cost    = onTime - delayed;
+    var lostPct = onTime > 0 ? ((cost / onTime) * 100).toFixed(1) : '0.0';
+    var mthCost = delay > 0 ? cost / delay : 0;
+
+    // ── Robust canvas capture: forces re-draw, adds opaque background,
+    //    falls back to direct toDataURL if chart object unavailable.
+    function captureCanvas(canvasId, chartObj, bgColor) {
+        bgColor = bgColor || '#f1f5fb';
+        try {
+            // Force Chart.js to redraw synchronously (works in Chart.js 3 & 4)
+            if (chartObj) {
+                if (typeof chartObj.draw   === 'function') chartObj.draw();
+                else if (typeof chartObj.render === 'function') chartObj.render();
+                else if (typeof chartObj.update === 'function') chartObj.update('none');
+            }
+            var src = document.getElementById(canvasId);
+            if (!src || src.width < 2 || src.height < 2) return null;
+            // Create temp canvas with opaque background so chart is never transparent
+            var tmp = document.createElement('canvas');
+            tmp.width = src.width; tmp.height = src.height;
+            var ctx = tmp.getContext('2d');
+            ctx.fillStyle = bgColor;
+            ctx.fillRect(0, 0, tmp.width, tmp.height);
+            ctx.drawImage(src, 0, 0);
+            var dataUrl = tmp.toDataURL('image/png');
+            // Make sure we got real data (not 1x1 blank placeholder)
+            return (dataUrl && dataUrl.length > 200) ? dataUrl : null;
+        } catch(e) { return null; }
+    }
+    // Capture BEFORE any await — guaranteed synchronous state
+    // Use cream (#fdf9ee) matching chart-card background so chart content is always visible
+    var pieImg  = captureCanvas('pieChart',  chartPie,  '#fdf9ee');
+    var barImg  = captureCanvas('barChart',  chartBar,  '#fdf9ee');
+    var lineImg = captureCanvas('lineChart', chartLine, '#fdf9ee');
+
+    // ── Async font fetch helper
+    async function fetchB64(url) {
+        var r = await fetch(url);
+        var buf = await r.arrayBuffer();
+        var bytes = new Uint8Array(buf), bin = '';
+        for (var i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+        return btoa(bin);
+    }
+
+    // ── Currency-aware formatter (₹ + Cr/L or $ + M) — ₹ glyph renders in Roboto
+    function pdfINR(n) {
+        n = Math.round(n);
+        var cur = 'indian';
+        try { var v = localStorage.getItem('m3-currency'); if (v === 'western' || v === 'indian') cur = v; } catch (e) {}
+        if (cur === 'western') {
+            var a = Math.abs(n);
+            if (a >= 1e9) return '$' + (n / 1e9).toFixed(2) + ' B';
+            if (a >= 1e6) return '$' + (n / 1e6).toFixed(2) + ' M';
+            return '$' + n.toLocaleString('en-US');
+        }
+        if (n >= 10000000) return '\u20b9' + (n / 10000000).toFixed(2) + ' Cr';
+        if (n >= 100000)   return '\u20b9' + (n / 100000).toFixed(2)   + ' L';
+        var s = n.toString(), last3 = s.slice(-3), rest = s.slice(0, -3), out = '';
+        while (rest.length > 2) { out = ',' + rest.slice(-2) + out; rest = rest.slice(0, -2); }
+        return '\u20b9' + (rest ? rest + ',' : '') + last3;
+    }
+
+    function addFooter(doc, pageNum, totalPages, PH, PW, NAVY, RED, FONT) {
+        doc.setFillColor(...NAVY); doc.rect(0, PH-12, PW, 12, 'F');
+        doc.setFillColor(...RED);  doc.rect(0, PH-12, 5,  12, 'F');
+        doc.setFont(FONT, 'normal'); doc.setFontSize(7);
+        doc.setTextColor(148, 163, 184);
+        doc.text('M3 Portfolio Investment Analysis  |  For informational purposes only. Not financial advice.', 11, PH-5);
+        doc.text('Page ' + pageNum + ' / ' + totalPages, PW - 20, PH-5);
+    }
+
+    try {
+        var { jsPDF } = window.jspdf;
+        var doc  = new jsPDF({ unit:'mm', format:'a4' });
+        var PW   = 210, PH = 297;
+        var NAVY  = [15,  12,  41];
+        var NAVY2 = [26,  22,  70];
+        var GOLD  = [232, 200, 74];
+        var RED   = [220, 38,  38];
+        var WHITE = [255, 255, 255];
+        var CREAM = [253, 249, 238];
+        var LGRAY = [241, 245, 251];
+        var GRAY  = [100, 116, 139];
+        var REDD  = [254, 226, 226];
+
+        // ── Load Roboto font (supports ₹ glyph)
+        var BASE = 'https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/fonts/Roboto/';
+        var [regB64, boldB64] = await Promise.all([
+            fetchB64(BASE + 'Roboto-Regular.ttf'),
+            fetchB64(BASE + 'Roboto-Medium.ttf')
+        ]);
+        doc.addFileToVFS('RobotoR.ttf', regB64);
+        doc.addFont('RobotoR.ttf', 'Roboto', 'normal');
+        doc.addFileToVFS('RobotoB.ttf', boldB64);
+        doc.addFont('RobotoB.ttf', 'Roboto', 'bold');
+        var FONT = 'Roboto';
+
+        // ══════════════════════════════════════════════════════════════════
+        // PAGE 1
+        // ══════════════════════════════════════════════════════════════════
+
+        // ── Header bar (navy + red left accent + gold rule)
+        doc.setFillColor(...NAVY); doc.rect(0, 0, PW, 28, 'F');
+        doc.setFillColor(...RED);  doc.rect(0, 0, 5,  28, 'F');
+        doc.setFillColor(...GOLD); doc.rect(0, 27.5, PW, 0.5, 'F');
+        doc.setTextColor(...WHITE);
+        doc.setFont(FONT, 'bold'); doc.setFontSize(16);
+        doc.text('Cost-of-Delay Analysis', 12, 11);
+        doc.setFont(FONT, 'normal'); doc.setFontSize(8);
+        doc.setTextColor(148, 163, 184);
+        doc.text('M3 Royal Wealth  |  ' + new Date().toLocaleDateString('en-IN', { day:'2-digit', month:'long', year:'numeric' }), 12, 20);
+        // Tag chip
+        doc.setFillColor(...RED); doc.roundedRect(148, 8, 52, 10, 2, 2, 'F');
+        doc.setFont(FONT, 'bold'); doc.setFontSize(7); doc.setTextColor(...WHITE);
+        doc.text('REGRET CALCULATOR REPORT', 152, 14.5);
+
+        var cy = 35;
+
+        // ── Input Parameters box
+        var inputs = [
+            { label: 'Monthly SIP',       value: pdfINR(sip) + ' / month'  },
+            { label: 'Expected Return',   value: ret   + '% p.a.'           },
+            { label: 'Investment Period', value: years + ' Years'            },
+            { label: 'Delay Duration',    value: delay + ' Months'           }
+        ];
+        var iH = 9 + inputs.length * 7;
+        doc.setFillColor(...CREAM); doc.roundedRect(10, cy, PW-20, iH, 2, 2, 'F');
+        doc.setFillColor(...RED);   doc.roundedRect(10, cy, 3, iH, 1, 1, 'F');
+        doc.setFont(FONT, 'bold'); doc.setFontSize(9); doc.setTextColor(...NAVY);
+        doc.text('Input Parameters', 16, cy + 6.5);
+        inputs.forEach(function(inp, i) {
+            doc.setFont(FONT, 'normal'); doc.setFontSize(8); doc.setTextColor(...GRAY);
+            doc.text(inp.label + ':', 16, cy + 13 + i * 7);
+            doc.setFont(FONT, 'bold'); doc.setTextColor(...NAVY);
+            doc.text(inp.value, 88, cy + 13 + i * 7);
+        });
+        cy += iH + 6;
+
+        // ── Summary cards (4-up) with colored top accent strips
+        var cards = [
+            { label:'Cost of Delay',  value: pdfINR(cost),    bg: REDD,  accent: RED,   valColor: RED  },
+            { label:'On-Time Corpus', value: pdfINR(onTime),  bg: CREAM, accent: NAVY,  valColor: NAVY },
+            { label:'Wealth Lost %',  value: lostPct + '%',   bg: CREAM, accent: RED,   valColor: RED  },
+            { label:'Delayed Corpus', value: pdfINR(delayed), bg: LGRAY, accent: NAVY2, valColor: NAVY }
+        ];
+        var cw = (PW - 20 - (cards.length - 1) * 3) / cards.length;
+        cards.forEach(function(card, i) {
+            var x = 10 + i * (cw + 3);
+            doc.setFillColor(...card.bg);   doc.roundedRect(x, cy, cw, 22, 2, 2, 'F');
+            doc.setFillColor(...card.accent); doc.roundedRect(x, cy, cw, 2, 1, 1, 'F');
+            doc.setFont(FONT, 'normal'); doc.setFontSize(6.5); doc.setTextColor(...GRAY);
+            doc.text(card.label, x + 3, cy + 9);
+            doc.setFont(FONT, 'bold'); doc.setFontSize(9.5); doc.setTextColor(...card.valColor);
+            doc.text(card.value, x + 3, cy + 18);
+        });
+        cy += 28;
+
+        // ── Key Insight box (auto-height)
+        var insightTxt = 'Investing ' + pdfINR(sip) + '/mo for ' + years + ' yrs at ' + ret +
+            '% p.a. — a ' + delay + '-month delay costs you ' + pdfINR(cost) +
+            ' (' + lostPct + '% of your final wealth). Every month of delay erodes ' +
+            pdfINR(Math.round(mthCost)) + ' from your corpus.';
+        doc.setFont(FONT, 'normal'); doc.setFontSize(8);
+        var splitTxt = doc.splitTextToSize(insightTxt, PW - 42);
+        var iBoxH = 11 + splitTxt.length * 5;
+        doc.setFillColor(...CREAM); doc.roundedRect(10, cy, PW-20, iBoxH, 2, 2, 'F');
+        doc.setFillColor(...RED);   doc.roundedRect(10, cy, 3, iBoxH, 1, 1, 'F');
+        doc.setFont(FONT, 'bold'); doc.setFontSize(8.5); doc.setTextColor(...RED);
+        doc.text('Key Insight', 16, cy + 6.5);
+        doc.setFont(FONT, 'normal'); doc.setFontSize(8); doc.setTextColor(...NAVY);
+        doc.text(splitTxt, 16, cy + 13);
+        cy += iBoxH + 6;
+
+        // ── Charts side-by-side (images pre-captured before async font load)
+        var halfW = (PW - 25) / 2;
+        var chartH = 62;
+        if (pieImg) {
+            doc.setFillColor(...LGRAY); doc.roundedRect(10, cy, halfW, chartH, 2, 2, 'F');
+            doc.setFillColor(...NAVY2); doc.roundedRect(10, cy, halfW, 9, 2, 2, 'F');
+            doc.setFont(FONT, 'bold'); doc.setFontSize(7.5); doc.setTextColor(...WHITE);
+            doc.text('Wealth Distribution', 14, cy + 6);
+            doc.addImage(pieImg, 'PNG', 11, cy + 10, halfW - 2, chartH - 12);
+        }
+        if (barImg) {
+            var rx = 10 + halfW + 5;
+            doc.setFillColor(...LGRAY); doc.roundedRect(rx, cy, halfW, chartH, 2, 2, 'F');
+            doc.setFillColor(...RED); doc.roundedRect(rx, cy, halfW, 9, 2, 2, 'F');
+            doc.setFont(FONT, 'bold'); doc.setFontSize(7.5); doc.setTextColor(...WHITE);
+            doc.text('Cost at Different Returns', rx + 3, cy + 6);
+            doc.addImage(barImg, 'PNG', rx + 1, cy + 10, halfW - 2, chartH - 12);
+        }
+        cy += chartH + 6;
+
+        // ── Scenario Comparison Table (fills remaining Page 1 space)
+        var delayYrs = delay / 12;
+        var scenarios = [
+            { label: 'Start 1 Year Earlier', dur: years + 1,          col: CREAM, accent: NAVY  },
+            { label: 'Start On Time (Base)',  dur: years,              col: [255,255,230], accent: GOLD  },
+            { label: 'Current Delay ('+ delay +' mo)', dur: effYrs,   col: REDD,  accent: RED   },
+            { label: 'One More Year Delay',   dur: Math.max(0,effYrs-1), col: LGRAY, accent: NAVY2 }
+        ];
+        var scRows = scenarios.map(function(s) {
+            var corpus = s.dur > 0 ? sipFV(sip, ret, s.dur) : 0;
+            var vs     = corpus - onTime;
+            var pct    = onTime > 0 ? ((vs / onTime) * 100).toFixed(1) : '0.0';
+            var sign   = vs >= 0 ? '+' : '';
+            return [s.label, s.dur.toFixed(1) + ' yrs', pdfINR(corpus),
+                    sign + pdfINR(Math.abs(vs)), sign + pct + '%'];
+        });
+        doc.autoTable({
+            startY: cy,
+            head: [['Scenario', 'Duration', 'Final Corpus', 'vs On-Time', '% Impact']],
+            body: scRows,
+            headStyles: { fillColor: NAVY, textColor: GOLD, fontStyle: 'bold', fontSize: 7.5, font: FONT },
+            bodyStyles: { fontSize: 7.5, textColor: NAVY, font: FONT },
+            alternateRowStyles: { fillColor: LGRAY },
+            columnStyles: {
+                0: { fontStyle: 'bold', cellWidth: 58 },
+                2: { halign: 'right' },
+                3: { halign: 'right' },
+                4: { halign: 'center', fontStyle: 'bold' }
+            },
+            didParseCell: function(data) {
+                if (data.section === 'body' && data.row.index === 1) {
+                    data.cell.styles.fillColor = [255, 255, 220];
+                    data.cell.styles.fontStyle = 'bold';
+                }
+                if (data.section === 'body' && (data.column.index === 3 || data.column.index === 4)) {
+                    var val = parseFloat(data.cell.raw);
+                    if (!isNaN(val) && val < 0) data.cell.styles.textColor = RED;
+                    if (!isNaN(val) && val > 0) data.cell.styles.textColor = [22, 163, 74];
+                }
+            },
+            margin: { left: 10, right: 10 }
+        });
+
+        // ══════════════════════════════════════════════════════════════════
+        // PAGE 2
+        // ══════════════════════════════════════════════════════════════════
+        doc.addPage();
+        cy = 15;
+
+        // ── Line chart — full width (pre-captured)
+        if (lineImg) {
+            doc.setFillColor(...LGRAY); doc.roundedRect(10, cy, PW-20, 72, 2, 2, 'F');
+            doc.setFillColor(...NAVY2); doc.roundedRect(10, cy, PW-20, 9, 2, 2, 'F');
+            doc.setFont(FONT, 'bold'); doc.setFontSize(8.5); doc.setTextColor(...WHITE);
+            doc.text('Growth Over Time — On-Time vs Delayed Investment', 14, cy + 6.5);
+            doc.addImage(lineImg, 'PNG', 12, cy + 11, PW-24, 59);
+            cy += 79;
+        }
+
+        // ── Year-wise table
+        var mr = ret / 12 / 100;
+        var tBody = [];
+        for (var y = 1; y <= years; y++) {
+            var n      = y * 12;
+            var onTInv = sip * n;
+            var onTVal = mr > 0 ? sip * (((1 + mr) ** n - 1) / mr) * (1 + mr) : sip * n;
+            var dN     = Math.max(0, n - delay);
+            var dInv   = sip * dN;
+            var dVal   = (dN > 0 && mr > 0) ? sip * (((1 + mr) ** dN - 1) / mr) * (1 + mr) : sip * dN;
+            var gap    = onTVal - dVal;
+            var mult   = onTInv > 0 ? (onTVal / onTInv).toFixed(2) + 'x' : '—';
+            tBody.push([
+                'Year ' + y,
+                pdfINR(onTInv), pdfINR(Math.round(onTVal)),
+                pdfINR(dInv),   pdfINR(Math.round(dVal)),
+                pdfINR(Math.round(gap)), mult
+            ]);
+        }
+        doc.autoTable({
+            startY: cy,
+            head: [['Year', 'Invested (On-Time)', 'On-Time Value', 'Invested (Delayed)', 'Delayed Value', 'Gap Lost', 'Multiplier']],
+            body: tBody,
+            headStyles:         { fillColor: NAVY, textColor: GOLD, fontStyle: 'bold', fontSize: 7, font: FONT },
+            bodyStyles:         { fontSize: 7, textColor: NAVY, font: FONT },
+            alternateRowStyles: { fillColor: CREAM },
+            columnStyles:       { 0: { fontStyle: 'bold' }, 5: { textColor: RED, fontStyle: 'bold' }, 6: { halign: 'center' } },
+            margin:             { left: 10, right: 10 }
+        });
+
+        // ── Footers on every page
+        var totalPages = doc.internal.getNumberOfPages();
+        for (var p = 1; p <= totalPages; p++) {
+            doc.setPage(p);
+            addFooter(doc, p, totalPages, PH, PW, NAVY, RED, FONT);
+        }
+
+        doc.save('M3_Regret_Report.pdf');
+        if (btn) { btn.innerHTML = origTxt; btn.disabled = false; }
+    } catch(e) {
+        alert('PDF Error: ' + e.message);
+        if (btn) { btn.innerHTML = origTxt; btn.disabled = false; }
+    }
+}
+
+// ── INIT ──────────────────────────────────────────────────────────────────
+updatePreview();
+
+{% if result %}
+buildDelayMatrix(
+    {{ monthly_sip or 5000 }},
+    {{ time_period or 10 }},
+    {{ exp_return or 12 }},
+    {{ delay_months or 12 }}
+);
+buildYearTable(
+    {{ monthly_sip or 5000 }},
+    {{ exp_return or 12 }},
+    {{ time_period or 10 }},
+    {{ delay_months or 12 }}
+);
+buildCharts(
+    {{ monthly_sip or 5000 }},
+    {{ exp_return or 12 }},
+    {{ time_period or 10 }},
+    {{ delay_months or 12 }},
+    {{ result.on_time_corpus }},
+    {{ result.delayed_corpus }},
+    {{ result.cost_of_delay }}
+);
+
+// Animate timeline bars
+(function() {
+    var lost   = {{ result.lost_pct }};
+    var gained = {{ result.gained_pct }};
+    setTimeout(function() {
+        document.getElementById('tlLost').style.width   = lost + '%';
+        document.getElementById('tlGained').style.width = gained + '%';
+    }, 100);
+})();
+
+// Scroll to results
+document.querySelector('.summary-grid').scrollIntoView({ behavior: 'smooth', block: 'start' });
+{% endif %}
+</script>
+
+<div class="calc-container">{% include '_disclaimer.html' %}</div>
+<script>
+// Currency preference live-update: swap input-prefix symbols and re-render preview
+(function () {
+  function refreshSyms() {
+    var sym = (window.M3 && typeof window.M3.currencySymbol === 'function')
+              ? window.M3.currencySymbol()
+              : ((function(){ try { return localStorage.getItem('m3-currency') === 'western' ? '$' : '₹'; } catch(e){ return '₹'; } })());
+    var nodes = document.querySelectorAll('.m3-cursym');
+    for (var i = 0; i < nodes.length; i++) nodes[i].textContent = sym;
+  }
+  function refreshPreview() {
+    if (typeof updatePreview === 'function') { try { updatePreview(); } catch(e){} }
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', refreshSyms);
+  } else { refreshSyms(); }
+  window.addEventListener('m3-currency-change', function () { refreshSyms(); refreshPreview(); });
+})();
+</script>
+
+</body>
+</html>

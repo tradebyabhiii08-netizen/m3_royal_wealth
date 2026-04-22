@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Risk Profile Quiz | M3 Portfolio</title>
+    <link rel="stylesheet" href="/static/design-tokens.css">
+    <script>
+      (function () {
+        try {
+          var saved = localStorage.getItem('m3-theme');
+          var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+          var theme = saved || (prefersDark ? 'dark' : 'light');
+          document.documentElement.setAttribute('data-theme', theme);
+          if (theme === 'dark') {
+            document.addEventListener('DOMContentLoaded', function () { document.body.classList.add('dark-mode'); });
+          }
+        } catch (e) {
+          document.documentElement.setAttribute('data-theme', 'light');
+        }
+      })();
+    </script>
+    <link rel="stylesheet" href="/static/style.css">
+    <style>
+        :root {
+            --navy:#0f0c29; --navy-m:#1a1550; --gold:#e8c84a; --gold-d:#d4a843;
+            --gold-l:#f5d96b; --gold-xl:#fdf3cc; --cream:#fdf9ee; --muted:#6b6080; --ink:#1a0f3c;
+            --card-shd:0 4px 20px rgba(15,12,41,0.11),0 1px 5px rgba(15,12,41,0.06);
+            --card-brd:1px solid rgba(232,200,74,0.2);
+        }
+        body {
+            min-height: 100vh;
+            padding: 20px;
+            font-family: 'DM Sans', 'Segoe UI', sans-serif;
+            background: linear-gradient(145deg, #f5edcc 0%, #fdf9ee 40%, #fffdf5 70%, #f5edcc 100%);
+            color: #141124;
+        }
+        html[data-theme="dark"] body,
+        body.dark-mode {
+            background: linear-gradient(145deg, #07060f 0%, #0f0c29 45%, #1a1550 80%, #07060f 100%) !important;
+            color: #f4eed2;
+        }
+        .container { max-width: 800px; margin: 0 auto; }
+
+        .page-header {
+            background: #fdf9ee;
+            padding: 25px 35px;
+            border-radius: 15px;
+            margin-bottom: 25px;
+            box-shadow: 0 8px 30px rgba(15,12,41,0.18);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .page-header h1 { color: #e8c84a; font-size: 1.8em; }
+        .page-header p  { color: #6b6080; font-size: 0.9em; margin-top: 4px; }
+        .btn-back {
+            padding: 10px 20px; background: #0f0c29;
+            color: #e8c84a; text-decoration: none; border-radius: 8px; font-size: 0.9em; font-weight: 600;
+        }
+
+        /* Progress */
+        .progress-wrap { margin-bottom: 25px; }
+        .progress-info { display: flex; justify-content: space-between; font-size: 0.85em; color: #e8c84a; margin-bottom: 8px; }
+        .progress-bar-bg { background: rgba(15,12,41,0.1); border-radius: 20px; height: 8px; }
+        .progress-bar-fg { background: #e8c84a; height: 8px; border-radius: 20px; transition: width 0.4s ease; }
+
+        /* Quiz Card */
+        .quiz-card {
+            background: #fdf9ee;
+            border-radius: 18px;
+            box-shadow: 0 8px 30px rgba(15,12,41,0.18);
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+        .question-block { display: none; padding: 35px; }
+        .question-block.active { display: block; }
+
+        .q-number {
+            display: inline-block;
+            background: #0f0c29;
+            color: #e8c84a; font-size: 0.8em; font-weight: 700;
+            padding: 4px 14px; border-radius: 20px; margin-bottom: 15px;
+        }
+        .q-category {
+            font-size: 0.8em; color: #6b6080; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.05em;
+        }
+        .q-text { font-size: 1.15em; font-weight: 700; color: #0f0c29; margin-bottom: 25px; line-height: 1.5; font-family: 'DM Sans', sans-serif; }
+
+        .options { display: flex; flex-direction: column; gap: 12px; }
+        .option-label {
+            display: flex; align-items: center; gap: 14px;
+            padding: 14px 18px;
+            border: 1.5px solid #d4a84340;
+            border-radius: 12px; cursor: pointer;
+            transition: all 0.2s; font-size: 0.95em; color: #0f0c29;
+        }
+        .option-label:hover { border-color: #e8c84a; background: #fdf9ee; }
+        .option-label input[type="radio"] { display: none; }
+        .option-label.selected { border-color: #e8c84a; background: #fdf3cc; color: #333; font-weight: 600; }
+        .option-dot {
+            width: 22px; height: 22px; border-radius: 50%;
+            border: 2px solid #ddd; flex-shrink: 0;
+            display: flex; align-items: center; justify-content: center;
+            transition: all 0.2s;
+        }
+        .option-label.selected .option-dot {
+            background: #e8c84a; border-color: #e8c84a;
+        }
+        .option-label.selected .option-dot::after {
+            content: ''; width: 8px; height: 8px;
+            background: white; border-radius: 50%;
+        }
+
+        /* Nav Buttons */
+        .nav-buttons {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 20px 35px; border-top: 1px solid rgba(232,200,74,0.15);
+            background: #fdf9ee;
+        }
+        .btn-prev {
+            padding: 11px 24px; background: transparent; color: #0f0c29;
+            border: 1.5px solid rgba(232,200,74,0.4); border-radius: 10px; font-size: 0.95em;
+            cursor: pointer; font-weight: 600;
+        }
+        .btn-prev:hover { background: #fdf3cc; }
+        .btn-next {
+            padding: 11px 28px;
+            background: linear-gradient(135deg, #e8c84a, #d4a843);
+            color: #0f0c29; border: none; border-radius: 10px; font-weight: 700;
+            font-size: 0.95em; cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 4px 14px rgba(232,200,74,0.35);
+        }
+        .btn-next:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(232,200,74,0.4); }
+        .btn-next:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+        .btn-submit {
+            padding: 13px 35px;
+            background: linear-gradient(135deg, #4CAF50, #2e7d32);
+            color: #0f0c29; border: none; border-radius: 10px; font-weight: 700;
+            font-size: 1em; cursor: pointer; font-weight: 700;
+            transition: all 0.2s;
+        }
+        .btn-submit:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(76,175,80,0.4); }
+        .btn-submit:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+        .q-counter { font-size: 0.85em; color: #6b6080; }
+
+        /* Dark Mode */
+        body.dark-mode .page-header { background: #0a0818 !important; border: 1px solid #1a1550 !important; }
+        body.dark-mode .page-header h1 { color: #a5b4fc !important; }
+        body.dark-mode .page-header p  { color: #64748b !important; }
+        body.dark-mode .quiz-card { background: #0a0818 !important; border: 1px solid #1a1550 !important; }
+        body.dark-mode .q-number { background: linear-gradient(135deg, #e8c84a, #6d28d9) !important; }
+        body.dark-mode .q-category { color: #64748b !important; }
+        body.dark-mode .q-text { color: #e2e8f0 !important; }
+        body.dark-mode .option-label { border-color: #252d4a !important; color: #cbd5e1 !important; }
+        body.dark-mode .option-label:hover { border-color: #e8c84a !important; background: #1a1f35 !important; }
+        body.dark-mode .option-label.selected { border-color: #e8c84a !important; background: #1a1f35 !important; color: #e2e8f0 !important; }
+        body.dark-mode .option-dot { border-color: #252d4a !important; }
+        body.dark-mode .option-label.selected .option-dot { background: #e8c84a !important; border-color: #e8c84a !important; }
+        body.dark-mode .nav-buttons { background: #07060f !important; border-top-color: #1a1550 !important; }
+        body.dark-mode .btn-prev { background: #1a1550 !important; color: #94a3b8 !important; }
+        body.dark-mode .q-counter { color: #64748b !important; }
+
+        @media (max-width: 600px) {
+            .question-block { padding: 22px; }
+            .nav-buttons { padding: 15px 22px; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+
+    <div class="page-header">
+        <div>
+            <h1>🎯 Risk Profile Quiz</h1>
+            <p>10 questions — takes about 3 minutes</p>
+        </div>
+        <a href="/dashboard" class="btn-back">← Dashboard</a>
+    </div>
+
+    <!-- Progress Bar -->
+    <div class="progress-wrap">
+        <div class="progress-info">
+            <span id="progressText">Question 1 of 10</span>
+            <span id="progressPct">0%</span>
+        </div>
+        <div class="progress-bar-bg">
+            <div class="progress-bar-fg" id="progressBar" style="width:0%"></div>
+        </div>
+    </div>
+
+    <form method="POST" action="/risk-quiz/result" id="quizForm">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <div class="quiz-card">
+
+            <!-- Q1 -->
+            <div class="question-block active" id="q1">
+                <div class="q-category">Personal Profile</div>
+                <div class="q-number">Question 1 / 10</div>
+                <div class="q-text">What is your current age?</div>
+                <div class="options">
+                    <label class="option-label"><input type="radio" name="q1" value="1"><div class="option-dot"></div>55 years or above</label>
+                    <label class="option-label"><input type="radio" name="q1" value="2"><div class="option-dot"></div>45 – 54 years</label>
+                    <label class="option-label"><input type="radio" name="q1" value="3"><div class="option-dot"></div>35 – 44 years</label>
+                    <label class="option-label"><input type="radio" name="q1" value="4"><div class="option-dot"></div>25 – 34 years</label>
+                    <label class="option-label"><input type="radio" name="q1" value="5"><div class="option-dot"></div>Under 25 years</label>
+                </div>
+            </div>
+
+            <!-- Q2 -->
+            <div class="question-block" id="q2">
+                <div class="q-category">Personal Profile</div>
+                <div class="q-number">Question 2 / 10</div>
+                <div class="q-text">What is your current employment / income status?</div>
+                <div class="options">
+                    <label class="option-label"><input type="radio" name="q2" value="1"><div class="option-dot"></div>Retired / No regular income</label>
+                    <label class="option-label"><input type="radio" name="q2" value="2"><div class="option-dot"></div>Part-time or irregular income</label>
+                    <label class="option-label"><input type="radio" name="q2" value="3"><div class="option-dot"></div>Salaried — private sector</label>
+                    <label class="option-label"><input type="radio" name="q2" value="4"><div class="option-dot"></div>Salaried — government / PSU</label>
+                    <label class="option-label"><input type="radio" name="q2" value="5"><div class="option-dot"></div>Self-employed / Business owner with high income</label>
+                </div>
+            </div>
+
+            <!-- Q3 -->
+            <div class="question-block" id="q3">
+                <div class="q-category">Financial Situation</div>
+                <div class="q-number">Question 3 / 10</div>
+                <div class="q-text">What percentage of your monthly income do you currently save or invest?</div>
+                <div class="options">
+                    <label class="option-label"><input type="radio" name="q3" value="1"><div class="option-dot"></div>Less than 5%</label>
+                    <label class="option-label"><input type="radio" name="q3" value="2"><div class="option-dot"></div>5% – 10%</label>
+                    <label class="option-label"><input type="radio" name="q3" value="3"><div class="option-dot"></div>11% – 20%</label>
+                    <label class="option-label"><input type="radio" name="q3" value="4"><div class="option-dot"></div>21% – 35%</label>
+                    <label class="option-label"><input type="radio" name="q3" value="5"><div class="option-dot"></div>More than 35%</label>
+                </div>
+            </div>
+
+            <!-- Q5 -->
+            <div class="question-block" id="q4">
+                <div class="q-category">Financial Situation</div>
+                <div class="q-number">Question 4 / 10</div>
+                <div class="q-text">Do you have any significant financial liabilities (home loan, car loan, personal loan)?</div>
+                <div class="options">
+                    <label class="option-label"><input type="radio" name="q4" value="1"><div class="option-dot"></div>Yes — EMI is more than 50% of my income</label>
+                    <label class="option-label"><input type="radio" name="q4" value="2"><div class="option-dot"></div>Yes — EMI is 30% – 50% of my income</label>
+                    <label class="option-label"><input type="radio" name="q4" value="3"><div class="option-dot"></div>Yes — EMI is less than 30% of my income</label>
+                    <label class="option-label"><input type="radio" name="q4" value="4"><div class="option-dot"></div>Minor liabilities only</label>
+                    <label class="option-label"><input type="radio" name="q4" value="5"><div class="option-dot"></div>No liabilities at all</label>
+                </div>
+            </div>
+
+            <!-- Q6 -->
+            <div class="question-block" id="q5">
+                <div class="q-category">Investment Goals</div>
+                <div class="q-number">Question 5 / 10</div>
+                <div class="q-text">What is your primary investment goal?</div>
+                <div class="options">
+                    <label class="option-label"><input type="radio" name="q5" value="1"><div class="option-dot"></div>Preserve my capital — I cannot afford any loss</label>
+                    <label class="option-label"><input type="radio" name="q5" value="2"><div class="option-dot"></div>Generate regular income from my investments</label>
+                    <label class="option-label"><input type="radio" name="q5" value="3"><div class="option-dot"></div>Balanced growth with moderate risk</label>
+                    <label class="option-label"><input type="radio" name="q5" value="4"><div class="option-dot"></div>Long-term wealth creation</label>
+                    <label class="option-label"><input type="radio" name="q5" value="5"><div class="option-dot"></div>Maximum growth — I can handle high risk</label>
+                </div>
+            </div>
+
+            <!-- Q7 -->
+            <div class="question-block" id="q6">
+                <div class="q-category">Investment Goals</div>
+                <div class="q-number">Question 6 / 10</div>
+                <div class="q-text">How long do you plan to stay invested?</div>
+                <div class="options">
+                    <label class="option-label"><input type="radio" name="q6" value="1"><div class="option-dot"></div>Less than 1 year</label>
+                    <label class="option-label"><input type="radio" name="q6" value="2"><div class="option-dot"></div>1 – 3 years</label>
+                    <label class="option-label"><input type="radio" name="q6" value="3"><div class="option-dot"></div>3 – 5 years</label>
+                    <label class="option-label"><input type="radio" name="q6" value="4"><div class="option-dot"></div>5 – 10 years</label>
+                    <label class="option-label"><input type="radio" name="q6" value="5"><div class="option-dot"></div>More than 10 years</label>
+                </div>
+            </div>
+
+            <!-- Q8 -->
+            <div class="question-block" id="q7">
+                <div class="q-category">Risk Tolerance</div>
+                <div class="q-number">Question 7 / 10</div>
+                <div class="q-text">Your ₹10 lakh portfolio drops to ₹8 lakh in 3 months. What do you do?</div>
+                <div class="options">
+                    <label class="option-label"><input type="radio" name="q7" value="1"><div class="option-dot"></div>Sell everything immediately to stop further loss</label>
+                    <label class="option-label"><input type="radio" name="q7" value="2"><div class="option-dot"></div>Sell some and move to safer investments</label>
+                    <label class="option-label"><input type="radio" name="q7" value="3"><div class="option-dot"></div>Do nothing — wait for recovery</label>
+                    <label class="option-label"><input type="radio" name="q7" value="4"><div class="option-dot"></div>Hold and invest a small additional amount</label>
+                    <label class="option-label"><input type="radio" name="q7" value="5"><div class="option-dot"></div>Invest more aggressively — this is a buying opportunity</label>
+                </div>
+            </div>
+
+            <!-- Q9 -->
+            <div class="question-block" id="q8">
+                <div class="q-category">Risk Tolerance</div>
+                <div class="q-number">Question 8 / 10</div>
+                <div class="q-text">What maximum loss in a year can you emotionally accept?</div>
+                <div class="options">
+                    <label class="option-label"><input type="radio" name="q8" value="1"><div class="option-dot"></div>I cannot accept any loss</label>
+                    <label class="option-label"><input type="radio" name="q8" value="2"><div class="option-dot"></div>Up to 5% loss</label>
+                    <label class="option-label"><input type="radio" name="q8" value="3"><div class="option-dot"></div>Up to 15% loss</label>
+                    <label class="option-label"><input type="radio" name="q8" value="4"><div class="option-dot"></div>Up to 30% loss</label>
+                    <label class="option-label"><input type="radio" name="q8" value="5"><div class="option-dot"></div>More than 30% — I think long term</label>
+                </div>
+            </div>
+
+            <!-- Q11 -->
+            <div class="question-block" id="q9">
+                <div class="q-category">Investment Experience</div>
+                <div class="q-number">Question 9 / 10</div>
+                <div class="q-text">How many years of investment experience do you have?</div>
+                <div class="options">
+                    <label class="option-label"><input type="radio" name="q9" value="1"><div class="option-dot"></div>No experience — I am a beginner</label>
+                    <label class="option-label"><input type="radio" name="q9" value="2"><div class="option-dot"></div>Less than 2 years</label>
+                    <label class="option-label"><input type="radio" name="q9" value="3"><div class="option-dot"></div>2 – 5 years</label>
+                    <label class="option-label"><input type="radio" name="q9" value="4"><div class="option-dot"></div>5 – 10 years</label>
+                    <label class="option-label"><input type="radio" name="q9" value="5"><div class="option-dot"></div>More than 10 years</label>
+                </div>
+            </div>
+
+            <!-- Q14 -->
+
+
+            <!-- Q15 -->
+            <div class="question-block" id="q10">
+                <div class="q-category">Mindset</div>
+                <div class="q-number">Question 10 / 10</div>
+                <div class="q-text">Which statement best describes your investment philosophy?</div>
+                <div class="options">
+                    <label class="option-label"><input type="radio" name="q10" value="1"><div class="option-dot"></div>Safety first — I want guaranteed returns even if low</label>
+                    <label class="option-label"><input type="radio" name="q10" value="2"><div class="option-dot"></div>Mostly safe with a small portion in growth assets</label>
+                    <label class="option-label"><input type="radio" name="q10" value="3"><div class="option-dot"></div>Equal balance between safety and growth</label>
+                    <label class="option-label"><input type="radio" name="q10" value="4"><div class="option-dot"></div>Mostly growth with a small safety net</label>
+                    <label class="option-label"><input type="radio" name="q10" value="5"><div class="option-dot"></div>Maximum growth — I think in decades not months</label>
+                </div>
+            </div>
+
+            <!-- Navigation -->
+            <div class="nav-buttons">
+                <button type="button" class="btn-prev" id="btnPrev" onclick="prevQ()" style="visibility:hidden">← Previous</button>
+                <span class="q-counter" id="qCounter">1 / 10</span>
+                <button type="button" class="btn-next" id="btnNext" onclick="nextQ()" disabled>Next →</button>
+                <button type="submit" class="btn-submit" id="btnSubmit" style="display:none" disabled>View My Risk Profile 🎯</button>
+            </div>
+
+        </div><!-- end quiz-card -->
+    </form>
+
+</div>
+
+<script>
+var current = 1;
+var total = 10;
+var answers = {};
+
+function updateProgress() {
+    var pct = Math.round(((current - 1) / total) * 100);
+    document.getElementById('progressBar').style.width = pct + '%';
+    document.getElementById('progressText').textContent = 'Question ' + current + ' of ' + total;
+    document.getElementById('progressPct').textContent = pct + '%';
+    document.getElementById('qCounter').textContent = current + ' / ' + total;
+}
+
+function checkAnswer() {
+    var selected = document.querySelector('#q' + current + ' input[type="radio"]:checked');
+    var isLast = current === total;
+    if (isLast) {
+        document.getElementById('btnNext').style.display = 'none';
+        document.getElementById('btnSubmit').style.display = 'inline-block';
+        document.getElementById('btnSubmit').disabled = !selected;
+    } else {
+        document.getElementById('btnNext').style.display = 'inline-block';
+        document.getElementById('btnSubmit').style.display = 'none';
+        document.getElementById('btnNext').disabled = !selected;
+    }
+}
+
+function nextQ() {
+    var selected = document.querySelector('#q' + current + ' input[type="radio"]:checked');
+    if (!selected) return;
+    answers[current] = selected.value;
+
+    document.getElementById('q' + current).classList.remove('active');
+    current++;
+    document.getElementById('q' + current).classList.add('active');
+
+    document.getElementById('btnPrev').style.visibility = current > 1 ? 'visible' : 'hidden';
+    updateProgress();
+    checkAnswer();
+}
+
+function prevQ() {
+    if (current <= 1) return;
+    document.getElementById('q' + current).classList.remove('active');
+    current--;
+    document.getElementById('q' + current).classList.add('active');
+    document.getElementById('btnPrev').style.visibility = current > 1 ? 'visible' : 'hidden';
+
+    // Show next button, hide submit
+    document.getElementById('btnNext').style.display = 'inline-block';
+    document.getElementById('btnSubmit').style.display = 'none';
+    updateProgress();
+    checkAnswer();
+}
+
+// Listen for option selection
+document.querySelectorAll('.option-label').forEach(function(label) {
+    label.addEventListener('click', function() {
+        var block = this.closest('.question-block');
+        block.querySelectorAll('.option-label').forEach(function(l) { l.classList.remove('selected'); });
+        this.classList.add('selected');
+        setTimeout(checkAnswer, 50);
+    });
+});
+
+updateProgress();
+checkAnswer();
+</script>
+
+</body>
+</html>

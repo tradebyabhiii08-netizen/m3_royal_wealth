@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script>(function(){try{var s=localStorage.getItem('m3-theme');var p=matchMedia('(prefers-color-scheme: dark)').matches;var t=s||(p?'dark':'light');document.documentElement.setAttribute('data-theme',t);document.addEventListener('DOMContentLoaded',function(){if(t==='dark')document.body.classList.add('dark-mode');});}catch(e){}})();</script>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SWP Calculator | M3 Portfolio Investment Analysis</title>
+    <link rel="stylesheet" href="/static/design-tokens.css">
+    <link rel="stylesheet" href="/static/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+    <style>
+        :root {
+            --navy:#0f0c29; --navy-m:#1a1550; --gold:#e8c84a; --gold-d:#d4a843;
+            --gold-l:#f5d96b; --gold-xl:#fdf3cc; --cream:#fdf9ee; --muted:#6b6080; --ink:#1a0f3c;
+            --card-shd:0 4px 20px rgba(15,12,41,0.11),0 1px 5px rgba(15,12,41,0.06);
+            --card-brd:1px solid rgba(232,200,74,0.2);
+        }
+        body { min-height: 100vh; padding: 20px;
+            background: linear-gradient(145deg, #f5edcc 0%, #fdf9ee 40%, #fffdf5 70%, #f5edcc 100%);
+            color: #141124;
+        }
+        html[data-theme="dark"] body,
+        body.dark-mode {
+            background: linear-gradient(145deg, #07060f 0%, #0f0c29 45%, #1a1550 80%, #07060f 100%) !important;
+            color: #f4eed2;
+        }
+        .calc-container { max-width: 1400px; margin: 0 auto; }
+        .calc-header { background: var(--cream); padding: 20px 28px; border-radius: 16px; margin-bottom: 20px; box-shadow: var(--card-shd); border: var(--card-brd); border-left: 5px solid var(--gold); display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap; }
+        .calc-card { background: var(--cream); padding: 28px; border-radius: 16px; box-shadow: var(--card-shd); margin-bottom: 18px; border: var(--card-brd); }
+        .btn-back { display: inline-block; padding: 10px 20px; background: #0f0c29; color: #e8c84a; text-decoration: none; border-radius: 8px; margin-bottom: 20px; font-weight: 600; }
+        .btn-calculate { width: 100%; padding: 15px; background: linear-gradient(135deg, #E91E63 0%, #C2185B 100%); color: white; border: none; border-radius: 10px; font-size: 1.1em; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+        .btn-calculate:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(233,30,99,0.4); }
+
+        .input-section { background: #fdf3cc; border-radius: 14px; padding: 20px 24px; margin-bottom: 18px; border: 1.5px solid #fce4ec; }
+        .input-section-title { font-size: 0.82em; font-weight: 700; color: #1a1550; letter-spacing: 0.04em; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 16px; }
+        .form-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+        .form-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 18px; }
+        .form-group-e { display: flex; flex-direction: column; gap: 6px; }
+        .form-group-e label { font-size: 0.83em; font-weight: 700; color: #3d3050; }
+        .input-wrap { display: flex; align-items: center; border: 1.5px solid #d4a84340; border-radius: 10px; overflow: hidden; background: white; transition: border 0.2s; }
+        .input-wrap:focus-within { border-color: #0f0c29; }
+        .input-pfx, .input-sfx { padding: 0 12px; font-size: 0.88em; color: #6b6080; font-weight: 600; background: #fdf6e3; height: 44px; display: flex; align-items: center; white-space: nowrap; }
+        .input-pfx { border-right: 1.5px solid #f0f0f0; }
+        .input-sfx { border-left: 1.5px solid #f0f0f0; }
+        .e-input { flex: 1; padding: 11px 14px; border: none; font-size: 0.95em; color: #333; outline: none; background: transparent; width: 100%; }
+        .hint { font-size: 0.74em; color: #6b6080; }
+
+        /* SUSTAINABILITY METER */
+        .sustain-meter { background: #fdf3cc; border-radius: 14px; padding: 20px 24px; margin-bottom: 18px; border: 1.5px solid #fce4ec; }
+        .sustain-title { font-size: 0.82em; font-weight: 700; color: #0f0c29; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 12px; }
+        .sustain-bar-wrap { background: #f0f0f0; border-radius: 10px; height: 10px; margin: 10px 0 6px; overflow: hidden; }
+        .sustain-bar-fill { height: 10px; border-radius: 10px; transition: width 0.5s; background: linear-gradient(90deg, #e8c84a, #d4a843); }
+        .sustain-labels { display: flex; justify-content: space-between; font-size: 0.75em; color: #6b6080; }
+
+        /* LIVE PREVIEW */
+        .live-preview { background: linear-gradient(135deg, #fdf9ee, #fdf3cc); border-radius: 14px; padding: 20px 24px; margin-bottom: 18px; border: 1.5px solid #f48fb1; }
+        .lp-title { font-size: 0.82em; font-weight: 700; color: #0f0c29; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 14px; }
+        .lp-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+        .lp-card { background: white; border-radius: 9px; padding: 14px; text-align: center; border: 1.5px solid #fce4ec; }
+        .lp-label { font-size: 0.72em; color: #6b6080; font-weight: 600; text-transform: uppercase; }
+        .lp-value { font-size: 1.1em; font-weight: 800; color: #0f0c29; margin-top: 5px; }
+
+        /* SUMMARY CARDS */
+        .summary-grid { display: grid; grid-template-columns: repeat(4,1fr) 1.3fr; gap: 14px; margin-bottom: 25px; }
+        .sum-card { background: white; border-radius: 12px; padding: 16px 18px; box-shadow: var(--card-shd); border: var(--card-brd); }
+        .sum-card .sc-label { font-size: 0.75em; color: #6b6080; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
+        .sum-card .sc-val { font-size: 1.5em; font-weight: 700; color: #0f0c29; font-family: 'Cormorant Garamond', serif; margin-top: 8px; }
+        .sum-card .sc-sub { font-size: 0.75em; color: #6b6080; margin-top: 4px; }
+
+        .success-box { background: #fce4ec; border-left: 4px solid #E91E63; padding: 15px; border-radius: 8px; margin: 20px 0; color: #880e4f; }
+        .warning-box { background: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; border-radius: 8px; margin: 20px 0; color: #856404; }
+
+        .charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 16px; }
+        .chart-card { background: white; padding: 30px; border-radius: 20px; box-shadow: 0 8px 28px rgba(15,12,41,0.14), 0 2px 8px rgba(15,12,41,0.07); }
+        .chart-card.full-width { grid-column: 1 / -1; }
+        .chart-card h3 { color: var(--navy); margin-bottom: 15px; font-size: 1.05em; }
+        .table-card { background: white; padding: 30px; border-radius: 20px; box-shadow: 0 8px 28px rgba(15,12,41,0.14), 0 2px 8px rgba(15,12,41,0.07); margin-top: 30px; }
+        .table-card h3 { color: var(--navy); margin-bottom: 15px; font-size: 1.05em; }
+        .data-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        .data-table th { background: #0f0c29; color: #e8c84a; padding: 12px; text-align: left; font-weight: 600; }
+        .data-table td { padding: 10px 12px; border-bottom: 1px solid rgba(232,200,74,0.15); }
+        .data-table tr:hover { background: #fdf3cc; }
+        .depleted-row td { color: #c62828 !important; font-weight: 600; }
+
+        .btn-pdf-download { display: inline-flex; align-items: center; gap: 8px; padding: 12px 28px; background: linear-gradient(135deg, #e8c84a 0%, #d4a843 100%); color: #0f0c29; font-weight: 700; border: none; border-radius: 10px; font-size: 1em; font-weight: 700; cursor: pointer; margin-top: 20px; box-shadow: 0 4px 15px rgba(15,12,41,0.4); transition: all 0.2s; width: 100%; }
+        .btn-pdf-download:hover { transform: translateY(-2px); }
+
+        /* DARK MODE */
+        body.dark-mode .calc-header, body.dark-mode .calc-card, body.dark-mode .chart-card, body.dark-mode .table-card { background: #0a0818 !important; border: 1px solid #1a1550 !important; box-shadow: 0 8px 32px rgba(0,0,0,0.4) !important; color: #e2e8f0 !important; }
+        body.dark-mode .calc-header h1 { color: #a5b4fc !important; }
+        body.dark-mode .calc-header p { color: #64748b !important; }
+        body.dark-mode .input-section { background: #1a0a10 !important; border-color: #2a1020 !important; }
+        body.dark-mode .live-preview { background: #1a0a10 !important; border-color: #2a1020 !important; }
+        body.dark-mode .sustain-meter { background: #0f172a !important; border-color: #2a1020 !important; }
+        body.dark-mode .input-section-title, body.dark-mode .lp-title, body.dark-mode .sustain-title { color: #f48fb1 !important; }
+        body.dark-mode .lp-card { background: #0a0818 !important; border-color: #2a1020 !important; }
+        body.dark-mode .lp-label { color: #64748b !important; }
+        body.dark-mode .lp-value { color: #f48fb1 !important; }
+        body.dark-mode .form-group-e label { color: #94a3b8 !important; }
+        body.dark-mode .input-wrap { background: #07060f !important; border-color: #252d4a !important; }
+        body.dark-mode .input-pfx, body.dark-mode .input-sfx { background: #07060f !important; color: #64748b !important; border-color: #252d4a !important; }
+        body.dark-mode .e-input { color: #e2e8f0 !important; }
+        body.dark-mode .sum-card { background: #0f0c29 !important; }
+        body.dark-mode .sum-card .sc-val { color: #e2e8f0 !important; }
+        body.dark-mode .chart-card h3, body.dark-mode .table-card h3 { color: #c7d2fe !important; }
+        body.dark-mode .data-table th { background: #3a0a1e !important; color: #f48fb1 !important; }
+        body.dark-mode .data-table td { background: #0a0818 !important; border-bottom-color: #07060f !important; color: #cbd5e1 !important; }
+        body.dark-mode .data-table tr:hover td { background: #0f0c29 !important; }
+        body.dark-mode .sustain-bar-wrap { background: #1a1550 !important; }
+        body.dark-mode .btn-back { background: rgba(232,200,74,0.12) !important; color: #f5d96b !important; }
+        body.dark-mode ::-webkit-scrollbar { width: 5px; }
+        body.dark-mode ::-webkit-scrollbar-track { background: #07060f; }
+        body.dark-mode ::-webkit-scrollbar-thumb { background: #252d4a; border-radius: 4px; }
+
+        .text-green { color: #0f0c29; }
+        .text-red   { color: #c62828; }
+        @media (max-width: 768px) {
+            .form-grid-2, .form-grid-3 { grid-template-columns: 1fr; }
+            .lp-grid { grid-template-columns: repeat(2,1fr); }
+            .summary-grid { grid-template-columns: repeat(2,1fr); }
+            .charts-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+    <script src="/static/calc-core.js"></script>
+</head>
+<body>
+    <script>
+        var CURRENCY_FORMAT = "{{ session.get('currency_format', 'indian') }}";
+        function formatCurrency(num) {
+            num = Math.round(num);
+            if (CURRENCY_FORMAT === 'western') return '$' + num.toLocaleString('en-US');
+            var s = num.toString();
+            if (s.length <= 3) return 'Rs.' + s;
+            var last3 = s.slice(-3), rest = s.slice(0,-3), result = '';
+            while (rest.length > 2) { result = ',' + rest.slice(-2) + result; rest = rest.slice(0,-2); }
+            return 'Rs.' + rest + result + ',' + last3;
+        }
+    </script>
+
+<div class="calc-container">
+    <a href="/dashboard" class="btn-back">← Back to Dashboard</a>
+
+    <div class="calc-header">
+        <h1>🏦 SWP Calculator</h1>
+        <p>Calculate your corpus sustainability with Systematic Withdrawal Plans — with inflation-adjusted withdrawals</p>
+    </div>
+
+    <div class="calc-card">
+        <form method="POST" action="/calculator/swp">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+            <!-- SECTION 1: Corpus Details -->
+            <div class="input-section">
+                <div class="input-section-title">💰 Corpus Details</div>
+                <div class="form-grid-2">
+                    <div class="form-group-e">
+                        <label>Initial Investment (Corpus)</label>
+                        <div class="input-wrap">
+                            <span class="input-pfx m3-cursym">₹</span>
+                            <input type="text" inputmode="numeric" class="amt-input e-input"
+                                   name="initial_investment" id="initInv"
+                                   value="{{ initial_investment or 1000000 }}"
+                                   oninput="onAmtKeyup(this); updatePreview();" required>
+                        </div>
+                        <span class="hint">Total corpus available for withdrawal</span>
+                    </div>
+                    <div class="form-group-e">
+                        <label>Monthly Withdrawal Amount</label>
+                        <div class="input-wrap">
+                            <span class="input-pfx m3-cursym">₹</span>
+                            <input type="text" inputmode="numeric" class="amt-input e-input"
+                                   name="monthly_withdrawal" id="monthlyWd"
+                                   value="{{ monthly_withdrawal or 10000 }}"
+                                   oninput="onAmtKeyup(this); updatePreview();" required>
+                        </div>
+                        <span class="hint">Starting monthly withdrawal amount</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECTION 2: Return & Period -->
+            <div class="input-section">
+                <div class="input-section-title">📈 Return & Withdrawal Period</div>
+                <div class="form-grid-3">
+                    <div class="form-group-e">
+                        <label>Expected Annual Return</label>
+                        <div class="input-wrap">
+                            <input type="number" class="e-input" name="expected_return" id="expReturn"
+                                   value="{{ expected_return or 12 }}" min="1" max="18" step="0.5"
+                                   oninput="updatePreview();" required>
+                            <span class="input-sfx">% p.a.</span>
+                        </div>
+                        <div style="display:flex; gap:6px; margin-top:5px; flex-wrap:wrap;">
+                            <span onclick="setVal('expReturn',10,this)" style="font-size:0.72em; padding:2px 8px; border-radius:20px; background:#fff5f8; color:#E91E63; border:1.5px solid #fce4ec; cursor:pointer; font-weight:600;">10%</span>
+                            <span onclick="setVal('expReturn',12,this)" style="font-size:0.72em; padding:2px 8px; border-radius:20px; background:#fce4ec; color:#E91E63; border:1.5px solid #E91E63; cursor:pointer; font-weight:600;">12%</span>
+                            <span onclick="setVal('expReturn',15,this)" style="font-size:0.72em; padding:2px 8px; border-radius:20px; background:#fff5f8; color:#E91E63; border:1.5px solid #fce4ec; cursor:pointer; font-weight:600;">15%</span>
+                        </div>
+                        <small style="font-size:0.7em; color:#6b6080; display:block; margin-top:4px;">Post-retirement portfolios typically target 7–10% p.a. Capped at 18%.</small>
+                    </div>
+                    <div class="form-group-e">
+                        <label>Withdrawal Period</label>
+                        <div class="input-wrap">
+                            <input type="number" class="e-input" name="time_period" id="timePeriod"
+                                   value="{{ time_period or 15 }}" min="1" max="50"
+                                   oninput="updatePreview();" required>
+                            <span class="input-sfx">Years</span>
+                        </div>
+                        <span class="hint">How long to withdraw</span>
+                    </div>
+                    <div class="form-group-e">
+                        <label>Annual Inflation Rate</label>
+                        <div class="input-wrap">
+                            <input type="number" class="e-input" name="inflation_rate" id="inflRate"
+                                   value="{{ inflation_rate or 6 }}" min="0" max="20" step="0.5"
+                                   oninput="updatePreview();" required>
+                            <span class="input-sfx">% p.a.</span>
+                        </div>
+                        <span class="hint">Withdrawal increases by this % yearly</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SUSTAINABILITY METER (live) -->
+            <div class="sustain-meter">
+                <div class="sustain-title">📊 Sustainability Preview</div>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                    <span style="font-size:0.85em; color:#555;">Corpus will last:</span>
+                    <span style="font-weight:800; color:#E91E63; font-size:1.1em;" id="sustainYears">—</span>
+                </div>
+                <div class="sustain-bar-wrap">
+                    <div class="sustain-bar-fill" id="sustainFill" style="width:0%; background:#E91E63;"></div>
+                </div>
+                <div class="sustain-labels">
+                    <span>Year 0</span>
+                    <span id="sustainMid"></span>
+                    <span id="sustainEnd"></span>
+                </div>
+            </div>
+
+            <!-- LIVE PREVIEW -->
+            <div class="live-preview">
+                <div class="lp-title">⚡ Live Preview</div>
+                <div class="lp-grid">
+                    <div class="lp-card">
+                        <div class="lp-label">Withdrawal Rate</div>
+                        <div class="lp-value" id="lpRate">—</div>
+                    </div>
+                    <div class="lp-card">
+                        <div class="lp-label">Final Withdrawal</div>
+                        <div class="lp-value" id="lpFinal">—</div>
+                    </div>
+                    <div class="lp-card">
+                        <div class="lp-label">Total Withdrawn</div>
+                        <div class="lp-value" id="lpTotal">—</div>
+                    </div>
+                    <div class="lp-card">
+                        <div class="lp-label">Remaining Corpus</div>
+                        <div class="lp-value" id="lpRemain">—</div>
+                    </div>
+                </div>
+            </div>
+
+            <button type="submit" class="btn-calculate">🏦 Calculate SWP Plan</button>
+        </form>
+
+        {% if result %}
+
+        <!-- SUMMARY CARDS -->
+        <div class="summary-grid" style="margin-top:30px;">
+            <div class="sum-card" style="border-top:4px solid #E91E63;">
+                <div class="sc-label">Initial Corpus</div>
+                <div class="sc-val">{{ '₹' if session.get('currency_format','indian')=='indian' else '$' }}{{ result.initial_investment | indian_currency }}</div>
+                <div class="sc-sub">Starting amount</div>
+            </div>
+            <div class="sum-card" style="border-top:4px solid #f44336;">
+                <div class="sc-label">Total Withdrawn</div>
+                <div class="sc-val" style="color:#c62828;">{{ '₹' if session.get('currency_format','indian')=='indian' else '$' }}{{ result.total_withdrawn | indian_currency }}</div>
+                <div class="sc-sub">Over {{ time_period }} years</div>
+            </div>
+            <div class="sum-card" style="border-top:4px solid #4CAF50;">
+                <div class="sc-label">Remaining Corpus</div>
+                <div class="sc-val {% if result.remaining_amount > 0 %}text-green{% else %}text-red{% endif %}">{{ '₹' if session.get('currency_format','indian')=='indian' else '$' }}{{ result.remaining_amount | indian_currency }}</div>
+                <div class="sc-sub">After {{ time_period }} years</div>
+            </div>
+            <div class="sum-card" style="border-top:4px solid #FF9800;">
+                <div class="sc-label">Final Monthly WD</div>
+                <div class="sc-val">{{ '₹' if session.get('currency_format','indian')=='indian' else '$' }}{{ result.final_monthly_withdrawal | indian_currency }}</div>
+                <div class="sc-sub">Inflation-adjusted</div>
+            </div>
+            <div class="sum-card" style="background:linear-gradient(135deg,#E91E63,#C2185B);">
+                <div class="sc-label" style="color:rgba(255,255,255,0.8);">⏱️ Fund Sustained For</div>
+                <div class="sc-val" style="color:white; font-size:1.6em;">{{ (result.months_sustained / 12) | round(1) }} Yrs</div>
+                <div class="sc-sub" style="color:rgba(255,255,255,0.65);">{{ result.months_sustained }} months{% if result.months_sustained >= time_period * 12 %} ✅{% else %} ⚠️{% endif %}</div>
+            </div>
+        </div>
+
+        {% if result.months_sustained < time_period * 12 %}
+        <div class="warning-box">
+            <strong>⚠️ Fund Depleted Early!</strong> Corpus depletes in {{ (result.months_sustained/12)|round(1) }} years —
+            {{ (time_period - result.months_sustained/12)|round(1) }} years earlier than planned.
+            Consider: reducing monthly withdrawal, increasing corpus, or choosing higher-return fund.
+        </div>
+        {% else %}
+        <div class="success-box">
+            <strong>✅ Sustainable Withdrawal Plan!</strong> Corpus lasts the full {{ time_period }} years with
+            <strong>{{ '₹' if session.get('currency_format','indian')=='indian' else '$' }}{{ result.remaining_amount | indian_currency }}</strong> remaining!
+            Effective withdrawal rate: {{ "%.2f"|format(monthly_withdrawal * 12 / initial_investment * 100) }}% p.a.
+        </div>
+        {% endif %}
+
+        <!-- JSON DATA -->
+        <script type="application/json" id="swp-data">
+        {
+            "initialInvestment": {{ initial_investment | tojson }},
+            "monthlyWithdrawal": {{ monthly_withdrawal | tojson }},
+            "expectedReturn":    {{ expected_return | tojson }},
+            "inflationRate":     {{ inflation_rate | tojson }},
+            "years":             {{ time_period | tojson }},
+            "totalWithdrawn":    {{ result.total_withdrawn | tojson }},
+            "remainingAmount":   {{ result.remaining_amount | tojson }},
+            "monthsSustained":   {{ result.months_sustained | tojson }}
+        }
+        </script>
+
+        <!-- CHARTS -->
+        <div class="charts-grid">
+            <div class="chart-card">
+                <h3>🍩 Fund Distribution</h3>
+                <canvas id="pieChart"></canvas>
+            </div>
+            <div class="chart-card">
+                <h3>📈 Monthly Withdrawal Growth (Inflation)</h3>
+                <canvas id="withdrawalChart"></canvas>
+            </div>
+            <div class="chart-card full-width">
+                <h3>📉 Corpus Value Over Time</h3>
+                <canvas id="lineChart"></canvas>
+            </div>
+            <div class="chart-card full-width">
+                <h3>📊 Annual Withdrawal vs Returns Earned</h3>
+                <canvas id="barChart"></canvas>
+            </div>
+        </div>
+
+        <!-- TABLE -->
+        <div class="table-card">
+            <h3>📋 Year-wise Breakdown</h3>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Year</th>
+                        <th>Opening Balance</th>
+                        <th>Monthly WD</th>
+                        <th>Annual Withdrawal</th>
+                        <th>Returns Earned</th>
+                        <th>Closing Balance</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody"></tbody>
+            </table>
+        </div>
+
+        <button class="btn-pdf-download" onclick="downloadSwpPdf()">⬇ Download PDF Report</button>
+
+        <script>
+            const data = JSON.parse(document.getElementById('swp-data').textContent);
+            const initInv    = data.initialInvestment;
+            const monthlyWd  = data.monthlyWithdrawal;
+            const annualRet  = data.expectedReturn / 100;
+            const monthlyRate= annualRet / 12;
+            const inflRate   = data.inflationRate / 100;
+            const years      = data.years;
+            const isDark     = document.body.classList.contains('dark-mode');
+            const gridColor  = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
+            const tickColor  = isDark ? '#64748b' : '#999';
+            const textColor  = isDark ? '#e2e8f0' : '#333';
+
+            function fmtCr(v) {
+                var a = Math.abs(v);
+                if (window.M3 && window.M3.fmtMoneyShort) return window.M3.fmtMoneyShort(v);
+                if (a >= 10000000) return '₹' + (v/10000000).toFixed(2) + 'Cr';
+                if (a >= 100000)   return '₹' + (v/100000).toFixed(2) + 'L';
+                return '₹' + Math.round(v).toLocaleString('en-IN');
+            }
+
+            // Simulate year-by-year
+            const yearLabels=[], corpusData=[], annualWdData=[], annualRetData=[], monthlyWdData=[], tableRows=[];
+            var corpus = initInv, currentWd = monthlyWd;
+            var depleted = false;
+
+            for (var y = 1; y <= years; y++) {
+                var opening = corpus, annualWd = 0, annualRet2 = 0;
+                // If already depleted, stop adding chart data
+                if (depleted) break;
+                for (var m = 0; m < 12; m++) {
+                    var ret = corpus * monthlyRate;
+                    corpus = corpus + ret - currentWd;
+                    annualWd  += currentWd;
+                    annualRet2 += ret;
+                    if (corpus <= 0) { corpus = 0; depleted = true; break; }
+                }
+                yearLabels.push('Year ' + y);
+                corpusData.push(Math.round(Math.max(0, corpus)));
+                // Show null for bars once corpus is gone
+                annualWdData.push(corpus === 0 && depleted ? Math.round(annualWd) : Math.round(annualWd));
+                annualRetData.push(Math.round(Math.max(0, annualRet2)));
+                monthlyWdData.push(Math.round(currentWd));
+                tableRows.push({ year: y, opening, monthlyWd: currentWd, annualWd, annualRet: annualRet2, closing: Math.max(0, corpus) });
+                currentWd = currentWd * (1 + inflRate);
+            }
+
+            // PIE
+            new Chart(document.getElementById('pieChart'), {
+                type: 'doughnut',
+                data: {
+                    labels: ['Total Withdrawn', 'Remaining Corpus'],
+                    datasets: [{ data: [data.totalWithdrawn, Math.max(0, data.remainingAmount)], backgroundColor: ['#E91E63','#4CAF50'], borderWidth: 2, borderColor: isDark ? '#0a0818' : '#fff' }]
+                },
+                options: { responsive: true, cutout: '65%', plugins: { legend: { position:'bottom', labels:{color:textColor} }, tooltip: { callbacks: { label: ctx => ctx.label + ': ' + fmtCr(ctx.parsed) } } } }
+            });
+
+            // WITHDRAWAL GROWTH
+            new Chart(document.getElementById('withdrawalChart'), {
+                type: 'line',
+                data: {
+                    labels: yearLabels,
+                    datasets: [{ label: 'Monthly Withdrawal', data: monthlyWdData, borderColor: '#E91E63', backgroundColor: 'rgba(233,30,99,0.1)', fill: true, tension: 0.4, pointRadius: 3 }]
+                },
+                options: { responsive: true, plugins: { legend:{display:false}, tooltip:{callbacks:{label:ctx=>fmtCr(ctx.parsed.y)+'/mo'}} }, scales: { x:{ticks:{color:tickColor},grid:{color:gridColor}}, y:{ticks:{color:tickColor,callback:v=>fmtCr(v)},grid:{color:gridColor}} } }
+            });
+
+            // LINE - corpus depletion
+            new Chart(document.getElementById('lineChart'), {
+                type: 'line',
+                data: {
+                    labels: yearLabels,
+                    datasets: [{ label: 'Corpus Value', data: corpusData, borderColor: '#9C27B0', backgroundColor: 'rgba(156,39,176,0.1)', fill: true, tension: 0.4, pointRadius: 3 }]
+                },
+                options: { responsive: true, plugins: { legend:{display:false}, tooltip:{callbacks:{label:ctx=>fmtCr(ctx.parsed.y)}} }, scales: { x:{ticks:{color:tickColor},grid:{color:gridColor}}, y:{ticks:{color:tickColor,callback:v=>fmtCr(v)},grid:{color:gridColor},min:0} } }
+            });
+
+            // BAR - withdrawals vs returns
+            new Chart(document.getElementById('barChart'), {
+                type: 'bar',
+                data: {
+                    labels: yearLabels,
+                    datasets: [
+                        { label: 'Annual Withdrawal', data: annualWdData, backgroundColor: 'rgba(233,30,99,0.8)', borderRadius: 4 },
+                        { label: 'Returns Earned', data: annualRetData, backgroundColor: 'rgba(76,175,80,0.8)', borderRadius: 4 }
+                    ]
+                },
+                options: { responsive: true, plugins: { legend:{position:'top',labels:{color:textColor}}, tooltip:{callbacks:{label:ctx=>ctx.dataset.label+': '+fmtCr(ctx.parsed.y)}} }, scales: { x:{ticks:{color:tickColor},grid:{color:gridColor}}, y:{ticks:{color:tickColor,callback:v=>fmtCr(v)},grid:{color:gridColor}} } }
+            });
+
+            // TABLE
+            var tbody = document.getElementById('tableBody');
+            tableRows.forEach(function(row) {
+                var tr = document.createElement('tr');
+                if (row.closing === 0) tr.classList.add('depleted-row');
+                tr.innerHTML =
+                    '<td><strong>Year ' + row.year + '</strong></td>' +
+                    '<td>' + fmtCr(row.opening) + '</td>' +
+                    '<td>' + fmtCr(row.monthlyWd) + '/mo</td>' +
+                    '<td style="color:#c62828">' + fmtCr(row.annualWd) + '</td>' +
+                    '<td style="color:#2e7d32">' + fmtCr(row.annualRet) + '</td>' +
+                    '<td style="font-weight:700; color:' + (row.closing === 0 ? '#c62828' : '#333') + '">' +
+                    (row.closing === 0 ? '⚠️ Depleted' : fmtCr(row.closing)) + '</td>';
+                tbody.appendChild(tr);
+            });
+        </script>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+    function parseAmt(v) { return parseFloat(String(v).replace(/,/g,'')) || 0; }
+    function setVal(id, val, el) {
+        document.getElementById(id).value = val;
+        // Update active state on sibling buttons
+        if (el) {
+            el.closest('div').querySelectorAll('span').forEach(function(s) {
+                s.style.background = '#fff5f8';
+                s.style.borderColor = '#fce4ec';
+            });
+            el.style.background = '#fce4ec';
+            el.style.borderColor = '#E91E63';
+        }
+        updatePreview();
+    }
+
+    function fmtPrev(n) {
+        n = Math.round(n);
+        if (window.M3 && window.M3.fmtMoneyShort) return window.M3.fmtMoneyShort(n);
+        if (n >= 10000000) return '₹' + (n/10000000).toFixed(2) + ' Cr';
+        if (n >= 100000)   return '₹' + (n/100000).toFixed(1) + ' L';
+        return '₹' + n.toLocaleString('en-IN');
+    }
+
+    function updatePreview() {
+        var inv    = parseAmt(document.getElementById('initInv').value);
+        var wd     = parseAmt(document.getElementById('monthlyWd').value);
+        var ret    = parseFloat(document.getElementById('expReturn').value) || 0;
+        var period = parseInt(document.getElementById('timePeriod').value) || 0;
+        var infl   = parseFloat(document.getElementById('inflRate').value) || 0;
+        if (!inv || !wd || !ret || !period) return;
+
+        var mRate = ret / 12 / 100;
+        var corpus = inv, currentWd = wd, totalWd = 0, monthsSustained = 0;
+        var finalWd = wd;
+
+        for (var y = 0; y < period; y++) {
+            for (var m = 0; m < 12; m++) {
+                corpus = corpus * (1 + mRate) - currentWd;
+                totalWd += currentWd;
+                monthsSustained++;
+                if (corpus <= 0) { corpus = 0; goto_end = true; break; }
+            }
+            finalWd = currentWd;
+            currentWd = currentWd * (1 + infl/100);
+            if (corpus <= 0) break;
+        }
+
+        var rate = (wd * 12 / inv * 100).toFixed(1);
+        document.getElementById('lpRate').textContent   = rate + '% p.a.';
+        document.getElementById('lpFinal').textContent  = fmtPrev(finalWd) + '/mo';
+        document.getElementById('lpTotal').textContent  = fmtPrev(totalWd);
+        document.getElementById('lpRemain').textContent = corpus > 0 ? fmtPrev(corpus) : '⚠️ Depleted';
+
+        // Sustainability meter
+        var sustainYrs = (monthsSustained / 12).toFixed(1);
+        var pct = Math.min((monthsSustained / (period*12)) * 100, 100);
+        document.getElementById('sustainYears').textContent = sustainYrs + ' Years' + (corpus > 0 ? ' ✅' : ' ⚠️');
+        document.getElementById('sustainFill').style.width = pct + '%';
+        document.getElementById('sustainFill').style.background = corpus > 0 ? '#4CAF50' : '#f44336';
+        document.getElementById('sustainMid').textContent = 'Year ' + Math.round(period/2);
+        document.getElementById('sustainEnd').textContent = 'Year ' + period;
+    }
+
+    // Indian formatting
+    function formatINR_input(num) {
+        num = Math.round(parseFloat(num) || 0);
+        if (num <= 0) return '';
+        var cur = 'indian';
+        try { var v = localStorage.getItem('m3-currency'); if (v === 'western' || v === 'indian') cur = v; } catch (e) {}
+        if (cur === 'western') return num.toLocaleString('en-US');
+        var s = num.toString();
+        if (s.length <= 3) return s;
+        var last3 = s.slice(-3), rest = s.slice(0,-3), result = '';
+        while (rest.length > 2) { result = ',' + rest.slice(-2) + result; rest = rest.slice(0,-2); }
+        return rest + result + ',' + last3;
+    }
+    function onAmtKeyup(el) {
+        var raw = el.value.replace(/,/g,'').replace(/[^0-9]/g,'');
+        var num = parseInt(raw, 10);
+        var pos = el.selectionStart, oldLen = el.value.length;
+        el.value = raw === '' ? '' : formatINR_input(num);
+        var newPos = pos + (el.value.length - oldLen);
+        el.setSelectionRange(newPos, newPos);
+    }
+    document.addEventListener('DOMContentLoaded', function() {
+        document.querySelectorAll('.amt-input').forEach(function(el) {
+            var num = parseInt((el.value||'').replace(/,/g,''), 10);
+            if (!isNaN(num) && num > 0) el.value = formatINR_input(num);
+        });
+        document.querySelectorAll('form').forEach(function(form) {
+            form.addEventListener('submit', function() {
+                form.querySelectorAll('.amt-input').forEach(function(el) { el.value = el.value.replace(/,/g,''); });
+            });
+        });
+        updatePreview();
+    });
+
+    // PDF
+    function fmtINR(num) {
+        num = Math.round(num);
+        var cur = 'indian';
+        try { var v = localStorage.getItem('m3-currency'); if (v === 'western' || v === 'indian') cur = v; } catch (e) {}
+        if (cur === 'western') {
+            return '$' + num.toLocaleString('en-US');
+        }
+        var s = num.toString();
+        if (s.length <= 3) return 'Rs.' + s;
+        var last3 = s.slice(-3), rest = s.slice(0,-3), result = '';
+        while (rest.length > 2) { result = ',' + rest.slice(-2) + result; rest = rest.slice(0,-2); }
+        return 'Rs.' + rest + result + ',' + last3;
+    }
+    function downloadSwpPdf() {
+        var el = document.getElementById('swp-data');
+        if (!el) { alert('Calculate first!'); return; }
+        var d = JSON.parse(el.textContent);
+        try {
+            var { jsPDF } = window.jspdf;
+            var doc = new jsPDF({ unit:'mm', format:'a4' });
+            var PW=210, PH=297;
+            var ACC=[233,30,99], DARK=[26,26,46], GRAY=[100,116,139], WHITE=[255,255,255], LIGHT=[241,245,251];
+
+            doc.setFillColor(...DARK); doc.rect(0,0,PW,28,'F');
+            doc.setFillColor(...ACC);  doc.rect(0,0,4,28,'F');
+            doc.setTextColor(...WHITE); doc.setFont('helvetica','bold'); doc.setFontSize(16);
+            doc.text('SWP Calculator Report', 10, 12);
+            doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(148,163,184);
+            doc.text('M3 Portfolio Investment Analysis  |  ' + new Date().toLocaleDateString('en-IN'), 10, 21);
+
+            var cy = 36;
+            var inputs = [
+                { label:'Initial Corpus',      value: fmtINR(d.initialInvestment) },
+                { label:'Monthly Withdrawal',  value: fmtINR(d.monthlyWithdrawal) + '/mo' },
+                { label:'Expected Return',     value: d.expectedReturn + '% p.a.' },
+                { label:'Withdrawal Period',   value: d.years + ' Years' },
+                { label:'Inflation Rate',      value: d.inflationRate + '% p.a.' },
+            ];
+            doc.setFillColor(...LIGHT); doc.roundedRect(10,cy,PW-20,8+inputs.length*7,2,2,'F');
+            doc.setFillColor(...ACC);   doc.roundedRect(10,cy,3,8+inputs.length*7,1,1,'F');
+            doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(...DARK);
+            doc.text('Input Parameters', 16, cy+6);
+            inputs.forEach(function(inp,i) {
+                doc.setFont('helvetica','normal'); doc.setFontSize(8.5); doc.setTextColor(...GRAY);
+                doc.text(inp.label+':', 16, cy+13+i*7);
+                doc.setFont('helvetica','bold'); doc.setTextColor(...DARK);
+                doc.text(inp.value, 85, cy+13+i*7);
+            });
+            cy += 8+inputs.length*7+8;
+
+            var cards = [
+                { label:'Initial Corpus',    value: fmtINR(d.initialInvestment) },
+                { label:'Total Withdrawn',   value: fmtINR(d.totalWithdrawn) },
+                { label:'Remaining Corpus',  value: fmtINR(d.remainingAmount) },
+                { label:'Fund Lasted',       value: (d.monthsSustained/12).toFixed(1)+' Years', highlight: true },
+            ];
+            var cw = (PW-20-(cards.length-1)*4)/cards.length;
+            cards.forEach(function(card,i) {
+                var x = 10+i*(cw+4);
+                if (card.highlight) { doc.setFillColor(...ACC); } else { doc.setFillColor(...LIGHT); }
+                doc.roundedRect(x,cy,cw,22,2,2,'F');
+                doc.setFont('helvetica','normal'); doc.setFontSize(6.5);
+                if (card.highlight) { doc.setTextColor(...WHITE); } else { doc.setTextColor(...GRAY); }
+                doc.text(card.label, x+3, cy+7);
+                doc.setFont('helvetica','bold'); doc.setFontSize(10);
+                if (card.highlight) { doc.setTextColor(...WHITE); } else { doc.setTextColor(...ACC); }
+                doc.text(card.value, x+3, cy+17);
+            });
+            cy += 30;
+
+            var canvas = document.getElementById('lineChart');
+            if (canvas) {
+                var img = canvas.toDataURL('image/png');
+                doc.setFillColor(...LIGHT); doc.roundedRect(10,cy,PW-20,68,2,2,'F');
+                doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(...DARK);
+                doc.text('Corpus Depletion Chart', 14, cy+6);
+                doc.addImage(img,'PNG',12,cy+8,PW-24,58); cy += 76;
+            }
+
+            // Table
+            var mRate2 = d.expectedReturn/12/100, corp2 = d.initialInvestment, curWd2 = d.monthlyWithdrawal, inflR = d.inflationRate/100;
+            var tBody = [];
+            for (var y2=1; y2<=d.years; y2++) {
+                var opening2=corp2, annWd2=0, annRet2=0;
+                for (var m2=0;m2<12;m2++) { var r2=corp2*mRate2; corp2=corp2+r2-curWd2; annWd2+=curWd2; annRet2+=r2; if(corp2<=0){corp2=0;break;} }
+                tBody.push(['Year '+y2, fmtINR(opening2), fmtINR(curWd2)+'/mo', fmtINR(annWd2), fmtINR(Math.max(0,corp2))]);
+                curWd2 = curWd2*(1+inflR);
+            }
+            doc.autoTable({ startY:cy, head:[['Year','Opening','Monthly WD','Annual WD','Closing']], body:tBody, headStyles:{fillColor:ACC,textColor:WHITE,fontStyle:'bold',fontSize:8}, bodyStyles:{fontSize:8,textColor:DARK}, alternateRowStyles:{fillColor:[255,243,248]}, margin:{left:10,right:10} });
+
+            doc.setFillColor(...DARK); doc.rect(0,PH-12,PW,12,'F');
+            doc.setFillColor(...ACC);  doc.rect(0,PH-12,4,12,'F');
+            doc.setFont('helvetica','normal'); doc.setFontSize(7); doc.setTextColor(148,163,184);
+            doc.text('M3 Portfolio Investment Analysis  |  For informational purposes only.', 9, PH-5);
+            doc.save('SWP_Report.pdf');
+        } catch(e) { alert('PDF Error: '+e.message); }
+    }
+</script>
+
+<script>
+(function () {
+    var params = new URLSearchParams(window.location.search);
+    if (!params.toString()) return;
+    var filled = 0;
+    params.forEach(function (value, key) {
+        var el = document.querySelector('[name="' + key + '"]') || document.getElementById(key);
+        if (!el) return;
+        el.value = value;
+        el.dispatchEvent(new Event('input',  { bubbles: true }));
+        el.dispatchEvent(new Event('change', { bubbles: true }));
+        filled++;
+    });
+    if (filled === 0) return;
+    var style = document.createElement('style');
+    style.textContent = '@keyframes m3BI{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:translateY(0)}}@keyframes m3BO{to{opacity:0;transform:translateY(-10px)}}.m3ab{position:fixed;top:20px;right:20px;z-index:9999;background:linear-gradient(135deg,#fff8f0,#fff3e0);border:2px solid #FF9800;border-radius:12px;padding:12px 18px;font-family: 'DM Sans', 'Segoe UI', sans-serif;font-size:.84em;font-weight:700;color:#e65100;box-shadow:0 6px 24px rgba(255,152,0,.25);display:flex;align-items:center;gap:10px;max-width:320px;animation:m3BI .35s ease}.m3ab .m3bi{font-size:1.3em;flex-shrink:0}.m3ab .m3bs{font-size:.82em;font-weight:400;color:#f57c00;margin-top:2px}body.dark-mode .m3ab{background:rgba(251,146,60,.12)!important;border-color:rgba(251,146,60,.4)!important;color:#fb923c!important}';
+    document.head.appendChild(style);
+    var b = document.createElement('div');
+    b.className = 'm3ab';
+    b.innerHTML = '<span class="m3bi">\uD83C\uDFAF</span><span><div>' + filled + ' field' + (filled > 1 ? 's' : '') + ' pre-filled</div><div class="m3bs">From AI Goal Planner</div></span>';
+    document.body.appendChild(b);
+    setTimeout(function(){ b.style.animation='m3BO .4s ease forwards'; setTimeout(function(){ b.remove(); }, 400); }, 3500);
+    if (typeof updatePreview === 'function') { try { updatePreview(); } catch(e){} }
+})();
+</script>
+
+<div class="calc-container">{% include '_disclaimer.html' %}</div>
+<script>
+// Currency preference live-update: swap input-prefix symbols and re-render preview
+(function () {
+  function refreshSyms() {
+    var sym = (window.M3 && typeof window.M3.currencySymbol === 'function')
+              ? window.M3.currencySymbol()
+              : ((function(){ try { return localStorage.getItem('m3-currency') === 'western' ? '$' : '₹'; } catch(e){ return '₹'; } })());
+    var nodes = document.querySelectorAll('.m3-cursym');
+    for (var i = 0; i < nodes.length; i++) nodes[i].textContent = sym;
+  }
+  function refreshPreview() {
+    if (typeof updatePreview === 'function') { try { updatePreview(); } catch(e){} }
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', refreshSyms);
+  } else { refreshSyms(); }
+  window.addEventListener('m3-currency-change', function () { refreshSyms(); refreshPreview(); });
+})();
+</script>
+
+</body>
+</html>

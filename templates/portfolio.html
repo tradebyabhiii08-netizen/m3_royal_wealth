@@ -1,0 +1,1930 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Portfolio Analysis | M3 Portfolio Investment Analysis</title>
+<link rel="stylesheet" href="/static/design-tokens.css">
+<script>
+  (function () {
+    try {
+      var saved = localStorage.getItem('m3-theme');
+      var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      var theme = saved || (prefersDark ? 'dark' : 'light');
+      document.documentElement.setAttribute('data-theme', theme);
+      if (theme === 'dark') { document.addEventListener('DOMContentLoaded', function () { document.body.classList.add('dark-mode'); }); }
+    } catch (e) {
+      document.documentElement.setAttribute('data-theme', 'light');
+    }
+  })();
+</script>
+<link rel="stylesheet" href="/static/style.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+* { box-sizing: border-box; }
+    :root {
+        --navy:#0f0c29; --navy-m:#1a1550; --gold:#e8c84a; --gold-d:#d4a843;
+        --gold-xl:#fdf3cc; --cream:#fdf9ee; --muted:#6b6080; --ink:#1a0f3c;
+        --card-shd:0 4px 20px rgba(15,12,41,0.11),0 1px 5px rgba(15,12,41,0.06);
+        --card-brd:1px solid rgba(232,200,74,0.2);
+    }
+
+body {
+    font-family: 'DM Sans', 'Segoe UI', sans-serif;
+    min-height: 100vh;
+    padding: 20px;
+    background: linear-gradient(145deg, #f5edcc 0%, #fdf9ee 40%, #fffdf5 70%, #f5edcc 100%);
+    color: #141124;
+}
+html[data-theme="dark"] body,
+body.dark-mode {
+    background: linear-gradient(145deg, #07060f 0%, #0f0c29 45%, #1a1550 80%, #07060f 100%) !important;
+    color: #f4eed2;
+}
+
+.container { max-width: 1150px; margin: 0 auto; }
+
+/* Top nav */
+.top-nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    background: #fdf9ee;
+    padding: 12px 20px;
+    border-radius: 14px;
+    box-shadow: 0 4px 20px rgba(15,12,41,0.11);
+    border: 1px solid rgba(232,200,74,0.2);
+    border-bottom: 3px solid #e8c84a;
+}
+.btn-back {
+    display: inline-block;
+    padding: 10px 20px;
+    background: #0f0c29;
+    color: #e8c84a;
+    text-decoration: none;
+    border-radius: 50px;
+    font-weight: 700;
+    border: none;
+}
+.btn-back:hover { background: #1a1550; }
+
+.page-title {
+    color: #0f0c29;
+    font-size: 1.4em;
+    font-weight: 700;
+    margin: 0;
+    font-family: 'Cormorant Garamond', serif;
+}
+
+/* Cards */
+.card {
+    background: #fdf9ee;
+    border-radius: 14px;
+    padding: 25px;
+    margin-bottom: 22px;
+    box-shadow: 0 8px 28px rgba(15,12,41,0.14), 0 2px 8px rgba(15,12,41,0.07);
+}
+.card h3 {
+    margin: 0 0 18px;
+    color: #0f0c29;
+    font-size: 1.1em;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+
+
+/* Client info */
+.client-input {
+    width: 100%;
+    padding: 12px 15px;
+    border: 1.5px solid #d4a84340;
+    border-radius: 8px;
+    font-size: 1em;
+    transition: border-color 0.2s;
+}
+.client-input:focus { border-color: #d4a843; outline: none; }
+
+/* Tables */
+table { width: 100%; border-collapse: collapse; font-size: 0.92em; }
+th {
+    background: linear-gradient(145deg, #07060f 0%, #0f0c29 45%, #1a1550 80%, #07060f 100%);
+    color: #fff;
+    padding: 10px 12px;
+    text-align: left;
+    font-weight: 600;
+}
+th:first-child { border-radius: 8px 0 0 0; }
+th:last-child { border-radius: 0 8px 0 0; }
+td { padding: 7px 8px; border-bottom: 1px solid #f0f0f0; }
+tr:hover td { background: #fdf3cc; }
+
+tr:last-child td { border-bottom: none; }
+
+/* Table inputs */
+td input {
+    width: 100%;
+    padding: 7px 10px;
+    border: 1.5px solid #e8e8e8;
+    border-radius: 6px;
+    font-size: 0.92em;
+    transition: border-color 0.2s, background 0.2s;
+    background: #fdf9ee;
+}
+td input:focus { border-color: #d4a843; outline: none; background: #fdf9ee; }
+td input[readonly] {
+    background: rgba(15,12,41,0.05);
+    color: #3d3050;
+    border-color: #eee;
+    cursor: default;
+}
+
+
+
+
+/* Instrument label */
+.instrument-name {
+    font-weight: 700;
+    color: #0f0c29;
+    white-space: nowrap;
+}
+
+/* Rename "Others" inline */
+.rename-wrap {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.rename-input {
+    border: none;
+    background: transparent;
+    font-weight: 600;
+    color: #0f0c29;
+    font-size: 0.92em;
+    width: 120px;
+    padding: 2px 4px;
+    border-radius: 4px;
+    cursor: text;
+    transition: background 0.2s, border 0.2s;
+}
+.rename-input:focus {
+    outline: none;
+    background: #f0f0ff;
+    border: 1px solid rgba(232,200,74,0.35);
+    cursor: text;
+}
+.rename-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 0.8em;
+    color: #6b6080;
+    padding: 2px 4px;
+    border-radius: 4px;
+    transition: color 0.2s, background 0.2s;
+    line-height: 1;
+}
+.rename-btn:hover { color: #d4a843; background: #f0f0ff; }
+
+
+
+
+
+/* Custom instrument rows */
+.custom-name-input {
+    width: 100%;
+    padding: 5px 8px;
+    border: 1.5px solid #d0d0f0;
+    border-radius: 6px;
+    font-size: 0.88em;
+    font-weight: 600;
+    color: #0f0c29;
+    background: #fafaff;
+    transition: border-color 0.2s;
+}
+.custom-name-input:focus { border-color: #d4a843; outline: none; background: #f5f5ff; }
+.custom-name-input::placeholder { color: #bbb; font-weight: 400; }
+
+
+
+.btn-delete-row {
+    background: none;
+    border: 1px solid #ffcdd2;
+    color: #e53935;
+    border-radius: 6px;
+    padding: 4px 9px;
+    cursor: pointer;
+    font-size: 0.85em;
+    transition: background 0.2s;
+}
+.btn-delete-row:hover { background: #ffebee; }
+
+
+
+/* Add custom instrument button */
+.btn-add-custom {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 12px;
+    padding: 8px 18px;
+    background: #f0f0ff;
+    color: #d4a843;
+    border: 1.5px dashed rgba(232,200,74,0.4);
+    border-radius: 8px;
+    font-size: 0.88em;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+.btn-add-custom:hover { background: #e0e0ff; }
+
+
+
+/* Custom row highlight */
+tr.custom-row td { background: #fdfcff; }
+
+
+/* ── CATEGORY BADGES ── */
+.cat-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 2px 8px;
+    border-radius: 20px;
+    font-size: 0.72em;
+    font-weight: 700;
+    white-space: nowrap;
+}
+.cat-equity { background: #fdf9ee; color: #0f0c29; }
+.cat-debt   { background: #fffbeb; color: #b45309; }
+.cat-real   { background: #ecfdf5; color: #047857; }
+.cat-alt    { background: #fefce8; color: #a16207; }
+
+
+
+
+/* ── LIQUIDITY DOTS ── */
+.liq-dot {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-size: 0.73em; font-weight: 500; color: #4a3f5c;
+}
+.liq-dot::before {
+    content: ''; display: inline-block;
+    width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0;
+}
+.liq-high::before { background: #22c55e; }
+.liq-med::before  { background: #f59e0b; }
+.liq-low::before  { background: #ef4444; }
+
+/* ── MODAL OVERLAY ── */
+.modal-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(10,12,30,0.5);
+    backdrop-filter: blur(4px); z-index: 1000;
+    align-items: center; justify-content: center; padding: 20px;
+}
+.modal-overlay.active { display: flex; }
+.modal-box {
+    background: #fdf9ee; border-radius: 18px; width: 100%; max-width: 490px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.25); overflow: hidden;
+    animation: modalPop 0.25s cubic-bezier(0.175,0.885,0.32,1.275);
+}
+
+@keyframes modalPop {
+    from { transform: scale(0.88) translateY(16px); opacity: 0; }
+    to   { transform: scale(1) translateY(0); opacity: 1; }
+}
+.modal-header {
+    padding: 20px 22px 14px; border-bottom: 1px solid #f0f0f0;
+    display: flex; align-items: flex-start; justify-content: space-between;
+}
+
+.modal-header h3 { font-size: 1em; font-weight: 700; color: #333; margin: 0 0 3px; }
+
+.modal-header p  { font-size: 0.78em; color: #6b6080; margin: 0; }
+.btn-modal-close {
+    background: rgba(15,12,41,0.05); border: none; cursor: pointer;
+    width: 28px; height: 28px; border-radius: 7px; font-size: 0.9em; color: #6b6080;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.15s, color 0.15s; flex-shrink: 0;
+}
+.btn-modal-close:hover { background: #ffebeb; color: #ef4444; }
+
+.modal-body { padding: 18px 22px; }
+.modal-tabs {
+    display: flex; gap: 5px; background: #f4f5fa;
+    padding: 4px; border-radius: 10px; margin-bottom: 16px;
+}
+
+.modal-tab {
+    flex: 1; padding: 7px; border: none; border-radius: 7px;
+    font-size: 0.8em; font-weight: 600; cursor: pointer;
+    color: #6b6080; background: transparent; transition: all 0.2s; font-family: 'DM Sans', 'Segoe UI', sans-serif;
+}
+.modal-tab.active { background: #fdf9ee; color: #1a1550; box-shadow: 0 2px 8px rgba(107,115,255,0.15); }
+
+.lib-search {
+    width: 100%; padding: 9px 13px 9px 36px;
+    border: 1.5px solid #e8e8e8; border-radius: 9px; font-size: 0.88em;
+    margin-bottom: 10px; transition: border-color 0.2s;
+    background: #fafbff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' fill='%23aaa' viewBox='0 0 16 16'%3E%3Cpath d='M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001q.044.06.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1 1 0 0 0-.115-.099zm-5.242 1.656a5.5 5.5 0 1 1 0-11 5.5 5.5 0 0 1 0 11'/%3E%3C/svg%3E") no-repeat 11px center;
+}
+.lib-search:focus { outline: none; border-color: #e8c84a; background-color: white; }
+
+.lib-list { display: flex; flex-direction: column; gap: 4px; max-height: 230px; overflow-y: auto; }
+.lib-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 9px 11px; border-radius: 9px; cursor: pointer;
+    border: 1.5px solid transparent; transition: all 0.15s;
+}
+.lib-item:hover { background: #f0f0ff; border-color: #d0d4ff; }
+.lib-item.lib-selected { background: #fdf3cc; border-color: #e8c84a; }
+.lib-item.lib-disabled { opacity: 0.4; cursor: not-allowed; }
+
+
+.lib-icon {
+    width: 32px; height: 32px; border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1em; flex-shrink: 0;
+}
+.lib-info { flex: 1; min-width: 0; }
+.lib-name { font-weight: 700; font-size: 0.85em; color: #333; }
+
+.lib-desc { font-size: 0.72em; color: #6b6080; margin-top: 1px; }
+.lib-meta { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; flex-shrink: 0; }
+.lib-xirr { font-size: 0.72em; font-weight: 600; color: #1a1550; }
+.lib-empty { text-align: center; padding: 20px; color: #6b6080; font-size: 0.85em; }
+.form-grp { margin-bottom: 14px; }
+.form-lbl {
+    display: block; font-size: 0.75em; font-weight: 700;
+    color: #6b6080; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.04em;
+}
+.form-ctrl {
+    width: 100%; padding: 9px 12px; border: 1.5px solid #e8e8e8;
+    border-radius: 9px; font-size: 0.9em; color: #333; font-family: 'DM Sans', 'Segoe UI', sans-serif;
+    transition: border-color 0.2s;
+}
+.form-ctrl:focus { outline: none; border-color: #e8c84a; }
+
+.cat-select { display: flex; gap: 8px; }
+.cat-opt {
+    flex: 1; padding: 9px 5px; border: 1.5px solid #e8e8e8;
+    border-radius: 9px; text-align: center; cursor: pointer;
+    transition: all 0.15s; font-size: 0.78em; font-weight: 600; color: #6b6080;
+}
+.cat-opt .cicon { font-size: 1.2em; display: block; margin-bottom: 3px; }
+.cat-opt:hover { border-color: #c0c4ff; background: #fafbff; }
+.cat-opt.sel-equity { border-color: #1a1550; background: #fdf9ee; color: #0f0c29; }
+.cat-opt.sel-debt   { border-color: #f59e0b; background: #fffbeb; color: #b45309; }
+.cat-opt.sel-real   { border-color: #10b981; background: #ecfdf5; color: #047857; }
+.cat-opt.sel-alt    { border-color: #D97706; background: #fefce8; color: #a16207; }
+
+.liq-select { display: flex; gap: 8px; }
+.liq-opt {
+    flex: 1; padding: 8px 5px; border: 1.5px solid #e8e8e8;
+    border-radius: 9px; text-align: center; cursor: pointer;
+    transition: all 0.15s; font-size: 0.78em; font-weight: 600; color: #6b6080;
+}
+.liq-opt:hover { border-color: #b8aec8; background: #fdf6e3; }
+.liq-opt.sel-high { border-color: #22c55e; background: #fdf9ee; color: #15803d; }
+.liq-opt.sel-med  { border-color: #f59e0b; background: #fffbeb; color: #92400e; }
+.liq-opt.sel-low  { border-color: #ef4444; background: #fff1f1; color: #b91c1c; }
+
+.liq-hint { font-size: 0.7em; color: #6b6080; margin-top: 5px; line-height: 1.5; }
+.modal-footer {
+    padding: 14px 22px; border-top: 1px solid rgba(232,200,74,0.15);
+    display: flex; gap: 8px; justify-content: flex-end;
+}
+
+.btn-mcancel {
+    padding: 9px 18px; border: 1.5px solid #e8e8e8; border-radius: 9px;
+    background: #fdf9ee; font-family: 'DM Sans', 'Segoe UI', sans-serif; font-size: 0.85em;
+    font-weight: 600; color: #6b6080; cursor: pointer; transition: all 0.15s;
+}
+.btn-mcancel:hover { border-color: #b8aec8; color: #0f0c29; }
+
+.btn-mconfirm {
+    padding: 9px 22px; border: none; border-radius: 9px;
+    background: linear-gradient(135deg, #e8c84a, #d4a843);
+    color: #0f0c29; font-family: 'DM Sans', 'Segoe UI', sans-serif;
+    font-size: 0.85em; font-weight: 700; cursor: pointer;
+    transition: opacity 0.15s, transform 0.1s; box-shadow: 0 4px 12px rgba(232,200,74,0.3);
+}
+.btn-mconfirm:hover { opacity: 0.9; transform: translateY(-1px); }
+.btn-mconfirm:disabled { opacity: 0.35; cursor: not-allowed; transform: none; }
+.toast-notif {
+    position: fixed; bottom: 24px; right: 24px;
+    background: #0f0c29; color: #e8c84a; padding: 11px 18px; border-radius: 10px;
+    font-size: 0.85em; font-weight: 500; box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+    z-index: 9999; opacity: 0; transform: translateY(8px);
+    transition: opacity 0.3s, transform 0.3s; pointer-events: none;
+}
+.toast-notif.show { opacity: 1; transform: translateY(0); }
+
+/* XIRR hint badge */
+.xirr-badge {
+    display: inline-block;
+    font-size: 0.72em;
+    color: #5c5c8a;
+    background: #f0f0ff;
+    border: 1px solid #d0d0f0;
+    border-radius: 4px;
+    padding: 2px 7px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+.xirr-badge:hover { background: #e0e0ff; }
+
+
+
+/* Metrics row */
+.metric-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 14px;
+    margin-top: 18px;
+}
+.metric {
+    background: #f7f9fc;
+    padding: 14px;
+    border-left: 4px solid #e8c84a;
+    border-radius: 8px;
+    text-align: center;
+}
+.metric .m-label { font-size: 0.8em; color: #777; margin-bottom: 4px; }
+.metric .m-value { font-size: 1.3em; font-weight: 700; color: #333; }
+.metric.good { border-color: #4caf50; }
+.metric.good .m-value { color: #2e7d32; }
+.metric.warn { border-color: #ff9800; }
+.metric.warn .m-value { color: #e65100; }
+
+
+
+
+
+
+/* Analysis box */
+.analysis-box {
+    margin-top: 15px;
+    padding: 14px 16px;
+    border-radius: 8px;
+    border-left: 4px solid #2196f3;
+    background: #e8f4ff;
+    font-size: 0.92em;
+    line-height: 1.6;
+}
+
+
+/* Charts side by side */
+.charts-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-top: 20px;
+}
+.chart-box {
+    background: #fdf6e3;
+    border-radius: 10px;
+    padding: 15px;
+    text-align: center;
+}
+.chart-box h4 { margin: 0 0 10px; font-size: 0.9em; color: #3d3050; }
+.chart-box canvas { max-height: 200px; }
+
+
+
+/* Submit button */
+.submit-area { text-align: center; margin-top: 10px; }
+.btn-submit {
+    background: linear-gradient(135deg, #e8c84a, #d4a843);
+    color: #0f0c29;
+    padding: 14px 50px;
+    border: none;
+    border-radius: 50px;
+    font-size: 1em;
+    font-weight: 700;
+    cursor: pointer;
+    transition: opacity 0.2s, transform 0.1s;
+    box-shadow: 0 4px 15px rgba(107, 115, 255, 0.4);
+}
+.btn-submit:hover { opacity: 0.92; transform: translateY(-1px); }
+
+/* Validation error */
+.error-msg {
+    display: none;
+    background: #ffebee;
+    border-left: 4px solid #f44336;
+    padding: 12px 16px;
+    border-radius: 8px;
+    margin-top: 15px;
+    color: #c62828;
+    font-size: 0.92em;
+}
+.error-msg.show { display: block; }
+
+/* Sync toggle */
+.sync-toggle {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 15px;
+    font-size: 0.88em;
+    color: #3d3050;
+}
+
+.toggle-switch {
+    position: relative;
+    width: 42px;
+    height: 22px;
+    flex-shrink: 0;
+}
+.toggle-switch input { opacity: 0; width: 0; height: 0; }
+.toggle-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: #ccc;
+    border-radius: 22px;
+    transition: 0.3s;
+}
+.toggle-slider:before {
+    content: '';
+    position: absolute;
+    height: 16px; width: 16px;
+    left: 3px; bottom: 3px;
+    background: #fdf9ee;
+    border-radius: 50%;
+    transition: 0.3s;
+}
+.toggle-switch input:checked + .toggle-slider { background: #e8c84a; color: #0f0c29; }
+.toggle-switch input:checked + .toggle-slider:before { transform: translateX(20px); }
+
+@media (max-width: 768px) {
+    .charts-row { grid-template-columns: 1fr; }
+    .metric-grid { grid-template-columns: 1fr 1fr; }
+}
+
+
+/* ══════════════════════════════════════════════════════════════
+   M3 PROFESSIONAL DARK MODE — Fintech Edition
+   Deep space aesthetic with proper depth, contrast & hierarchy
+   ══════════════════════════════════════════════════════════════ */
+
+/* ── Base & Background ── */
+body.dark-mode {
+    background: #07060f !important;
+    color: #e2e8f0 !important;
+}
+
+/* ── Navigation ── */
+body.dark-mode .btn-back {
+    background: rgba(139,92,246,0.12) !important;
+    border: 1px solid rgba(139,92,246,0.3) !important;
+    color: #f5d96b !important;
+}
+body.dark-mode .btn-back:hover {
+    background: rgba(139,92,246,0.22) !important;
+    border-color: rgba(139,92,246,0.5) !important;
+}
+body.dark-mode .page-title { color: #f1f5f9 !important; }
+
+/* ── Cards — elevated dark panels ── */
+body.dark-mode .card {
+    background: #0a0818 !important;
+    border: 1px solid #1a1550 !important;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.4), 0 8px 32px rgba(0,0,0,0.3) !important;
+    color: #e2e8f0 !important;
+}
+body.dark-mode .card h3 {
+    color: #a5b4fc !important;
+    border-bottom: 1px solid #1a1550 !important;
+    padding-bottom: 12px !important;
+    margin-bottom: 18px !important;
+}
+
+/* ── Client Name Input ── */
+body.dark-mode .client-input {
+    background: #07060f !important;
+    border: 1.5px solid #2a3050 !important;
+    color: #f1f5f9 !important;
+    border-radius: 10px !important;
+}
+body.dark-mode .client-input:focus {
+    background: #07060f !important;
+    border-color: #e8c84a !important;
+    box-shadow: 0 0 0 3px rgba(232,200,74,0.12) !important;
+    outline: none !important;
+}
+body.dark-mode .client-input::placeholder { color: #3d4a6a !important; }
+
+/* ── Table Header ── */
+body.dark-mode th {
+    background: #1a1f36 !important;
+    color: #94a3b8 !important;
+    border-bottom: 2px solid #252d4a !important;
+    font-size: 0.78em !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.06em !important;
+    text-transform: uppercase !important;
+}
+
+/* ── Table Body ── */
+body.dark-mode table { background: transparent !important; }
+body.dark-mode tr td {
+    background: #0a0818 !important;
+    color: #cbd5e1 !important;
+    border-bottom: 1px solid #07060f !important;
+    transition: background 0.12s !important;
+}
+body.dark-mode tr:nth-child(even) td {
+    background: #07060f !important;
+}
+body.dark-mode tr:hover td {
+    background: #0f0c29 !important;
+    color: #f1f5f9 !important;
+}
+body.dark-mode tr.custom-row td {
+    background: #12192e !important;
+    border-left: 3px solid rgba(139,92,246,0.5) !important;
+}
+body.dark-mode tr:last-child td { border-bottom: none !important; }
+
+/* ── Table Inputs ── */
+body.dark-mode td input {
+    background: #07060f !important;
+    color: #e2e8f0 !important;
+    border: 1.5px solid #252d4a !important;
+    border-radius: 7px !important;
+}
+body.dark-mode td input:focus {
+    background: #07060f !important;
+    border-color: #e8c84a !important;
+    box-shadow: 0 0 0 3px rgba(232,200,74,0.12) !important;
+    outline: none !important;
+    color: #f8fafc !important;
+}
+body.dark-mode td input[readonly] {
+    background: transparent !important;
+    color: #e8c84a !important;
+    border-color: transparent !important;
+    font-weight: 700 !important;
+}
+body.dark-mode td input::placeholder { color: #2e3a55 !important; }
+
+/* ── Instrument Labels ── */
+body.dark-mode .instrument-name { color: #e2e8f0 !important; font-weight: 600 !important; }
+body.dark-mode .instrument-label { color: #64748b !important; }
+
+/* ── Category Badges ── */
+body.dark-mode .cat-equity {
+    background: rgba(232,200,74,0.15) !important;
+    color: #a5b4fc !important;
+    border: 1px solid rgba(232,200,74,0.3) !important;
+}
+body.dark-mode .cat-debt {
+    background: rgba(251,191,36,0.12) !important;
+    color: #fbbf24 !important;
+    border: 1px solid rgba(251,191,36,0.25) !important;
+}
+body.dark-mode .cat-real {
+    background: rgba(52,211,153,0.12) !important;
+    color: #34d399 !important;
+    border: 1px solid rgba(52,211,153,0.25) !important;
+}
+body.dark-mode .cat-alt {
+    background: rgba(217,119,6,0.12) !important;
+    color: #fbbf24 !important;
+    border: 1px solid rgba(217,119,6,0.3) !important;
+}
+
+/* ── Liquidity Dots ── */
+body.dark-mode .liq-high  { color: #34d399 !important; font-weight: 600 !important; }
+body.dark-mode .liq-med   { color: #fbbf24 !important; font-weight: 600 !important; }
+body.dark-mode .liq-low   { color: #f87171 !important; font-weight: 600 !important; }
+
+/* ── XIRR Badge ── */
+body.dark-mode .xirr-badge {
+    background: rgba(232,200,74,0.1) !important;
+    color: #e8c84a !important;
+    border: 1px solid rgba(232,200,74,0.2) !important;
+}
+body.dark-mode .xirr-badge:hover { background: rgba(232,200,74,0.2) !important; }
+
+/* ── Rename input ── */
+body.dark-mode .rename-input { color: #e2e8f0 !important; background: transparent !important; }
+body.dark-mode .rename-input:focus { background: rgba(232,200,74,0.08) !important; border-color: #e8c84a !important; }
+body.dark-mode .rename-btn { color: #374151 !important; }
+body.dark-mode .rename-btn:hover { color: #a5b4fc !important; background: rgba(232,200,74,0.08) !important; }
+
+/* ── Custom instrument name ── */
+body.dark-mode .custom-name-input {
+    background: #07060f !important;
+    color: #e2e8f0 !important;
+    border-color: #252d4a !important;
+}
+body.dark-mode .custom-name-input:focus { border-color: #e8c84a !important; background: #07060f !important; }
+
+/* ── Buttons ── */
+body.dark-mode .btn-delete-row {
+    border-color: rgba(239,68,68,0.25) !important;
+    color: #f87171 !important;
+    background: rgba(239,68,68,0.06) !important;
+}
+body.dark-mode .btn-delete-row:hover { background: rgba(239,68,68,0.15) !important; }
+
+body.dark-mode .btn-add-custom {
+    background: rgba(232,200,74,0.08) !important;
+    color: #e8c84a !important;
+    border: 1.5px dashed rgba(232,200,74,0.35) !important;
+}
+body.dark-mode .btn-add-custom:hover { background: rgba(232,200,74,0.15) !important; border-color: #e8c84a !important; }
+
+/* ── Metrics ── */
+body.dark-mode .metric {
+    background: #07060f !important;
+    border-left-color: #e8c84a !important;
+    border-radius: 8px !important;
+}
+body.dark-mode .metric .m-label { color: #64748b !important; }
+body.dark-mode .metric .m-value { color: #e2e8f0 !important; }
+body.dark-mode .metric.good { border-left-color: #34d399 !important; }
+body.dark-mode .metric.good .m-value { color: #34d399 !important; }
+body.dark-mode .metric.warn { border-left-color: #fbbf24 !important; }
+body.dark-mode .metric.warn .m-value { color: #fbbf24 !important; }
+
+/* ── Analysis Box ── */
+body.dark-mode .analysis-box {
+    background: #07060f !important;
+    border-left: 4px solid #e8c84a !important;
+    color: #cbd5e1 !important;
+}
+
+/* ── Charts ── */
+body.dark-mode .chart-box {
+    background: #07060f !important;
+    border: 1px solid #1a1550 !important;
+}
+body.dark-mode .chart-box h4 { color: #64748b !important; }
+
+/* ── Sync toggle ── */
+body.dark-mode .sync-toggle { color: #e8c84a !important; }
+body.dark-mode .sync-label  { color: #64748b !important; }
+
+/* ── Error message ── */
+body.dark-mode .error-msg {
+    background: rgba(239,68,68,0.08) !important;
+    border-left-color: #ef4444 !important;
+    color: #fca5a5 !important;
+}
+
+/* ── Submit button ── */
+body.dark-mode .btn-submit {
+    background: linear-gradient(135deg, #e8c84a, #d4a843) !important;
+    color: #0f0c29 !important;
+    box-shadow: 0 4px 20px rgba(232,200,74,0.35) !important;
+}
+body.dark-mode .btn-submit:hover {
+    box-shadow: 0 6px 28px rgba(232,200,74,0.5) !important;
+}
+
+/* ── Toast ── */
+body.dark-mode #toastNotif {
+    background: #0f0c29 !important;
+    border: 1px solid #2a3a6a !important;
+    color: #c7d2fe !important;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5) !important;
+}
+
+/* ── Modal ── */
+body.dark-mode .modal-overlay {
+    background: rgba(0,0,0,0.7) !important;
+    backdrop-filter: blur(6px) !important;
+}
+body.dark-mode .modal-box {
+    background: #0a0818 !important;
+    border: 1px solid #1a1550 !important;
+    box-shadow: 0 24px 64px rgba(0,0,0,0.6) !important;
+}
+body.dark-mode .modal-header { border-color: #1a1550 !important; }
+body.dark-mode .modal-header h3 { color: #c7d2fe !important; }
+body.dark-mode .btn-modal-close {
+    background: #07060f !important;
+    color: #94a3b8 !important;
+    border: 1px solid #252d4a !important;
+}
+body.dark-mode .btn-modal-close:hover { background: rgba(239,68,68,0.15) !important; color: #f87171 !important; }
+
+body.dark-mode .modal-tabs { background: #07060f !important; border-radius: 8px !important; padding: 4px !important; }
+body.dark-mode .modal-tab { color: #64748b !important; border-radius: 6px !important; }
+body.dark-mode .modal-tab.active { background: #0f0c29 !important; color: #c7d2fe !important; }
+
+body.dark-mode .lib-search {
+    background: #07060f !important;
+    color: #e2e8f0 !important;
+    border: 1.5px solid #252d4a !important;
+}
+body.dark-mode .lib-search:focus { border-color: #e8c84a !important; background: #07060f !important; }
+
+body.dark-mode .lib-item {
+    background: #07060f !important;
+    border: 1px solid #1a1550 !important;
+}
+body.dark-mode .lib-item:hover { background: #0f0c29 !important; border-color: #e8c84a !important; }
+body.dark-mode .lib-item.lib-selected {
+    background: rgba(232,200,74,0.15) !important;
+    border-color: #e8c84a !important;
+}
+body.dark-mode .lib-name { color: #e2e8f0 !important; }
+body.dark-mode .lib-desc { color: #64748b !important; }
+body.dark-mode .lib-xirr { color: #e8c84a !important; }
+
+body.dark-mode .form-ctrl {
+    background: #07060f !important;
+    color: #e2e8f0 !important;
+    border: 1.5px solid #252d4a !important;
+}
+body.dark-mode .form-ctrl:focus { border-color: #e8c84a !important; background: #07060f !important; }
+
+body.dark-mode .cat-opt, body.dark-mode .liq-opt {
+    background: #07060f !important;
+    border: 1.5px solid #252d4a !important;
+    color: #64748b !important;
+}
+body.dark-mode .cat-opt:hover, body.dark-mode .liq-opt:hover {
+    background: #0f0c29 !important;
+    border-color: #e8c84a !important;
+    color: #c7d2fe !important;
+}
+body.dark-mode .cat-opt.selected, body.dark-mode .liq-opt.selected,
+body.dark-mode .cat-opt.sel-equity, body.dark-mode .cat-opt.sel-debt, body.dark-mode .cat-opt.sel-real, body.dark-mode .cat-opt.sel-alt {
+    background: rgba(232,200,74,0.18) !important;
+    border-color: #e8c84a !important;
+    color: #c7d2fe !important;
+}
+body.dark-mode .modal-footer {
+    border-color: #1a1550 !important;
+    background: #0f1220 !important;
+}
+body.dark-mode .btn-mcancel {
+    background: #07060f !important;
+    border: 1px solid #252d4a !important;
+    color: #94a3b8 !important;
+}
+body.dark-mode .btn-mcancel:hover { background: #252d4a !important; color: #e2e8f0 !important; }
+
+/* ── Scrollbar ── */
+body.dark-mode ::-webkit-scrollbar { width: 5px; height: 5px; }
+body.dark-mode ::-webkit-scrollbar-track { background: #07060f; }
+body.dark-mode ::-webkit-scrollbar-thumb { background: #252d4a; border-radius: 4px; }
+body.dark-mode ::-webkit-scrollbar-thumb:hover { background: #e8c84a; }
+
+</style>
+</head>
+
+<body>
+    <script></script>
+    <script>
+        // Currency setting — localStorage is the single source of truth; fall back to server session
+        var CURRENCY_FORMAT = (function () {
+            try {
+                var v = localStorage.getItem('m3-currency');
+                if (v === 'indian' || v === 'western') return v;
+            } catch (e) {}
+            return "{{ session.get('currency_format', 'indian') }}";
+        })();
+        var CURRENCY_SYMBOL = CURRENCY_FORMAT === 'western' ? '$' : 'Rs.';
+        window.addEventListener('m3-currency-change', function (e) {
+            CURRENCY_FORMAT = (e && e.detail) || CURRENCY_FORMAT;
+            CURRENCY_SYMBOL = CURRENCY_FORMAT === 'western' ? '$' : 'Rs.';
+            var sym = CURRENCY_FORMAT === 'western' ? '$' : '\u20B9';
+            document.querySelectorAll('.m3-cursym').forEach(function (n) { n.textContent = sym; });
+        });
+        function formatCurrency(num) {
+            num = Math.round(num);
+            if (CURRENCY_FORMAT === 'western') {
+                return '$' + num.toLocaleString('en-US');
+            }
+            // Indian format
+            var s = num.toString();
+            if (s.length <= 3) return 'Rs.' + s;
+            var last3 = s.slice(-3), rest = s.slice(0, -3), result = '';
+            while (rest.length > 2) { result = ',' + rest.slice(-2) + result; rest = rest.slice(0, -2); }
+            return 'Rs.' + rest + result + ',' + last3;
+        }
+    </script>
+
+<div class="container">
+
+    <!-- EDIT MODE BANNER -->
+    <div id="editBanner" style="display:none; background:#fff3cd; border:1.5px solid #ffc107;
+         border-radius:10px; padding:12px 20px; margin-bottom:16px; color:#856404;
+         font-weight:600; font-size:0.95em;">
+        ✏️ Edit Mode — You are updating an existing analysis. Submit to save changes.
+    </div>
+
+    <!-- Top Nav -->
+    <div class="top-nav">
+        <a href="/dashboard" class="btn-back">← Dashboard</a>
+        <h2 class="page-title">📊 M3 Portfolio Investment Analysis</h2>
+        <div style="width:120px"></div>
+    </div>
+
+    <form action="/result" method="POST" id="portfolioForm">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            {% if edit_mode %}
+            <input type="hidden" name="edit_id" value="{{ edit_id }}">
+            {% endif %}
+
+    <!-- CLIENT INFO -->
+    <div class="card">
+        <h3>👤 Client Information</h3>
+        <input class="client-input" name="name" id="clientName" required placeholder="Enter client name">
+    </div>
+
+    <!-- M1 – CURRENT PORTFOLIO -->
+    <div class="card">
+        <h3>📁 M1 – Money Review (Current Portfolio)</h3>
+
+        <table>
+            <thead>
+                <tr>
+                    <th style="width:16%">Investment</th>
+                    <th style="width:10%">Category</th>
+                    <th style="width:8%">Liquidity</th>
+                    <th style="width:18%">Amount (<span class="m3-cursym">₹</span>)</th>
+                    <th style="width:18%">XIRR %</th>
+                    <th style="width:14%">Allocation %</th>
+                    <th style="width:16%">Weighted Return</th>
+                </tr>
+            </thead>
+            <tbody id="r1Body">
+                <!-- Rows generated by JS -->
+            </tbody>
+        </table>
+        <button type="button" class="btn-add-custom" onclick="addCustomRow('r1')">
+            ➕ Add Custom Instrument
+        </button>
+
+        <div class="metric-grid">
+            <div class="metric" id="r1_total_card">
+                <div class="m-label">Total Investment</div>
+                <div class="m-value"><span class="m3-cursym">₹</span> <span id="r1_total">0</span></div>
+            </div>
+            <div class="metric" id="r1_return_card">
+                <div class="m-label">Portfolio Return</div>
+                <div class="m-value"><span id="r1_return">0.00</span> %</div>
+            </div>
+            <div class="metric" id="r1_instruments_card">
+                <div class="m-label">Active Instruments</div>
+                <div class="m-value"><span id="r1_instruments">0</span></div>
+            </div>
+        </div>
+
+        <div class="analysis-box" id="r1_analysis">
+            Fill in your portfolio details above to see the analysis.
+        </div>
+
+        <!-- Live Charts -->
+        <div class="charts-row">
+            <div class="chart-box">
+                <h4>📊 Allocation Breakdown</h4>
+                <canvas id="r1PieChart"></canvas>
+            </div>
+            <div class="chart-box">
+                <h4>📈 Weighted Return by Instrument</h4>
+                <canvas id="r1BarChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- M2 – REVISED PORTFOLIO -->
+    <div class="card">
+        <h3>✅ M2 – Mirror (Recommended Portfolio)</h3>
+
+        <div class="sync-toggle">
+            <label class="toggle-switch">
+                <input type="checkbox" id="syncToggle" checked onchange="toggleSync()">
+                <span class="toggle-slider"></span>
+            </label>
+            <span id="syncLabel">🔄 Auto-sync amounts from M1 (turn off to edit M2 independently)</span>
+        </div>
+
+        <table>
+            <thead>
+                <tr>
+                    <th style="width:16%">Investment</th>
+                    <th style="width:10%">Category</th>
+                    <th style="width:8%">Liquidity</th>
+                    <th style="width:18%">Revised Amount (<span class="m3-cursym">₹</span>)</th>
+                    <th style="width:18%">XIRR %</th>
+                    <th style="width:14%">Allocation %</th>
+                    <th style="width:16%">Weighted Return</th>
+                </tr>
+            </thead>
+            <tbody id="r2Body">
+                <!-- Rows generated by JS -->
+            </tbody>
+        </table>
+        <button type="button" class="btn-add-custom" onclick="addCustomRow('r2')">
+            ➕ Add Custom Instrument
+        </button>
+
+        <div class="metric-grid">
+            <div class="metric good" id="r2_total_card">
+                <div class="m-label">Total Investment</div>
+                <div class="m-value"><span class="m3-cursym">₹</span> <span id="r2_total">0</span></div>
+            </div>
+            <div class="metric good" id="r2_return_card">
+                <div class="m-label">Portfolio Return</div>
+                <div class="m-value"><span id="r2_return">0.00</span> %</div>
+            </div>
+            <div class="metric good" id="r2_improvement_card">
+                <div class="m-label">Return Improvement</div>
+                <div class="m-value"><span id="r2_improvement">0.00</span> %</div>
+            </div>
+            <div class="metric" id="r2_balance_card">
+                <div class="m-label">Balance Remaining</div>
+                <div class="m-value"><span id="r2_balance">—</span></div>
+                <div id="r2_balance_sub" style="font-size:0.75em;margin-top:4px;color:#888;">Enter M1 values first</div>
+            </div>
+        </div>
+
+        <!-- Balance progress bar -->
+        <div id="r2_balance_bar_wrap" style="margin-top:12px;display:none;">
+            <div style="display:flex;justify-content:space-between;font-size:0.8em;color:#555;margin-bottom:5px;">
+                <span>M2 Allocated: <strong><span class="m3-cursym">₹</span><span id="r2_bar_allocated">0</span></strong></span>
+                <span>M1 Total: <strong><span class="m3-cursym">₹</span><span id="r2_bar_r1total">0</span></strong></span>
+            </div>
+            <div style="height:10px;background:#f0f0f0;border-radius:10px;overflow:hidden;">
+                <div id="r2_bar_fill" style="height:100%;border-radius:10px;transition:width 0.4s,background 0.4s;width:0%;background:#4caf50;"></div>
+            </div>
+            <div style="font-size:0.75em;color:#888;margin-top:4px;" id="r2_bar_label">0% of R1 allocated</div>
+        </div>
+
+        <div class="analysis-box" id="r2_analysis" style="border-color:#4caf50; background:#fdf9ee;">
+            Fill in M1 first, then adjust M2 to see advisory.
+        </div>
+
+        <div class="charts-row">
+            <div class="chart-box">
+                <h4>📊 Revised Allocation</h4>
+                <canvas id="r2PieChart"></canvas>
+            </div>
+            <div class="chart-box">
+                <h4>📈 M1 vs M2 Return Comparison</h4>
+                <canvas id="compareBarChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hidden fields: totals -->
+    <input type="hidden" name="current_total" id="current_total">
+    <input type="hidden" name="current_return" id="current_return">
+    <input type="hidden" name="revised_total" id="revised_total">
+    <input type="hidden" name="revised_return" id="revised_return">
+    <!-- Instrument amounts submitted directly via named table inputs -->
+
+    <!-- Validation Error -->
+    <div class="error-msg" id="errorMsg"></div>
+
+    <!-- Submit -->
+    <div class="submit-area">
+        <button type="button" class="btn-submit" onclick="submitForm()">
+            🔍 Analyze Portfolio →
+        </button>
+    </div>
+
+    </form>
+</div>
+
+<!-- ═══ CUSTOM INSTRUMENT MODAL ═══ -->
+<div class="modal-overlay" id="custModal" onclick="handleModalOverlay(event)">
+  <div class="modal-box" id="modalBox">
+    <div class="modal-header">
+      <div>
+        <h3>➕ Add Custom Instrument</h3>
+        <p>Pick from the library or define your own</p>
+      </div>
+      <button class="btn-modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="modal-tabs">
+        <button class="modal-tab active" id="tab-lib"    onclick="switchModalTab('library')">📚 Quick Library</button>
+        <button class="modal-tab"        id="tab-custom" onclick="switchModalTab('custom')">✏️ Define Custom</button>
+      </div>
+
+      <!-- Library pane -->
+      <div id="pane-library">
+        <input class="lib-search" id="libSearch" placeholder="Search NPS, ULIP, Crypto…" oninput="filterLib()">
+        <div class="lib-list" id="libList"></div>
+      </div>
+
+      <!-- Custom pane -->
+      <div id="pane-custom" style="display:none">
+        <div class="form-grp">
+          <label class="form-lbl">Instrument Name *</label>
+          <input class="form-ctrl" id="custName" placeholder="e.g. NPS, Chit Fund, Art…" oninput="validateModal()">
+        </div>
+        <div class="form-grp">
+          <label class="form-lbl">Asset Category *</label>
+          <div class="cat-select">
+            <div class="cat-opt" id="copt-equity" onclick="selCat('equity')"><span class="cicon">📈</span>Equity</div>
+            <div class="cat-opt" id="copt-debt"   onclick="selCat('debt')"  ><span class="cicon">💰</span>Debt</div>
+            <div class="cat-opt" id="copt-real"   onclick="selCat('real')"  ><span class="cicon">🏡</span>Real Estate</div>
+            <div class="cat-opt" id="copt-alt"    onclick="selCat('alt')"><span class="cicon">🏅</span>Commodities</div>
+          </div>
+        </div>
+        <div class="form-grp">
+          <label class="form-lbl">Liquidity</label>
+          <div class="liq-select">
+            <div class="liq-opt" id="lopt-high" onclick="selLiq('high')">🟢 High</div>
+            <div class="liq-opt" id="lopt-med"  onclick="selLiq('med')" >🟡 Medium</div>
+            <div class="liq-opt" id="lopt-low"  onclick="selLiq('low')" >🔴 Low</div>
+          </div>
+          <div class="liq-hint">🟢 High = liquid within days &nbsp;|&nbsp; 🟡 Medium = weeks &nbsp;|&nbsp; 🔴 Low = months/years</div>
+        </div>
+        <div class="form-grp">
+          <label class="form-lbl">Default XIRR % hint (optional)</label>
+          <input class="form-ctrl" id="custXirr" type="number" placeholder="e.g. 9">
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-mcancel"  onclick="closeModal()">Cancel</button>
+      <button class="btn-mconfirm" id="btnModalAdd" onclick="confirmAddInstrument()" disabled>Add to Portfolio</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast-notif" id="toastNotif"></div>
+
+<script>
+// ========== INSTRUMENT CONFIG ==========
+const instruments = [
+    { id: 'fd',        label: 'FD',                 hint: '6.5',  hintLabel: 'Avg. 6.5%',    cat: 'debt',   liq: 'high', catLabel: '💰 Debt',       liqLabel: 'High' },
+    { id: 'gold',      label: 'Gold',               hint: '8',    hintLabel: 'Avg. 8%',       cat: 'alt',    liq: 'med',  catLabel: '🏅 Commodities',  liqLabel: 'Medium' },
+    { id: 'govt',      label: 'Govt Bonds',         hint: '7.2',  hintLabel: 'Avg. 7.2%',    cat: 'debt',   liq: 'med',  catLabel: '💰 Debt',       liqLabel: 'Medium' },
+    { id: 'insurance', label: 'Insurance Policies', hint: '4.5',  hintLabel: 'Avg. 4-5%',    cat: 'debt',   liq: 'low',  catLabel: '💰 Debt',       liqLabel: 'Low' },
+    { id: 'ppf',       label: 'PPF',                hint: '7.1',  hintLabel: '7.1% (Govt)',  cat: 'debt',   liq: 'low',  catLabel: '💰 Debt',       liqLabel: 'Low' },
+    { id: 'epf',       label: 'EPF',                hint: '8.15', hintLabel: '8.15% (Govt)', cat: 'debt',   liq: 'low',  catLabel: '💰 Debt',       liqLabel: 'Low' },
+    { id: 'realestate',label: 'Real Estate',        hint: '5',    hintLabel: 'Avg. 4-6%',    cat: 'real',   liq: 'low',  catLabel: '🏡 Real Estate', liqLabel: 'Low' },
+    { id: 'mf',        label: 'Mutual Funds',       hint: '12',   hintLabel: 'Avg. 12%',     cat: 'equity', liq: 'high', catLabel: '📈 Equity',     liqLabel: 'High' },
+    { id: 'equity',    label: 'Equity',             hint: '12',   hintLabel: 'Avg. 12%',     cat: 'equity', liq: 'high', catLabel: '📈 Equity',     liqLabel: 'High' },
+];
+
+const COLORS = ['#6b73ff','#7f53ac','#4caf50','#ff9800','#f44336','#00bcd4','#9c27b0','#e91e63','#607d8b','#795548',
+                '#3f51b5','#009688','#cddc39','#ff5722','#8bc34a'];
+
+// Custom instrument tracking
+let customCount = 0;
+let customInstruments = { r1: [], r2: [] };
+
+// ========== BUILD FIXED TABLE ROWS ==========
+function catBadge(cat, label) {
+    const cls = cat === 'equity' ? 'cat-equity' : cat === 'debt' ? 'cat-debt' : cat === 'alt' ? 'cat-alt' : 'cat-real';
+    return `<span class="cat-badge ${cls}">${label}</span>`;
+}
+function liqBadge(liq, label) {
+    const cls = liq === 'high' ? 'liq-high' : liq === 'med' ? 'liq-med' : 'liq-low';
+    return `<span class="liq-dot ${cls}">${label}</span>`;
+}
+
+function buildRows(tbodyId, prefix) {
+    const tbody = document.getElementById(tbodyId);
+    instruments.forEach((inst) => {
+        const row = document.createElement('tr');
+        let nameCell;
+        if (inst.renameable) {
+            nameCell = `
+                <div class="rename-wrap">
+                    <input class="rename-input" id="${prefix}_${inst.id}_label"
+                           value="${inst.label}" title="Click to rename"
+
+                           onfocus="this.select()">
+                    <button type="button" class="rename-btn" title="Rename"
+                            onclick="document.getElementById('${prefix}_${inst.id}_label').focus()">✏️</button>
+                </div>`;
+        } else {
+            nameCell = `<span class="instrument-name">${inst.label}</span>`;
+        }
+        row.innerHTML = `
+            <td>${nameCell}</td>
+            <td>${catBadge(inst.cat, inst.catLabel)}</td>
+            <td>${liqBadge(inst.liq, inst.liqLabel)}</td>
+            <td>
+                <input type="text" inputmode="numeric" id="${prefix}_${inst.id}_amt" name="${prefix}_${inst.id}_amt"
+                       placeholder="0" autocomplete="off"
+                       oninput="onAmtInput(this, '${prefix}', '${inst.id}')">
+            </td>
+            <td>
+                <div style="display:flex; flex-direction:column; gap:4px;">
+                    <input type="number" id="${prefix}_${inst.id}_xirr" name="${prefix}_${inst.id}_xirr" min="0" max="100" step="0.1"
+                           placeholder="Enter XIRR %"
+                           oninput="onXirrChange('${prefix}')">
+                    ${inst.hintLabel ? `<span class="xirr-badge">📌 Default: ${inst.hintLabel}</span>` : ''}
+                </div>
+            </td>
+            <td><input type="number" id="${prefix}_${inst.id}_alloc" readonly></td>
+            <td><input type="number" id="${prefix}_${inst.id}_wret" readonly></td>
+        `;
+        tbody.appendChild(row);
+    });
+}
+
+buildRows('r1Body', 'r1');
+buildRows('r2Body', 'r2');
+
+
+
+// ========== LIBRARY DATA ==========
+const instrLibrary = [
+    { id:'nps',    name:'NPS',                cat:'debt',   liq:'low',  hint:'9',    catLabel:'💰 Debt',        liqLabel:'Low',    icon:'🏛️', desc:'National Pension Scheme' },
+    { id:'ulip',   name:'ULIP',               cat:'equity', liq:'low',  hint:'7',    catLabel:'📈 Equity',      liqLabel:'Low',    icon:'🛡️', desc:'Unit Linked Insurance Plan' },
+    { id:'crypto', name:'Cryptocurrency',      cat:'equity', liq:'high', hint:'',     catLabel:'📈 Equity',      liqLabel:'High',   icon:'₿',  desc:'Bitcoin, Ethereum etc.' },
+    { id:'reit',   name:'REITs',              cat:'real',   liq:'med',  hint:'8',    catLabel:'🏡 Real Estate', liqLabel:'Medium', icon:'🏢', desc:'Real Estate Investment Trust' },
+    { id:'bonds',  name:'Corp Bonds',         cat:'debt',   liq:'med',  hint:'8.5',  catLabel:'💰 Debt',        liqLabel:'Medium', icon:'📄', desc:'Private / Corporate Bonds' },
+    { id:'chit',   name:'Chit Fund',          cat:'debt',   liq:'low',  hint:'',     catLabel:'💰 Debt',        liqLabel:'Low',    icon:'🤝', desc:'Monthly chit savings' },
+    { id:'angel',  name:'Angel Investment',   cat:'equity', liq:'low',  hint:'',     catLabel:'📈 Equity',      liqLabel:'Low',    icon:'👼', desc:'Startup angel investing' },
+    { id:'sgb',    name:'Sovereign Gold Bond',cat:'alt',    liq:'med',  hint:'8',    catLabel:'🏅 Commodities',   liqLabel:'Medium', icon:'🥇', desc:'RBI Sovereign Gold Bonds' },
+    { id:'invit',  name:'InvIT / Infra Fund', cat:'real',   liq:'med',  hint:'9',    catLabel:'🏡 Real Estate', liqLabel:'Medium', icon:'🏗️', desc:'Infrastructure Investment Trust' },
+    { id:'elss',   name:'ELSS',               cat:'equity', liq:'low',  hint:'12',   catLabel:'📈 Equity',      liqLabel:'Low',    icon:'💹', desc:'Equity Linked Savings Scheme (3-yr lock-in)' },
+    { id:'pms',    name:'PMS',                cat:'equity', liq:'low',  hint:'15',   catLabel:'📈 Equity',      liqLabel:'Low',    icon:'📊', desc:'Portfolio Management Service' },
+    { id:'aif',    name:'AIF',                cat:'equity', liq:'low',  hint:'15',   catLabel:'📈 Equity',      liqLabel:'Low',    icon:'🏦', desc:'Alternative Investment Fund' },
+    { id:'sif',    name:'SIF',                cat:'equity', liq:'low',  hint:'12',   catLabel:'📈 Equity',      liqLabel:'Low',    icon:'⚡', desc:'Specialised Investment Fund (SEBI 2024)' },
+    { id:'epos',  name:'EPOS',               cat:'equity', liq:'low',  hint:'12',   catLabel:'📈 Equity',      liqLabel:'Low',    icon:'🏭', desc:'Employee Provident Fund Online Service' },
+    { id:'forex',  name:'Forex / GIFT City',  cat:'equity', liq:'high', hint:'',     catLabel:'📈 Equity',      liqLabel:'High',   icon:'💱', desc:'Foreign currency investments' },
+    { id:'pvtcred',name:'Private Credit',     cat:'debt',   liq:'low',  hint:'12',   catLabel:'💰 Debt',        liqLabel:'Low',    icon:'💼', desc:'Private lending / HNI credit' },
+    { id:'art',    name:'Art & Collectibles', cat:'real',   liq:'low',  hint:'',     catLabel:'🏡 Real Estate', liqLabel:'Low',    icon:'🎨', desc:'Physical art and collectibles' },
+];
+
+// Modal state
+let modalPrefix    = 'r1';
+let modalTab       = 'library';
+let selLibItem     = null;
+let selCatVal      = null;
+let selLiqVal      = 'low';
+
+function openModal(prefix) {
+    modalPrefix = prefix;
+    selLibItem  = null;
+    selCatVal   = null;
+    selLiqVal   = 'low';
+    switchModalTab('library');
+    document.getElementById('libSearch').value  = '';
+    document.getElementById('custName').value   = '';
+    document.getElementById('custXirr').value   = '';
+    ['equity','debt','real','alt'].forEach(c => document.getElementById(`copt-${c}`).className = 'cat-opt');
+    ['high','med','low'].forEach(l => document.getElementById(`lopt-${l}`).className = 'liq-opt');
+    document.getElementById('lopt-low').className = 'liq-opt sel-low'; // default liquidity = low
+    renderLib('');
+    document.getElementById('btnModalAdd').disabled = true;
+    document.getElementById('custModal').classList.add('active');
+}
+function closeModal() { document.getElementById('custModal').classList.remove('active'); }
+function handleModalOverlay(e) { if (e.target.id === 'custModal') closeModal(); }
+
+function switchModalTab(tab) {
+    modalTab = tab;
+    document.getElementById('pane-library').style.display = tab === 'library' ? '' : 'none';
+    document.getElementById('pane-custom').style.display  = tab === 'custom'  ? '' : 'none';
+    document.getElementById('tab-lib').classList.toggle('active', tab === 'library');
+    document.getElementById('tab-custom').classList.toggle('active', tab === 'custom');
+    validateModal();
+}
+
+function renderLib(filter) {
+    const addedIds = new Set(customInstruments[modalPrefix].map(c => c.id)
+        .concat(instrLibrary.filter(l => document.getElementById(`r1_${l.id}_row`) || document.getElementById(`r2_${l.id}_row`)).map(l => l.id))
+    );
+    const list = instrLibrary.filter(l =>
+        !filter || l.name.toLowerCase().includes(filter.toLowerCase()) || l.desc.toLowerCase().includes(filter.toLowerCase())
+    );
+    const el = document.getElementById('libList');
+    if (!list.length) {
+        el.innerHTML = `<div class="lib-empty">😕 Not found — try "Define Custom" tab</div>`;
+        return;
+    }
+    const iconBgMap = { equity:'#fdf3cc', debt:'#fffbeb', real:'#ecfdf5' };
+    el.innerHTML = list.map(l => {
+        const disabled = addedIds.has(l.id);
+        const isSel    = selLibItem && selLibItem.id === l.id;
+        return `<div class="lib-item ${isSel ? 'lib-selected' : ''} ${disabled ? 'lib-disabled' : ''}"
+                     onclick="${disabled ? '' : `pickLib('${l.id}')`}">
+            <div class="lib-icon" style="background:${iconBgMap[l.cat]}">${l.icon}</div>
+            <div class="lib-info">
+                <div class="lib-name">${l.name}${disabled ? ' <span style="color:#ccc;font-weight:400;font-size:0.85em">(added)</span>' : ''}</div>
+                <div class="lib-desc">${l.desc}</div>
+            </div>
+            <div class="lib-meta">
+                ${catBadge(l.cat, l.catLabel)}
+                ${liqBadge(l.liq, l.liqLabel)}
+                ${l.hint ? `<span class="lib-xirr">~${l.hint}%</span>` : ''}
+            </div>
+        </div>`;
+    }).join('');
+}
+
+function filterLib() { selLibItem = null; renderLib(document.getElementById('libSearch').value); validateModal(); }
+function pickLib(id) {
+    selLibItem = instrLibrary.find(l => l.id === id);
+    renderLib(document.getElementById('libSearch').value);
+    validateModal();
+}
+function selCat(cat) {
+    selCatVal = cat;
+    ['equity','debt','real'].forEach(c => {
+        document.getElementById(`copt-${c}`).className = `cat-opt${c === cat ? ` sel-${c}` : ''}`;
+    });
+    validateModal();
+}
+function selLiq(liq) {
+    selLiqVal = liq;
+    ['high','med','low'].forEach(l => {
+        document.getElementById(`lopt-${l}`).className = `liq-opt${l === liq ? ` sel-${l}` : ''}`;
+    });
+}
+function validateModal() {
+    const btn = document.getElementById('btnModalAdd');
+    if (modalTab === 'library') {
+        btn.disabled = !selLibItem;
+    } else {
+        const nm = (document.getElementById('custName')?.value || '').trim();
+        btn.disabled = !nm || !selCatVal;
+    }
+}
+function confirmAddInstrument() {
+    let item;
+    if (modalTab === 'library') {
+        if (!selLibItem) return;
+        item = { ...selLibItem, isCustom: true };
+    } else {
+        const nm   = document.getElementById('custName').value.trim();
+        const xirr = document.getElementById('custXirr').value.trim();
+        if (!nm || !selCatVal) return;
+        const catMeta = { equity: { catLabel:'📈 Equity', liq:'low', liqLabel:'Low' },
+                          debt:   { catLabel:'💰 Debt',   liq:'low', liqLabel:'Low' },
+                          real:   { catLabel:'🏡 Real Estate', liq:'low', liqLabel:'Low' } };
+        const meta = catMeta[selCatVal];
+        customCount++;
+        item = {
+            id:       `cust_${customCount}`,
+            name:     nm,
+            cat:      selCatVal,
+            liq:      selLiqVal || 'low',
+            hint:     xirr,
+            catLabel: meta.catLabel,
+            liqLabel: selLiqVal === 'high' ? 'High' : selLiqVal === 'med' ? 'Medium' : 'Low',
+            isCustom: true
+        };
+    }
+    customInstruments[modalPrefix].push({ id: item.id, label: item.name, cat: item.cat, liq: item.liq });
+    appendCustomRow(modalPrefix, item);
+    if (modalPrefix === 'r1' && syncEnabled) {
+        if (!customInstruments['r2'].find(c => c.id === item.id)) {
+            customInstruments['r2'].push({ id: item.id, label: item.name, cat: item.cat, liq: item.liq });
+            appendCustomRow('r2', item, true);
+        }
+    }
+    closeModal();
+    showToast(`✅ "${item.name}" added to portfolio`);
+    if (modalPrefix === 'r1') { updateR1(); if (syncEnabled) syncR2fromR1(); }
+    updateR2();
+}
+
+function appendCustomRow(prefix, item, isMirror = false) {
+    const tbody = document.getElementById(`${prefix}Body`);
+    const row   = document.createElement('tr');
+    row.id        = `${prefix}_${item.id}_row`;
+    row.className = 'custom-row';
+    row.innerHTML = `
+        <td>
+            <div style="display:flex;align-items:center;gap:5px;">
+                <span class="instrument-name">${item.name}</span>
+                <span style="font-size:0.68em;background:#fdf3cc;color:#6b73ff;padding:1px 5px;border-radius:4px;font-weight:700;">NEW</span>
+            </div>
+        </td>
+        <td>${catBadge(item.cat, item.catLabel)}</td>
+        <td>${liqBadge(item.liq, item.liqLabel)}</td>
+        <td>
+            <input type="text" inputmode="numeric" id="${prefix}_${item.id}_amt"
+                   placeholder="0" autocomplete="off"
+                   oninput="onAmtInput(this, '${prefix}', '${item.id}', true)">
+        </td>
+        <td>
+            <div style="display:flex;flex-direction:column;gap:4px;">
+                <input type="number" id="${prefix}_${item.id}_xirr" min="0" max="100" step="0.1"
+                       placeholder="${item.hint || 'XIRR %'}" oninput="onXirrChange('${prefix}')">
+                ${item.hint ? `<span class="xirr-badge">📌 Default: ${item.hint}%</span>` : ''}
+            </div>
+        </td>
+        <td><input type="number" id="${prefix}_${item.id}_alloc" readonly></td>
+        <td>
+            <div style="display:flex;align-items:center;gap:5px;">
+                <input type="number" id="${prefix}_${item.id}_wret" readonly style="flex:1">
+                <button type="button" class="btn-delete-row"
+                        onclick="deleteCustomRow('${prefix}','${item.id}')" title="Remove">✕</button>
+            </div>
+        </td>`;
+    tbody.appendChild(row);
+}
+
+function showToast(msg) {
+    const t = document.getElementById('toastNotif');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+// ========== ADD CUSTOM ROW ==========
+function addCustomRow(prefix) {
+    // now opens modal
+    openModal(prefix);
+}
+
+function deleteCustomRow(prefix, cid) {
+    const row = document.getElementById(`${prefix}_${cid}_row`);
+    if (row) row.remove();
+    customInstruments[prefix] = customInstruments[prefix].filter(c => c.id !== cid);
+    // Also remove from other side if sync on
+    if (prefix === 'r1' && syncEnabled) {
+        const r2row = document.getElementById(`r2_${cid}_row`);
+        if (r2row) r2row.remove();
+        customInstruments['r2'] = customInstruments['r2'].filter(c => c.id !== cid);
+    }
+    if (prefix === 'r1') { updateR1(); } else { updateR2(); }
+}
+
+// ========== CHART INSTANCES ==========
+let r1Pie, r1Bar, r2Pie, compareBar;
+
+function initCharts() {
+    r1Pie = new Chart(document.getElementById('r1PieChart'), {
+        type: 'doughnut',
+        data: { labels: [], datasets: [{ data: [], backgroundColor: COLORS }] },
+        options: { plugins: { legend: { position: 'right', labels: { font: { size: 10 } } } }, cutout: '55%' }
+    });
+    r1Bar = new Chart(document.getElementById('r1BarChart'), {
+        type: 'bar',
+        data: { labels: [], datasets: [{ label: 'Weighted Return %', data: [], backgroundColor: COLORS }] },
+        options: {
+            plugins: { legend: { display: false } },
+            scales: { y: { beginAtZero: true, ticks: { font: { size: 9 } } }, x: { ticks: { font: { size: 9 } } } }
+        }
+    });
+    r2Pie = new Chart(document.getElementById('r2PieChart'), {
+        type: 'doughnut',
+        data: { labels: [], datasets: [{ data: [], backgroundColor: COLORS }] },
+        options: { plugins: { legend: { position: 'right', labels: { font: { size: 10 } } } }, cutout: '55%' }
+    });
+    compareBar = new Chart(document.getElementById('compareBarChart'), {
+        type: 'bar',
+        data: {
+            labels: [],
+            datasets: [
+                { label: 'Current (M1)', data: [], backgroundColor: 'rgba(107,115,255,0.7)' },
+                { label: 'Revised (M2)', data: [], backgroundColor: 'rgba(76,175,80,0.7)' }
+            ]
+        },
+        options: {
+            plugins: { legend: { labels: { font: { size: 10 } } } },
+            scales: { y: { beginAtZero: true, ticks: { font: { size: 9 } } }, x: { ticks: { font: { size: 9 } } } }
+        }
+    });
+}
+initCharts();
+
+// ========== CALCULATE (includes custom rows) ==========
+function getAllInstruments(prefix) {
+    // Returns merged list: fixed instruments + custom rows for this prefix
+    const fixed = instruments.map(inst => ({
+        id: inst.id,
+        label: inst.id === 'others'
+            ? (document.getElementById(`${prefix}_others_label`)?.value || inst.label)
+            : inst.label,
+        isCustom: false
+    }));
+    const custom = customInstruments[prefix].map(c => ({
+        id: c.id,
+        label: c.label || `Custom`,
+        isCustom: true
+    }));
+    return [...fixed, ...custom];
+}
+
+function calcPortfolio(prefix) {
+    const all = getAllInstruments(prefix);
+    let total = 0, wretSum = 0;
+    const pieLabels = [], pieData = [], barLabels = [], barDataR1 = [];
+
+    // First pass: total
+    all.forEach(inst => {
+        total += getAmt(`${prefix}_${inst.id}_amt`);
+    });
+
+    // Second pass: allocation + weighted return
+    all.forEach(inst => {
+        const xirrEl = document.getElementById(`${prefix}_${inst.id}_xirr`);
+        const amt  = getAmt(`${prefix}_${inst.id}_amt`);
+        const xirr = parseFloat(xirrEl?.value) || 0;
+        const alloc = total > 0 ? (amt / total) * 100 : 0;
+        const wret  = (alloc * xirr) / 100;
+        wretSum += wret;
+
+        const allocEl = document.getElementById(`${prefix}_${inst.id}_alloc`);
+        const wretEl  = document.getElementById(`${prefix}_${inst.id}_wret`);
+        if (allocEl) allocEl.value = alloc.toFixed(2);
+        if (wretEl)  wretEl.value  = wret.toFixed(2);
+
+        if (amt > 0) {
+            pieLabels.push(inst.label || 'Custom');
+            pieData.push(amt);
+            barLabels.push(inst.label || 'Custom');
+            barDataR1.push(wret.toFixed(2));
+        }
+    });
+
+    return { total, wretSum, pieLabels, pieData, barLabels, barDataR1 };
+}
+
+function updateR1() {
+    const { total, wretSum, pieLabels, pieData, barLabels, barDataR1 } = calcPortfolio('r1');
+
+    document.getElementById('r1_total').textContent = formatINR(total);
+    document.getElementById('r1_return').textContent = wretSum.toFixed(2);
+    document.getElementById('r1_instruments').textContent = pieLabels.length;
+
+    const retCard = document.getElementById('r1_return_card');
+    retCard.className = 'metric ' + (wretSum >= 10 ? 'good' : wretSum >= 7 ? '' : 'warn');
+
+    updateAnalysis('r1', total, wretSum, pieLabels.length);
+
+    r1Pie.data.labels = pieLabels;
+    r1Pie.data.datasets[0].data = pieData;
+    r1Pie.update();
+
+    r1Bar.data.labels = barLabels;
+    r1Bar.data.datasets[0].data = barDataR1;
+    r1Bar.update();
+}
+
+function updateR2() {
+    const r1Return = parseFloat(document.getElementById('r1_return').textContent) || 0;
+    const r1Total  = parseFloat(document.getElementById('r1_total').textContent.replace(/,/g, '')) || 0;
+    const { total, wretSum, pieLabels, pieData, barLabels } = calcPortfolio('r2');
+
+    document.getElementById('r2_total').textContent = formatINR(total);
+    document.getElementById('r2_return').textContent = wretSum.toFixed(2);
+
+    const improvement = wretSum - r1Return;
+    const impEl = document.getElementById('r2_improvement');
+    impEl.textContent = (improvement >= 0 ? '+' : '') + improvement.toFixed(2);
+    document.getElementById('r2_improvement_card').className = 'metric ' + (improvement >= 0 ? 'good' : 'warn');
+
+    // ── Remaining Balance ──
+    const balanceCard = document.getElementById('r2_balance_card');
+    const balanceEl   = document.getElementById('r2_balance');
+    const balanceSub  = document.getElementById('r2_balance_sub');
+    const barWrap     = document.getElementById('r2_balance_bar_wrap');
+
+    if (r1Total > 0) {
+        const remaining = r1Total - total;
+        const pct = Math.min((total / r1Total) * 100, 100);
+
+        balanceEl.textContent = (CURRENCY_FORMAT === 'western' ? (remaining >= 0 ? '$' : '-$') : (remaining >= 0 ? '₹' : '-₹')) + formatINR(Math.abs(remaining));
+
+        if (remaining > 0) {
+            balanceCard.className = 'metric warn';
+            balanceSub.textContent = '⬇ Under-allocated vs M1';
+            balanceSub.style.color = '#e65100';
+        } else if (remaining < 0) {
+            balanceCard.className = 'metric';
+            balanceCard.style.borderColor = '#f44336';
+            balanceSub.textContent = '⬆ Over-allocated vs M1';
+            balanceSub.style.color = '#c62828';
+        } else {
+            balanceCard.className = 'metric good';
+            balanceSub.textContent = '✅ Perfectly matched with M1';
+            balanceSub.style.color = '#2e7d32';
+        }
+
+        barWrap.style.display = 'block';
+        const barFill = document.getElementById('r2_bar_fill');
+        barFill.style.width = pct + '%';
+        barFill.style.background = remaining > 0 ? '#ff9800' : remaining < 0 ? '#f44336' : '#4caf50';
+        document.getElementById('r2_bar_allocated').textContent = formatINR(total);
+        document.getElementById('r2_bar_r1total').textContent   = formatINR(r1Total);
+        document.getElementById('r2_bar_label').textContent = pct.toFixed(1) + '% of M1 total allocated in M2';
+    } else {
+        balanceEl.textContent = '—';
+        balanceSub.textContent = 'Enter M1 values first';
+        balanceSub.style.color = '#888';
+        barWrap.style.display = 'none';
+    }
+
+    updateAnalysis('r2', total, wretSum, pieLabels.length, r1Return);
+
+    r2Pie.data.labels = pieLabels;
+    r2Pie.data.datasets[0].data = pieData;
+    r2Pie.update();
+
+    // Compare bar — all instruments with data in either R1 or R2
+    const allR1 = getAllInstruments('r1');
+    const allR2 = getAllInstruments('r2');
+    const seenIds = new Set();
+    const allIds = [...allR1, ...allR2].filter(i => {
+        if (seenIds.has(i.id)) return false;
+        seenIds.add(i.id); return true;
+    });
+
+    const cmpLabels = [], r1Vals = [], r2Vals = [];
+    allIds.forEach(inst => {
+        const r1w = parseFloat(document.getElementById(`r1_${inst.id}_wret`)?.value) || 0;
+        const r2w = parseFloat(document.getElementById(`r2_${inst.id}_wret`)?.value) || 0;
+        if (r1w > 0 || r2w > 0) {
+            cmpLabels.push(inst.label || 'Custom');
+            r1Vals.push(r1w.toFixed(2));
+            r2Vals.push(r2w.toFixed(2));
+        }
+    });
+    compareBar.data.labels = cmpLabels;
+    compareBar.data.datasets[0].data = r1Vals;
+    compareBar.data.datasets[1].data = r2Vals;
+    compareBar.update();
+}
+
+function updateAnalysis(prefix, total, wret, count, r1Return) {
+    const el = document.getElementById(`${prefix}_analysis`);
+    if (total === 0) {
+        el.innerHTML = prefix === 'r1'
+            ? 'Fill in your portfolio details above to see the analysis.'
+            : 'Fill in M1 first, then adjust M2 to see advisory.';
+        return;
+    }
+
+    if (prefix === 'r1') {
+        let rating = wret >= 12 ? '🟢 <b>High Growth</b>' : wret >= 9 ? '🟡 <b>Moderate Growth</b>' : wret >= 6 ? '🟠 <b>Conservative</b>' : '🔴 <b>Low Return</b>';
+        let tip = wret < 7 ? ' Consider adding higher-return instruments like MF or Equity to improve overall returns.' :
+                  wret < 10 ? ' Portfolio is balanced. Minor rebalancing towards equity/MF could improve returns.' :
+                  ' Strong return profile. Ensure adequate diversification across asset classes.';
+        el.innerHTML = `<b>Analysis:</b> ${rating} portfolio with <b>${wret.toFixed(2)}%</b> weighted return across <b>${count}</b> instruments.${tip}`;
+    } else {
+        const diff = wret - (r1Return || 0);
+        let advisory = diff > 2 ? `✅ Excellent revision! Return improved by <b>+${diff.toFixed(2)}%</b>.` :
+                       diff > 0 ? `✅ Good revision. Return improved by <b>+${diff.toFixed(2)}%</b>.` :
+                       diff === 0 ? `ℹ️ Returns unchanged. Try reallocating to higher-return instruments.` :
+                       `⚠️ Revised return is lower by <b>${diff.toFixed(2)}%</b>. Review allocations.`;
+        el.innerHTML = `<b>Advisory:</b> ${advisory} Revised portfolio return: <b>${wret.toFixed(2)}%</b>.`;
+    }
+}
+
+// ========== EVENT HANDLERS ==========
+let syncEnabled = true;
+
+function onAmtChange(prefix, instId, isCustom = false) {
+    if (!isCustom && instId) {
+        const xirrEl = document.getElementById(`${prefix}_${instId}_xirr`);
+        const inst = instruments.find(i => i.id === instId);
+        if (inst && inst.hint && !xirrEl.value) {
+            xirrEl.value = inst.hint;
+        }
+        if (prefix === 'r1' && syncEnabled) {
+            const r2XirrEl = document.getElementById(`r2_${instId}_xirr`);
+            if (inst && inst.hint && !r2XirrEl.value) {
+                r2XirrEl.value = inst.hint;
+            }
+        }
+    }
+    if (prefix === 'r1') {
+        updateR1();
+        if (syncEnabled) syncR2fromR1();
+    }
+    updateR2();
+}
+
+function onXirrChange(prefix) {
+    if (prefix === 'r1') {
+        updateR1();
+        if (syncEnabled) syncXirrR2fromR1();
+    }
+    updateR2();
+}
+
+function syncR2fromR1() {
+    instruments.forEach(inst => {
+        const r2el = document.getElementById(`r2_${inst.id}_amt`);
+        const r1el = document.getElementById(`r1_${inst.id}_amt`);
+        if (r2el && r1el) r2el.value = r1el.value; // already formatted text
+    });
+    customInstruments['r1'].forEach(c => {
+        const r2el = document.getElementById(`r2_${c.id}_amt`);
+        const r1el = document.getElementById(`r1_${c.id}_amt`);
+        if (r2el && r1el) r2el.value = r1el.value;
+    });
+}
+
+function syncXirrR2fromR1() {
+    instruments.forEach(inst => {
+        const r2el = document.getElementById(`r2_${inst.id}_xirr`);
+        const r1el = document.getElementById(`r1_${inst.id}_xirr`);
+        if (r2el && r1el) r2el.value = r1el.value;
+    });
+    customInstruments['r1'].forEach(c => {
+        const r2el = document.getElementById(`r2_${c.id}_xirr`);
+        const r1el = document.getElementById(`r1_${c.id}_xirr`);
+        if (r2el && r1el) r2el.value = r1el.value;
+    });
+}
+
+function toggleSync() {
+    syncEnabled = document.getElementById('syncToggle').checked;
+    const label = document.getElementById('syncLabel');
+    if (syncEnabled) {
+        label.textContent = '🔄 Auto-sync amounts from M1 (turn off to edit M2 independently)';
+        syncR2fromR1();
+        syncXirrR2fromR1();
+        updateR2();
+    } else {
+        label.textContent = '✏️ Manual mode — M2 is now independent of M1';
+    }
+}
+
+// ========== FORMAT ==========
+// ── Indian comma format (display) ──
+function formatINR(num) {
+    num = Math.round(num);
+    if (num === 0) return '0';
+    if (CURRENCY_FORMAT === 'western') return num.toLocaleString('en-US');
+    let s = num.toString();
+    if (s.length <= 3) return s;
+    let last3 = s.slice(-3);
+    let rest  = s.slice(0, -3);
+    let result = '';
+    while (rest.length > 2) { result = ',' + rest.slice(-2) + result; rest = rest.slice(0, -2); }
+    return rest + result + ',' + last3;
+}
+
+// ── Format a number into Indian-comma string for input fields ──
+function fmtAmt(num) {
+    num = Math.round(parseFloat(num) || 0);
+    if (num <= 0) return '';
+    return formatINR(num);
+}
+
+// ── Read raw numeric value from a formatted text input ──
+function getAmt(id) {
+    const el = document.getElementById(id);
+    if (!el) return 0;
+    return parseFloat(el.value.replace(/,/g, '')) || 0;
+}
+
+// ── Live format amount input as user types ──
+function onAmtInput(el, prefix, instId, isCustom = false) {
+    const raw  = el.value.replace(/,/g, '').replace(/[^0-9]/g, ''); // digits only
+    const num  = parseFloat(raw) || 0;
+    const pos  = el.selectionStart;
+    const oldLen = el.value.length;
+    el.value   = raw === '' ? '' : formatINR(num);
+    // Restore cursor — adjust for added/removed commas
+    const newLen = el.value.length;
+    el.setSelectionRange(pos + (newLen - oldLen), pos + (newLen - oldLen));
+    onAmtChange(prefix, instId, isCustom);
+}
+
+// ========== VALIDATION & SUBMIT ==========
+function submitForm() {
+    const errorEl = document.getElementById('errorMsg');
+    const clientName = document.getElementById('clientName').value.trim();
+
+    if (!clientName) {
+        errorEl.textContent = '⚠️ Please enter the client name before submitting.';
+        errorEl.classList.add('show');
+        document.getElementById('clientName').focus();
+        return;
+    }
+
+    // Check R1 has at least one entry (fixed + custom)
+    const allR1 = getAllInstruments('r1');
+    let r1HasData = allR1.some(inst => {
+        return getAmt(`r1_${inst.id}_amt`) > 0;
+    });
+
+    if (!r1HasData) {
+        errorEl.textContent = '⚠️ Please enter at least one investment in the Current Portfolio (M1).';
+        errorEl.classList.add('show');
+        return;
+    }
+
+    // Check XIRR filled where amounts exist
+    let missingXirr = allR1.find(inst => {
+        const amt  = getAmt(`r1_${inst.id}_amt`);
+        const xirr = parseFloat(document.getElementById(`r1_${inst.id}_xirr`)?.value) || 0;
+        return amt > 0 && xirr === 0;
+    });
+
+    if (missingXirr) {
+        errorEl.textContent = `⚠️ Please enter the XIRR % for "${missingXirr.label || 'a custom instrument'}" in Current Portfolio (M1).`;
+        errorEl.classList.add('show');
+        return;
+    }
+
+    errorEl.classList.remove('show');
+
+    // --- Submit custom instruments as individual hidden fields ---
+    // Each custom instrument sends: amt, xirr, cat, liq — backend reads these properly
+    const form = document.getElementById('portfolioForm');
+
+    // Remove old custom hidden fields if re-submitting
+    form.querySelectorAll('[data-custom-field]').forEach(el => el.remove());
+
+    ['r1','r2'].forEach(prefix => {
+        customInstruments[prefix].forEach(c => {
+            const amt  = getAmt(`${prefix}_${c.id}_amt`);
+            const xirr = parseFloat(document.getElementById(`${prefix}_${c.id}_xirr`)?.value) || 0;
+            if (amt > 0) {
+                const makeHidden = (name, val) => {
+                    const el = document.createElement('input');
+                    el.type  = 'hidden';
+                    el.name  = name;
+                    el.value = val;
+                    el.setAttribute('data-custom-field', '1');
+                    form.appendChild(el);
+                };
+                makeHidden(`${prefix}_custom_amt[]`,  amt);
+                makeHidden(`${prefix}_custom_xirr[]`, xirr);
+                makeHidden(`${prefix}_custom_cat[]`,  c.cat  || 'debt');
+                makeHidden(`${prefix}_custom_liq[]`,  c.liq  || 'low');
+                makeHidden(`${prefix}_custom_name[]`, c.label || 'Custom');
+            }
+        });
+    });
+
+    // Populate hidden totals
+    const r1Total  = parseFloat(document.getElementById('r1_total').textContent.replace(/,/g, '')) || 0;
+    const r1Return = parseFloat(document.getElementById('r1_return').textContent) || 0;
+    const r2Total  = parseFloat(document.getElementById('r2_total').textContent.replace(/,/g, '')) || 0;
+    const r2Return = parseFloat(document.getElementById('r2_return').textContent) || 0;
+
+    document.getElementById('current_total').value  = r1Total;
+    document.getElementById('current_return').value = r1Return;
+    document.getElementById('revised_total').value  = r2Total;
+    document.getElementById('revised_return').value = r2Return;
+
+    document.getElementById('portfolioForm').submit();
+}
+</script>
+
+{% if edit_mode %}
+{# Pass JSON data through a hidden element — avoids VS Code JS linter errors #}
+<script id="editDataJson" type="application/json">{{ edit_data | safe }}</script>
+<script>
+// Run AFTER all charts and rows are built
+window.addEventListener('load', function() {
+    var dataEl = document.getElementById('editDataJson');
+    if (!dataEl) return;
+    var raw;
+    try { raw = JSON.parse(dataEl.textContent); }
+    catch(e) { console.warn('Edit pre-fill: JSON parse failed', e); return; }
+
+    // Helper — get first value from Flask's ImmutableMultiDict format
+    function val(key) {
+        var v = raw[key];
+        if (!v) return '';
+        return Array.isArray(v) ? v[0] : v;
+    }
+
+    // 1. Pre-fill client name
+    var nameEl = document.getElementById('clientName');
+    if (nameEl && val('name')) nameEl.value = val('name');
+
+    // 2. Pre-fill client_id dropdown
+    var sel = document.getElementById('clientSelect');
+    if (sel && val('client_id')) sel.value = val('client_id');
+
+    // 3. Pre-fill all instrument amount fields (r1_fd_amt, r2_mf_amt etc.)
+    Object.keys(raw).forEach(function(key) {
+        var v = val(key);
+        if (!v || v === '0') return;
+        // Only fill amt and xirr fields — skip hidden/csrf fields
+        if (!(key.endsWith('_amt') || key.endsWith('_xirr'))) return;
+        var el = document.getElementById(key);
+        if (el) el.value = v;
+    });
+
+    // 4. Trigger full recalculation for both sides
+    if (typeof updateR1 === 'function') updateR1();
+    if (typeof updateR2 === 'function') updateR2();
+
+    // 5. Show edit banner
+    var banner = document.getElementById('editBanner');
+    if (banner) banner.style.display = 'block';
+});
+</script>
+{% endif %}
+
+</body>
+</html>

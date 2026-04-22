@@ -1,0 +1,154 @@
+{% extends "base.html" %}
+{% block title %}{{ client.name }} — M3 Portfolio{% endblock %}
+
+{% block content %}
+<div class="detail-page">
+
+  <!-- Header -->
+  <div class="detail-header">
+    <a href="{{ url_for('clients') }}" class="back-link">← All Clients</a>
+    <div class="detail-header-main">
+      <div class="client-avatar-lg">{{ client.name[0].upper() }}</div>
+      <div class="client-header-info">
+        <h1>{{ client.name }}</h1>
+        <div class="client-meta">
+          <span class="risk-badge risk-{{ client.risk_profile }}">{{ client.risk_profile | capitalize }}</span>
+          {% if client.age %}<span class="meta-pill">Age {{ client.age }}</span>{% endif %}
+          {% if client.email %}<span class="meta-pill">📧 {{ client.email }}</span>{% endif %}
+          {% if client.phone %}<span class="meta-pill">📱 {{ client.phone }}</span>{% endif %}
+        </div>
+        {% if client.notes %}
+        <p class="client-notes-detail">{{ client.notes }}</p>
+        {% endif %}
+      </div>
+      <div class="detail-actions">
+        <a href="{{ url_for('edit_client', client_id=client.id) }}" class="btn btn-outline">✏️ Edit</a>
+        <a href="{{ url_for('portfolio') }}" class="btn btn-primary">+ New Analysis</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Stats Row -->
+  <div class="stats-row">
+    <div class="stat-card">
+      <div class="stat-value">{{ analyses | length }}</div>
+      <div class="stat-label">Total Analyses</div>
+    </div>
+    {% if analyses %}
+    <div class="stat-card">
+      <div class="stat-value">{{ analyses[0].overall_rating }}</div>
+      <div class="stat-label">Latest Rating</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value">{{ '%.1f' % analyses[0].revised_return }}%</div>
+      <div class="stat-label">Latest Return</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value">{{ (analyses[0].created_at|string)[:10] }}</div>
+      <div class="stat-label">Last Analysis</div>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Analyses History -->
+  <div class="card">
+    <div class="section-header">
+      <h2>📊 Portfolio Analyses History</h2>
+      <a href="{{ url_for('portfolio') }}" class="btn btn-sm btn-primary">+ Run New Analysis</a>
+    </div>
+
+    {% if analyses %}
+    <div class="analyses-table-wrap">
+      <table class="analyses-table">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Current Portfolio</th>
+            <th>Revised Portfolio</th>
+            <th>Return Improvement</th>
+            <th>Rating</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for a in analyses %}
+          <tr>
+            <td>{{ (a.created_at|string)[:16] }}</td>
+            <td>
+              <div>{{ '\u20B9' if session.get('currency_format','indian')=='indian' else '$' }}{{ '{:,.0f}'.format(a.current_total) }}</div>
+              <small class="text-muted">@ {{ '%.1f' % a.current_return }}%</small>
+            </td>
+            <td>
+              <div>{{ '\u20B9' if session.get('currency_format','indian')=='indian' else '$' }}{{ '{:,.0f}'.format(a.revised_total) }}</div>
+              <small class="text-muted">@ {{ '%.1f' % a.revised_return }}%</small>
+            </td>
+            <td>
+              {% set diff = a.revised_return - a.current_return %}
+              <span class="{{ 'text-green' if diff >= 0 else 'text-red' }}">
+                {{ '+' if diff >= 0 else '' }}{{ '%.1f' % diff }}%
+              </span>
+            </td>
+            <td>
+              <span class="rating-badge rating-{{ a.overall_rating | lower }}">
+                {{ a.overall_rating }}
+              </span>
+            </td>
+            <td>
+              <a href="{{ url_for('present_analysis', analysis_id=a.id) }}" target="_blank" class="btn btn-sm" style="background:linear-gradient(135deg,#e8c84a,#d4a843);color:#1a0f3c;font-weight:700;">🎤 Present</a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty-state-small">
+      <p>No analyses yet for this client.</p>
+      <a href="{{ url_for('portfolio') }}" class="btn btn-primary">Run First Analysis →</a>
+    </div>
+    {% endif %}
+  </div>
+
+</div>
+
+<style>
+.detail-page { max-width:900px; margin:0 auto; }
+.back-link { color:#2E75B6; text-decoration:none; font-size:0.9rem; }
+.back-link:hover { text-decoration:underline; }
+.detail-header { margin-bottom:24px; }
+.detail-header-main { display:flex; align-items:flex-start; gap:16px; margin-top:12px; flex-wrap:wrap; }
+.client-avatar-lg { width:64px; height:64px; background:linear-gradient(135deg,#1F4E79,#2E75B6); color:#fff; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:1.8rem; font-weight:bold; flex-shrink:0; }
+.client-header-info { flex:1; min-width:200px; }
+.client-header-info h1 { margin:0 0 8px; font-size:1.7rem; color:#1F4E79; }
+.client-meta { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:8px; }
+.meta-pill { background:#f0f4f8; color:#555; font-size:0.82rem; padding:3px 10px; border-radius:20px; }
+.risk-badge { font-size:0.78rem; padding:3px 12px; border-radius:20px; font-weight:700; }
+.risk-conservative { background:#d4edda; color:#155724; }
+.risk-moderate     { background:#fff3cd; color:#856404; }
+.risk-aggressive   { background:#fde8e8; color:#B71C1C; }
+.client-notes-detail { font-size:0.88rem; color:#777; margin:6px 0 0; font-style:italic; }
+.detail-actions { display:flex; gap:10px; flex-wrap:wrap; }
+.stats-row { display:grid; grid-template-columns:repeat(auto-fill, minmax(160px, 1fr)); gap:16px; margin-bottom:24px; }
+.stat-card { background:#fff; border:1px solid #e0e8f0; border-radius:10px; padding:20px; text-align:center; }
+.stat-value { font-size:1.5rem; font-weight:700; color:#1F4E79; }
+.stat-label { font-size:0.8rem; color: #6b6080; margin-top:4px; }
+.section-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; flex-wrap:wrap; gap:10px; }
+.section-header h2 { margin:0; font-size:1.1rem; color:#1F4E79; }
+.analyses-table-wrap { overflow-x:auto; }
+.analyses-table { width:100%; border-collapse:collapse; font-size:0.88rem; }
+.analyses-table th { background:#f0f4f8; color:#1F4E79; font-weight:700; padding:10px 14px; text-align:left; white-space:nowrap; }
+.analyses-table td { padding:10px 14px; border-bottom:1px solid #f0f0f0; vertical-align:middle; }
+.analyses-table tr:last-child td { border-bottom:none; }
+.analyses-table tr:hover td { background:#f8fbff; }
+.text-muted { color: #6b6080; font-size:0.8rem; }
+.text-green { color:#1E7E34; font-weight:600; }
+.text-red { color:#B71C1C; font-weight:600; }
+.rating-badge { font-size:0.78rem; padding:3px 10px; border-radius:20px; font-weight:700; }
+.rating-excellent { background:#d4edda; color:#155724; }
+.rating-good { background:#d1ecf1; color:#0c5460; }
+.rating-moderate { background:#fff3cd; color:#856404; }
+.rating-poor { background:#fde8e8; color:#B71C1C; }
+.empty-state-small { text-align:center; padding:40px; color: #6b6080; }
+.btn-sm { padding:6px 14px; font-size:0.85rem; }
+</style>
+{% endblock %}

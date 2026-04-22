@@ -1,0 +1,7 @@
+flask
+werkzeug
+flask-wtf
+flask-limiter
+flask-mail
+gunicorn
+psycopg2-binary

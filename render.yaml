@@ -1,0 +1,29 @@
+services:
+  - type: web
+    name: m3-portfolio
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT --timeout 120
+    envVars:
+      - key: SECRET_KEY
+        generateValue: true
+      - key: FLASK_ENV
+        value: production
+      - key: FLASK_DEBUG
+        value: false
+      # Fill these in the Render dashboard after first deploy:
+      - key: GROQ_API_KEY
+        sync: false   # Required for AI Goal Planner + AI Wealth Assistant
+      - key: MAIL_SERVER
+        value: smtp.gmail.com
+      - key: MAIL_PORT
+        value: 587
+      - key: MAIL_USERNAME
+        sync: false   # Your Gmail / SMTP username
+      - key: MAIL_PASSWORD
+        sync: false   # App password (NOT your Gmail login password)
+      - key: MAIL_DEFAULT_SENDER
+        value: "M3 Portfolio <no-reply@m3portfolio.com>"
+      # Optional — leave empty to use SQLite (default), or provide a Postgres URL:
+      - key: DATABASE_URL
+        sync: false

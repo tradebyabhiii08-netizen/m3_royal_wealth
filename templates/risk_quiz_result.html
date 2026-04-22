@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Risk Profile Result | M3 Portfolio</title>
+    <link rel="stylesheet" href="/static/design-tokens.css">
+    <script>
+      (function () {
+        try {
+          var saved = localStorage.getItem('m3-theme');
+          var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+          var theme = saved || (prefersDark ? 'dark' : 'light');
+          document.documentElement.setAttribute('data-theme', theme);
+          if (theme === 'dark') {
+            document.addEventListener('DOMContentLoaded', function () { document.body.classList.add('dark-mode'); });
+          }
+        } catch (e) {
+          document.documentElement.setAttribute('data-theme', 'light');
+        }
+      })();
+    </script>
+    <link rel="stylesheet" href="/static/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            min-height: 100vh;
+            padding: 20px;
+            font-family: 'DM Sans', 'Segoe UI', sans-serif;
+            background: linear-gradient(145deg, #f5edcc 0%, #fdf9ee 40%, #fffdf5 70%, #f5edcc 100%);
+            color: #141124;
+        }
+        html[data-theme="dark"] body,
+        body.dark-mode {
+            background: linear-gradient(145deg, #07060f 0%, #0f0c29 45%, #1a1550 80%, #07060f 100%) !important;
+            color: #f4eed2;
+        }
+        .container { max-width: 700px; margin: 0 auto; }
+
+        .result-card {
+            background: #fdf9ee;
+            border-radius: 18px;
+            box-shadow: 0 15px 50px rgba(15,12,41,0.35);
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+
+        /* Hero Section */
+        .result-hero {
+            padding: 45px 40px;
+            text-align: center;
+            color: white;
+        }
+        .result-emoji { font-size: 4em; margin-bottom: 15px; }
+        .result-profile { font-size: 2em; font-weight: 700; margin-bottom: 8px; font-family: 'Cormorant Garamond', serif; }
+        .result-score { font-size: 1em; opacity: 0.85; margin-bottom: 15px; }
+        .result-desc { font-size: 1em; opacity: 0.9; max-width: 480px; margin: 0 auto; line-height: 1.6; }
+
+        /* Score Meter */
+        .score-meter {
+            padding: 30px 40px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        .meter-label { font-size: 0.85em; font-weight: 700; color: #6b6080; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 12px; }
+        .meter-track {
+            background: #f0f0f0; border-radius: 20px; height: 14px;
+            position: relative; overflow: hidden;
+        }
+        .meter-fill {
+            height: 100%; border-radius: 20px;
+            transition: width 1s ease;
+        }
+        .meter-markers {
+            display: flex; justify-content: space-between;
+            margin-top: 8px; font-size: 0.75em; color: #6b6080;
+        }
+        .meter-zones {
+            display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap;
+        }
+        .zone {
+            flex: 1; min-width: 100px; padding: 8px 10px;
+            border-radius: 8px; text-align: center; font-size: 0.75em; font-weight: 600;
+        }
+        .zone.active { transform: scale(1.05); box-shadow: 0 3px 10px rgba(0,0,0,0.15); }
+
+        /* Allocation */
+        .allocation-section {
+            padding: 30px 40px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        .alloc-title { font-size: 1em; font-weight: 700; color: #333; margin-bottom: 20px; }
+        .alloc-grid {
+            display: grid; grid-template-columns: 1fr 1fr;
+            gap: 20px; align-items: center;
+        }
+        .chart-wrap { height: 200px; position: relative; }
+        .alloc-legend { display: flex; flex-direction: column; gap: 14px; }
+        .alloc-item { display: flex; align-items: center; gap: 12px; }
+        .alloc-dot { width: 16px; height: 16px; border-radius: 4px; flex-shrink: 0; }
+        .alloc-info { flex: 1; }
+        .alloc-name { font-size: 0.85em; color: #3d3050; font-weight: 600; }
+        .alloc-pct { font-size: 1.5em; font-weight: 800; color: #333; line-height: 1; }
+        .alloc-bar-wrap { background: rgba(15,12,41,0.08); border-radius: 20px; height: 6px; margin-top: 4px; }
+        .alloc-bar { height: 6px; border-radius: 20px; transition: width 0.8s ease; }
+
+        /* Actions */
+        .actions {
+            padding: 25px 40px;
+            display: flex; gap: 12px; flex-wrap: wrap;
+        }
+        .btn-primary {
+            padding: 12px 26px;
+            background: linear-gradient(135deg, var(--gold), var(--gold-d));
+            color: var(--navy); text-decoration: none; border-radius: 50px; font-weight: 700;
+            font-size: 0.92em; transition: all 0.2s;
+            border: none; cursor: pointer; display:inline-flex; align-items:center; gap:6px;
+            box-shadow: 0 4px 14px rgba(232,200,74,0.35);
+        }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(232,200,74,0.4); }
+        .btn-secondary {
+            padding: 11px 22px; background: transparent; color: var(--navy);
+            text-decoration: none; border-radius: 50px;
+            font-weight: 600; font-size: 0.9em;
+            border: 1.5px solid rgba(232,200,74,0.42); cursor: pointer;
+            display:inline-flex; align-items:center; gap:6px;
+        }
+        .btn-secondary:hover { background: var(--gold-xl); }
+
+        /* Dark Mode */
+        body.dark-mode .result-card { background: #0f0c29 !important; border: var(--card-brd) !important; }
+        body.dark-mode .score-meter { border-bottom-color: #1a1550 !important; }
+        body.dark-mode .meter-label { color: #64748b !important; }
+        body.dark-mode .meter-track { background: #252d4a !important; }
+        body.dark-mode .meter-markers { color: #475569 !important; }
+        body.dark-mode .alloc-title { color: #e2e8f0 !important; }
+        body.dark-mode .alloc-name { color: #94a3b8 !important; }
+        body.dark-mode .alloc-pct { color: #e2e8f0 !important; }
+        body.dark-mode .alloc-bar-wrap { background: #252d4a !important; }
+        body.dark-mode .allocation-section { border-bottom-color: #1a1550 !important; }
+        body.dark-mode .actions { background: transparent !important; }
+        body.dark-mode .btn-secondary { background: #1a1550 !important; color: #94a3b8 !important; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="result-card">
+
+        <!-- Hero -->
+        <div class="result-hero" id="resultHero" data-color="{{ color }}">
+            <div class="result-emoji">{{ emoji }}</div>
+            <div class="result-profile">{{ profile }} Investor</div>
+            <div class="result-score">Score: {{ score }} / {{ max_score }} points</div>
+            <div class="result-desc">{{ description }}</div>
+        </div>
+
+        <!-- Score Meter -->
+        <div class="score-meter">
+            <div class="meter-label">Your Position on the Risk Scale</div>
+            <div class="meter-track">
+                <div class="meter-fill" id="meterFill"
+                     data-pct="{{ ((score / max_score) * 100) | round(1) }}"
+                     style="width:0%; background: linear-gradient(90deg, #4CAF50, #FF9800, #f44336)">
+                </div>
+            </div>
+            <div class="meter-markers">
+                <span>Conservative</span>
+                <span>Moderate</span>
+                <span>Aggressive</span>
+                <span>Very Aggressive</span>
+            </div>
+            <div class="meter-zones" id="zoneContainer" data-score="{{ score }}">
+                <div class="zone" id="zone-conservative">🟢 Conservative<br>0–15</div>
+                <div class="zone" id="zone-moderate">🟡 Moderate<br>16–30</div>
+                <div class="zone" id="zone-aggressive">🟠 Aggressive<br>31–40</div>
+                <div class="zone" id="zone-veryaggressive">🔴 Very Aggressive<br>41–50</div>
+            </div>
+        </div>
+
+        <!-- Allocation -->
+        <div class="allocation-section">
+            <div class="alloc-title">📊 Recommended Portfolio Allocation</div>
+            <div class="alloc-grid">
+                <div class="chart-wrap">
+                    <canvas id="allocChart" data-equity="{{ equity_pct }}" data-debt="{{ debt_pct }}"></canvas>
+                </div>
+                <div class="alloc-legend">
+                    <div class="alloc-item">
+                        <div class="alloc-dot" style="background:#e8c84a"></div>
+                        <div class="alloc-info">
+                            <div class="alloc-name">Equity</div>
+                            <div class="alloc-pct">{{ equity_pct }}%</div>
+                            <div class="alloc-bar-wrap">
+                                <div class="alloc-bar" data-w="{{ equity_pct }}" style="width:0%; background:#e8c84a"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="alloc-item">
+                        <div class="alloc-dot" style="background:#4CAF50"></div>
+                        <div class="alloc-info">
+                            <div class="alloc-name">Debt</div>
+                            <div class="alloc-pct">{{ debt_pct }}%</div>
+                            <div class="alloc-bar-wrap">
+                                <div class="alloc-bar" data-w="{{ debt_pct }}" style="width:0%; background:#4CAF50"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="actions">
+            <a href="/portfolio" class="btn-primary">📊 Start Portfolio Analysis</a>
+            <a href="/risk-quiz" class="btn-secondary">🔄 Retake Quiz</a>
+            <a href="/dashboard" class="btn-secondary">← Dashboard</a>
+        </div>
+
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Set hero background color
+    var hero = document.getElementById('resultHero');
+    var col = hero.getAttribute('data-color');
+    hero.style.background = 'linear-gradient(135deg, ' + col + ', ' + col + 'cc)';
+
+    // Animate meter
+    var fill = document.getElementById('meterFill');
+    setTimeout(function() {
+        fill.style.width = fill.getAttribute('data-pct') + '%';
+    }, 200);
+
+    // Style zones based on score
+    var score = parseInt(document.getElementById('zoneContainer').getAttribute('data-score'));
+    var zones = {
+        'conservative': { min:0,  max:15,  bg:'#fdf9ee', color:'#2e7d32' },
+        'moderate':     { min:16, max:30,  bg:'#fff3e0', color:'#e65100' },
+        'aggressive':   { min:31, max:40,  bg:'#fbe9e7', color:'#bf360c' },
+        'veryaggressive':{ min:41, max:50, bg:'#ffebee', color:'#c62828' }
+    };
+    Object.keys(zones).forEach(function(key) {
+        var el = document.getElementById('zone-' + key);
+        var z = zones[key];
+        if (score >= z.min && score <= z.max) {
+            el.classList.add('active');
+            el.style.background = z.bg;
+            el.style.color = z.color;
+        } else {
+            el.style.background = '#f5f5f5';
+            el.style.color = '#aaa';
+        }
+    });
+
+    // Animate allocation bars
+    document.querySelectorAll('.alloc-bar[data-w]').forEach(function(bar) {
+        setTimeout(function() {
+            bar.style.width = bar.getAttribute('data-w') + '%';
+        }, 400);
+    });
+
+    // Donut chart
+    var isDark = document.body.classList.contains('dark-mode');
+    var canvas = document.getElementById('allocChart');
+    var equityPct = parseInt(canvas.getAttribute('data-equity'));
+    var debtPct   = parseInt(canvas.getAttribute('data-debt'));
+    new Chart(canvas, {
+        type: 'doughnut',
+        data: {
+            labels: ['Equity', 'Debt'],
+            datasets: [{
+                data: [equityPct, debtPct],
+                backgroundColor: ['#e8c84a', '#4CAF50'],
+                borderWidth: 3,
+                borderColor: isDark ? '#0a0818' : '#ffffff'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '68%',
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: function(ctx) { return ctx.label + ': ' + ctx.parsed + '%'; }
+                    }
+                }
+            }
+        }
+    });
+});
+</script>
+
+</body>
+</html>

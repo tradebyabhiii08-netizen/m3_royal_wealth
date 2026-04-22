@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- FOUC-free theme bootstrap: runs BEFORE any stylesheet so paint is correct on first frame -->
+    <script>
+      (function () {
+        try {
+          var saved = localStorage.getItem('m3-theme');
+          var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+          var theme = saved || (prefersDark ? 'dark' : 'light');
+          document.documentElement.setAttribute('data-theme', theme);
+          // Mirror to legacy class so existing body.dark-mode CSS keeps working
+          document.addEventListener('DOMContentLoaded', function () {
+            if (theme === 'dark') document.body.classList.add('dark-mode');
+          });
+        } catch (e) { document.documentElement.setAttribute('data-theme', 'light'); }
+      })();
+    </script>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <title>{% block title %}M3 Portfolio Investment Analysis{% endblock %}</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Design tokens load first so components can consume CSS variables; legacy style.css remains for backward compat -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='design-tokens.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='meeting-mode.css') }}">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'DM Sans', 'Segoe UI', sans-serif;
+            background: linear-gradient(145deg, #07060f 0%, #0f0c29 45%, #1a1550 80%, #07060f 100%);
+            min-height: 100vh;
+            padding: 22px;
+        }
+
+        /* ── NAVBAR ── */
+        .navbar {
+            background: #fdf9ee;
+            padding: 14px 28px;
+            border-radius: 16px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 20px rgba(15,12,41,0.11), 0 1px 5px rgba(15,12,41,0.06);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 3px solid #e8c84a;
+        }
+        .navbar h1 { color: #0f0c29; font-size: 1.5em; font-family: 'Cormorant Garamond', serif; font-weight: 700; letter-spacing: 0.5px; }
+        .navbar .user-info { display: flex; align-items: center; gap: 15px; flex-wrap: wrap; }
+        .navbar .user-name { color: #0f0c29; font-weight: 700; }
+        .navbar a {
+            color: #0f0c29; text-decoration: none; font-weight: 700;
+            padding: 6px 16px; border: 2px solid #e8c84a; border-radius: 20px; transition: all 0.3s;
+            background: #e8c84a;
+        }
+        .navbar a:hover { background: #f5d96b; color: #0f0c29; font-weight: 700; }
+        .navbar .admin-btn {
+            background: linear-gradient(135deg, #1a1550, #0f0c29);
+            color: white !important; border: none !important; padding: 7px 18px;
+            border-radius: 20px; font-weight: 600; text-decoration: none;
+            box-shadow: 0 2px 8px rgba(232,200,74,0.3);
+        }
+        .navbar .nav-links { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+        .navbar .nav-links a {
+            color: #0f0c29; text-decoration: none; font-weight: 600;
+            padding: 6px 13px; border-radius: 15px; transition: all 0.2s; font-size: 0.88em;
+        }
+        .navbar .nav-links a:hover { background: #f5edcc; color: #0f0c29; }
+        .navbar .nav-links a.active { background: #e8c84a; color: #0f0c29; font-weight: 700; border-radius: 14px; }
+
+        /* ── NAV DROPDOWNS ── */
+        .nav-dropdown { position: relative; display: inline-block; }
+        .nav-drop-btn {
+            color: #0f0c29; font-weight: 600; font-size: 0.88em;
+            padding: 6px 13px; border-radius: 15px; cursor: pointer;
+            transition: all 0.2s; display: flex; align-items: center; gap: 4px;
+            background: none; border: none; font-family: inherit;
+        }
+        .nav-drop-btn:hover { background: #f5edcc; }
+        .nav-drop-btn .caret { font-size: 0.7em; transition: transform 0.2s; display: inline-block; }
+        .nav-dropdown:hover .nav-drop-btn .caret { transform: rotate(180deg); }
+        .nav-drop-menu {
+            display: none; position: absolute; top: calc(100% + 6px); left: 0;
+            background: white; border-radius: 12px; min-width: 200px;
+            box-shadow: 0 8px 24px rgba(232,200,74,0.18); z-index: 999;
+            padding: 6px; border: 1px solid rgba(232,200,74,0.3);
+        }
+        .nav-dropdown:hover .nav-drop-menu { display: block; }
+        .nav-drop-menu a {
+            display: flex; align-items: center; gap: 9px;
+            padding: 8px 12px; border-radius: 8px; color: #0f0c29 !important; font-weight: 500;
+            font-size: 0.87em; font-weight: 500; text-decoration: none;
+            transition: background 0.15s; border: none !important;
+        }
+        .nav-drop-menu a:hover { background: #fdf9ee; color: #b89a2a !important; }
+        .drop-divider { height: 1px; background: #f5edcc; margin: 4px 0; }
+        .drop-label {
+            font-size: 0.72em; font-weight: 700; color: #9ca3af;
+            text-transform: uppercase; letter-spacing: 0.06em; padding: 6px 12px 2px;
+        }
+
+        .container { max-width: 1400px; margin: 0 auto; }
+
+        /* ── CARDS ── */
+        .card {
+            background: #fdf9ee;
+            border-radius: 14px;
+            box-shadow: 0 4px 20px rgba(15,12,41,0.1), 0 1px 4px rgba(15,12,41,0.05);
+            padding: 24px;
+            margin-bottom: 20px;
+            border: 1px solid rgba(232,200,74,0.2);
+        }
+
+        /* ── BUTTONS ── */
+        .btn {
+            display: inline-block; padding: 10px 22px; border-radius: 50px;
+            font-weight: 600; text-decoration: none; cursor: pointer;
+            border: none; transition: all 0.3s; font-size: 0.9rem;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #e8c84a 0%, #d4a843 100%);
+            color: #0f0c29;
+            box-shadow: 0 4px 12px rgba(232,200,74,0.35);
+            letter-spacing: 0.02em;
+            font-weight: 700;
+        }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(232,200,74,0.6); }
+        .btn-secondary {
+            background: transparent; color: #e8c84a;
+            border: 2px solid #e8c84a !important;
+        }
+        .btn-secondary:hover { background: #e8c84a; color: #0f0c29; font-weight: 700; }
+        .btn-outline {
+            background: transparent; color: #4a3f5c;
+            border: 2px solid #ddd !important;
+        }
+        .btn-outline:hover { background: #f5f5f5; }
+        .btn-danger { background: #dc3545; color: white; }
+        .btn-danger:hover { background: #bb2d3b; }
+
+        /* ── DARK MODE ── */
+        body.dark-mode {
+            background: linear-gradient(135deg, #07060f 0%, #16213e 100%);
+        }
+        body.dark-mode .navbar,
+        body.dark-mode .card {
+            background: #0f0c29 !important;
+            color: #e2e8f0 !important;
+        }
+        body.dark-mode .navbar h1 { color: #e8c84a !important; font-family: 'Cormorant Garamond', serif !important; }
+        body.dark-mode .navbar .user-name { color: #cbd5e1 !important; }
+        body.dark-mode .navbar a { color: #e8c84a !important; border-color: rgba(232,200,74,0.4) !important; }
+        body.dark-mode .navbar a:hover { background: #f5d96b !important; color: #0f0c29 !important; }
+        body.dark-mode .nav-drop-btn { color: #e8c84a !important; }
+        body.dark-mode .nav-drop-btn:hover { background: rgba(232,200,74,0.12) !important; }
+        body.dark-mode .nav-drop-menu { background: #0f0c29 !important; border-color: #334155 !important; box-shadow: 0 8px 24px rgba(0,0,0,0.4) !important; }
+        body.dark-mode .nav-drop-menu a { color: #f5d96b !important; }
+        body.dark-mode .nav-drop-menu a:hover { background: rgba(232,200,74,0.15) !important; color: #e8c84a !important; }
+        body.dark-mode .drop-divider { background: rgba(232,200,74,0.15) !important; }
+        body.dark-mode .drop-label { color: rgba(232,200,74,0.5) !important; }
+        body.dark-mode .navbar .nav-links a.active { background: rgba(232,200,74,0.25) !important; color: #e8c84a !important; }
+
+        /* ── FLASH MESSAGES ── */
+        .flash-success {
+            background: #fdf9ee; color: #1e5c28; padding: 12px 20px;
+            border-radius: 10px; margin-bottom: 16px; border-left: 4px solid #e8c84a; font-weight: 500;
+            font-weight: 500;
+        }
+        .flash-error {
+            background: #fef2f2; color: #991b1b; padding: 13px 20px;
+            border-radius: 10px; margin-bottom: 16px; border-left: 4px solid #ef4444;
+            font-weight: 500; font-size: 0.93em;
+        }
+    </style>
+
+    {% block extra_head %}{% endblock %}
+    <style>
+    /* ── Shared Royal Wealth tokens injected from base ── */
+    :root {
+        --navy:    #0f0c29;
+        --navy-m:  #1a1550;
+        --gold:    #e8c84a;
+        --gold-d:  #d4a843;
+        --gold-l:  #f5d96b;
+        --gold-xl: #fdf3cc;
+        --cream:   #fdf9ee;
+        --muted:   #6b6080;
+        --ink:     #1a0f3c;
+        --card-shd: 0 4px 20px rgba(15,12,41,0.11), 0 1px 5px rgba(15,12,41,0.06);
+        --card-brd: 1px solid rgba(232,200,74,0.2);
+    }
+    /* Page header */
+    .page-hdr {
+        background:var(--cream); border-radius:16px; padding:22px 28px;
+        margin-bottom:20px; box-shadow:var(--card-shd); border:var(--card-brd);
+        border-left:5px solid var(--gold); display:flex;
+        justify-content:space-between; align-items:center; gap:16px; flex-wrap:wrap;
+    }
+    .page-hdr h1 { font-size:1.65em; color:var(--navy); font-weight:700; margin-bottom:3px; font-family:'Cormorant Garamond',serif; }
+    .page-hdr p  { color:var(--muted); font-size:0.87em; }
+    .page-hdr-right { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+    /* Panel */
+    .panel { background:var(--cream); border-radius:16px; border:var(--card-brd); box-shadow:var(--card-shd); overflow:hidden; margin-bottom:18px; }
+    .panel-hdr { padding:15px 20px 13px; border-bottom:1px solid rgba(232,200,74,0.15); display:flex; align-items:center; justify-content:space-between; }
+    .panel-hdr h3 { font-size:0.96em; font-weight:700; color:var(--navy); font-family:'DM Sans',sans-serif; display:flex; align-items:center; gap:7px; }
+    .panel-body { padding:18px 20px; }
+    /* Buttons */
+    .btn-gold { background:linear-gradient(135deg,var(--gold),var(--gold-d)); color:var(--navy); font-weight:700; padding:9px 20px; border-radius:50px; border:none; cursor:pointer; text-decoration:none; font-size:0.88em; display:inline-flex; align-items:center; gap:6px; transition:all 0.2s; font-family:'DM Sans',sans-serif; }
+    .btn-gold:hover { transform:translateY(-1px); box-shadow:0 5px 16px rgba(232,200,74,0.38); }
+    .btn-navy { background:var(--navy); color:var(--gold); font-weight:600; padding:9px 20px; border-radius:50px; border:none; cursor:pointer; text-decoration:none; font-size:0.88em; display:inline-flex; align-items:center; gap:6px; transition:all 0.2s; font-family:'DM Sans',sans-serif; }
+    .btn-navy:hover { background:var(--navy-m); }
+    .btn-ghost { background:transparent; color:var(--navy); font-weight:600; padding:8px 18px; border-radius:50px; border:1.5px solid rgba(232,200,74,0.42); cursor:pointer; text-decoration:none; font-size:0.86em; display:inline-flex; align-items:center; gap:6px; transition:all 0.2s; font-family:'DM Sans',sans-serif; }
+    .btn-ghost:hover { background:var(--gold-xl); }
+    .btn-red { background:#dc2626; color:white; font-weight:600; padding:9px 20px; border-radius:50px; border:none; cursor:pointer; text-decoration:none; font-size:0.88em; display:inline-flex; align-items:center; gap:6px; transition:all 0.2s; }
+    .btn-red:hover { background:#b91c1c; }
+    /* Dark mode overrides for base page components */
+    body.dark-mode .page-hdr { background:#0f0c29 !important; border-color:rgba(232,200,74,0.1) !important; }
+    body.dark-mode .page-hdr h1 { color:#e8c84a !important; }
+    body.dark-mode .page-hdr p  { color:#64748b !important; }
+    body.dark-mode .panel { background:#0f0c29 !important; border-color:rgba(232,200,74,0.08) !important; }
+    body.dark-mode .panel-hdr { border-bottom-color:rgba(232,200,74,0.07) !important; }
+    body.dark-mode .panel-hdr h3 { color:#e8c84a !important; }
+    body.dark-mode .panel-body p,body.dark-mode .panel-body td,body.dark-mode .panel-body li { color:#cbd5e1 !important; }
+    </style>
+</head>
+<body id="mainBody">
+
+    <!-- NAVBAR -->
+    <div class="navbar">
+        <h1>📊 M3 Portfolio Investment Analysis</h1>
+        <div class="user-info">
+            <div class="nav-links">
+                <a href="/dashboard">🏠 Dashboard</a>
+                <a href="/clients">👥 Clients</a>
+                <a href="/portfolio">📈 Portfolio</a>
+                <a href="/reports">📋 Reports</a>
+
+                <!-- Calculators Dropdown -->
+                <div class="nav-dropdown">
+                    <button class="nav-drop-btn">🧮 Calculators <span class="caret">▾</span></button>
+                    <div class="nav-drop-menu">
+                        <div class="drop-label">SIP Tools</div>
+                        <a href="/calculator/sip">📅 SIP Calculator</a>
+                        <a href="/calculator/stepup-sip">📈 Step-Up SIP</a>
+                        <a href="/calculator/lumpsum">💰 Lumpsum</a>
+                        <a href="/calculator/swp">💸 SWP Calculator</a>
+                        <div class="drop-divider"></div>
+                        <div class="drop-label">Planning</div>
+                        <a href="/calculator/retirement">🏖️ Retirement</a>
+                        <a href="/calculator/goal-sip">🎯 Goal SIP</a>
+                        <a href="/calculator/wealth-optimizer">⚡ Wealth Optimizer</a>
+                    </div>
+                </div>
+
+                <!-- AI Tools Dropdown -->
+                <div class="nav-dropdown">
+                    <button class="nav-drop-btn">🤖 AI Tools <span class="caret">▾</span></button>
+                    <div class="nav-drop-menu">
+                        <a href="/ai/wealth-assistant">💬 Wealth Assistant</a>
+                        <a href="/ai/goal-planner">🎯 Goal Planner</a>
+                        <div class="drop-divider"></div>
+                        <a href="/risk-quiz">🧠 Risk Profile Quiz</a>
+                    </div>
+                </div>
+            </div>
+            <span class="user-name">👤 {{ session.get('user_name', '') }}</span>
+            <button id="m3ThemeToggle" class="m3-theme-toggle" type="button"
+                    aria-label="Toggle light / dark theme" aria-pressed="false" title="Toggle theme">
+              <span class="m3-sun" aria-hidden="true">☀︎</span>
+              <span class="m3-moon" aria-hidden="true">☾</span>
+            </button>
+            <button type="button" class="mm-toggle advisor-only" title="Meeting Mode: hides advisor controls for client-facing view">
+                🎤 <span class="mm-label">Meeting Mode</span>
+            </button>
+            {% if session.get('is_admin') %}
+            <a href="/admin" class="admin-btn advisor-only">🛡️ Admin</a>
+            {% endif %}
+            <a href="/settings" class="advisor-only">⚙️ Settings</a>
+            <a href="/logout" class="advisor-only">Logout</a>
+        </div>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <div class="container">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="flash-{{ category }}">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+
+        <!-- ───────────── AMFI / SEBI mandatory disclaimer ───────────── -->
+        <footer class="m3-footer" role="contentinfo">
+          <div class="m3-footer-disclaimer">
+            <strong>Mutual Fund investments are subject to market risks.</strong>
+            Read all scheme-related documents carefully. Figures shown anywhere in this
+            platform are <em>indicative projections</em> based on assumed rates of return
+            — past performance is not a guarantee of future results. Inflation, fund
+            expenses, exit loads and taxes may materially affect actual outcomes.
+            Always validate AI-generated analysis before presenting to clients.
+          </div>
+          <div>
+            © {{ current_year if current_year else '2025' }} M3 Royal Wealth ·
+            AMFI Registered MFD: <strong>{{ session.get('arn', 'ARN-XXXXXX') }}</strong>
+          </div>
+        </footer>
+    </div>
+
+    <!-- Shared calculator math library (window.M3) -->
+    <script src="{{ url_for('static', filename='calc-core.js') }}"></script>
+    <script src="{{ url_for('static', filename='meeting-mode.js') }}"></script>
+
+    {% block extra_scripts %}{% endblock %}
+
+    <script>
+    // ─── Theme toggle (persistent, accessible, syncs legacy .dark-mode class) ───
+    (function () {
+      var btn = document.getElementById('m3ThemeToggle');
+      if (!btn) return;
+      var html = document.documentElement;
+      function sync() {
+        var dark = html.getAttribute('data-theme') === 'dark';
+        btn.setAttribute('aria-pressed', dark ? 'true' : 'false');
+        document.body.classList.toggle('dark-mode', dark);
+      }
+      sync();
+      btn.addEventListener('click', function () {
+        var next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+        html.setAttribute('data-theme', next);
+        try { localStorage.setItem('m3-theme', next); } catch (e) {}
+        sync();
+        window.dispatchEvent(new CustomEvent('m3-theme-change', { detail: next }));
+      });
+      // Respect live OS preference changes only when user hasn't set an explicit choice
+      if (window.matchMedia) {
+        try {
+          window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function (e) {
+            if (!localStorage.getItem('m3-theme')) {
+              html.setAttribute('data-theme', e.matches ? 'dark' : 'light');
+              sync();
+            }
+          });
+        } catch (e) { /* older browsers */ }
+      }
+    })();
+
+    // ─── Active nav link highlight ───
+    (function(){
+        const path = window.location.pathname;
+        document.querySelectorAll('.nav-links > a').forEach(a => {
+            if (a.getAttribute('href') === path) a.classList.add('active');
+        });
+        document.querySelectorAll('.nav-drop-menu a').forEach(a => {
+            const href = a.getAttribute('href');
+            if (href === path || (href !== '/' && path.startsWith(href))) {
+                const btn = a.closest('.nav-dropdown').querySelector('.nav-drop-btn');
+                if (btn) btn.style.background = '#fdf9ee';
+            }
+        });
+    })();
+
+    // ─── Apply chart defaults from theme tokens on every page ───
+    if (window.M3 && window.Chart) { try { window.M3.applyChartDefaults(); } catch (e) {} }
+    </script>
+
+</body>
+</html>

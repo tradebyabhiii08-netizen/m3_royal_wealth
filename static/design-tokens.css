@@ -1,0 +1,263 @@
+/* ================================================================
+   M3 Royal Wealth — Design Tokens (single source of truth)
+   Light theme = default. Dark theme activated via <html data-theme="dark">.
+   Legacy body.dark-mode is also supported for backward compatibility.
+   ================================================================ */
+
+:root {
+  /* Brand palette */
+  --brand-navy:       #0f0c29;
+  --brand-navy-deep:  #07060f;
+  --brand-navy-mid:   #1a1550;
+  --brand-gold:       #c9a227;   /* AA-safe gold — darkened from #e8c84a for cream backgrounds */
+  --brand-gold-soft:  #e8c84a;   /* original gold kept for accents on dark backgrounds */
+  --brand-gold-deep:  #a07f10;
+  --brand-cream:      #fdf9ee;
+  --brand-cream-deep: #f5edcc;
+
+  /* Semantic (LIGHT theme values) */
+  --bg:             #faf7ef;
+  --surface-1:      #ffffff;
+  --surface-2:      #fdf9ee;
+  --surface-3:      #f5edcc;
+  --text-1:         #141124;        /* primary text */
+  --text-2:         #4a4464;        /* secondary */
+  --text-3:         #6b6380;        /* muted — AA compliant */
+  --border:         #e4dcc2;
+  --border-strong:  #c9a227;
+  --focus-ring:     0 0 0 3px rgba(201,162,39,0.45);
+
+  --success:        #0e7c43;
+  --success-bg:     #e6f7ec;
+  --warning:        #a1620a;
+  --warning-bg:     #fdf3d6;
+  --danger:         #b4261a;
+  --danger-bg:      #fbe9e7;
+  --info:           #1257a0;
+  --info-bg:        #e6f0fb;
+
+  /* Spacing scale (4-based) */
+  --sp-1: 4px;  --sp-2: 8px;  --sp-3: 12px; --sp-4: 16px;
+  --sp-5: 24px; --sp-6: 32px; --sp-7: 48px; --sp-8: 64px;
+
+  /* Radius scale */
+  --r-sm: 8px; --r-md: 12px; --r-lg: 16px; --r-xl: 20px; --r-pill: 999px;
+
+  /* Type ramp (rem) */
+  --fs-xs:  0.75rem;  --fs-sm:  0.875rem; --fs-md:  1rem;
+  --fs-lg:  1.125rem; --fs-xl:  1.5rem;   --fs-2xl: 2rem;   --fs-3xl: 2.75rem;
+
+  /* Elevation */
+  --sh-1: 0 1px 2px rgba(15,12,41,.06);
+  --sh-2: 0 4px 14px rgba(15,12,41,.08);
+  --sh-3: 0 16px 40px rgba(15,12,41,.14);
+
+  /* Chart palette — theme-aware readable */
+  --c1: #c9a227; --c2: #1257a0; --c3: #0e7c43; --c4: #a1620a; --c5: #7a3e9d;
+
+  color-scheme: light;
+}
+
+/* ======================== DARK THEME ======================== */
+html[data-theme="dark"],
+html[data-theme="dark"] body,
+body.dark-mode {
+  --bg:             #07060f;
+  --surface-1:      #121028;
+  --surface-2:      #1a1550;
+  --surface-3:      #241e63;
+  --text-1:         #f4eed2;       /* 14.8:1 on --bg ✅ AAA */
+  --text-2:         #d9cf9a;       /*  9.6:1        ✅ AAA */
+  --text-3:         #a39771;       /*  5.2:1        ✅ AA  (replaces broken #b89a2a @ 3.2:1) */
+  --border:         rgba(233,203,101,0.18);
+  --border-strong:  #e6c965;
+  --focus-ring:     0 0 0 3px rgba(230,201,101,0.55);
+
+  --success:        #3ddc97; --success-bg: #07331f;
+  --warning:        #f7c860; --warning-bg: #3b2a05;
+  --danger:         #ff6b5e; --danger-bg:  #3a100a;
+  --info:           #6db7f7; --info-bg:    #0a2338;
+
+  --sh-1: 0 1px 2px rgba(0,0,0,.5);
+  --sh-2: 0 4px 14px rgba(0,0,0,.55);
+  --sh-3: 0 16px 40px rgba(0,0,0,.7);
+
+  --c1:#e6c965; --c2:#6db7f7; --c3:#3ddc97; --c4:#f7c860; --c5:#c896ff;
+
+  color-scheme: dark;
+}
+
+/* ================================================================
+   Reusable component primitives (opt-in via classnames)
+   Existing pages keep their current inline styles; these are for
+   new or refactored components and for the AMFI disclaimer block.
+   ================================================================ */
+
+.m3-disclaimer {
+  margin-top: var(--sp-5);
+  padding: var(--sp-4) var(--sp-5);
+  border-top: 1px solid var(--border);
+  font-size: var(--fs-xs);
+  line-height: 1.55;
+  color: var(--text-3);
+  background: var(--surface-2);
+  border-radius: var(--r-md);
+}
+.m3-disclaimer strong { color: var(--text-2); }
+
+.m3-share-row {
+  display: flex; flex-wrap: wrap; gap: var(--sp-2);
+  padding: var(--sp-4) 0;
+  align-items: center;
+}
+.m3-share-row .m3-btn { flex: 0 0 auto; }
+
+.m3-btn {
+  display: inline-flex; align-items: center; gap: var(--sp-2);
+  padding: var(--sp-3) var(--sp-5);
+  border-radius: var(--r-md);
+  font: 600 var(--fs-md)/1 'DM Sans', system-ui, sans-serif;
+  border: 1.5px solid transparent;
+  cursor: pointer; text-decoration: none;
+  transition: transform .1s ease, box-shadow .15s ease,
+              background .15s ease, color .15s ease;
+}
+.m3-btn:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+.m3-btn[disabled], .m3-btn[aria-disabled="true"] {
+  background: var(--surface-3) !important;
+  color: var(--text-3) !important;
+  cursor: not-allowed; transform: none; box-shadow: none;
+}
+
+.m3-btn-primary {
+  background: var(--brand-gold);
+  color: var(--brand-navy);
+  box-shadow: var(--sh-2);
+}
+.m3-btn-primary:hover  { background: var(--brand-gold-soft); transform: translateY(-1px); box-shadow: var(--sh-3); }
+
+.m3-btn-outline {
+  background: transparent;
+  color: var(--text-1);
+  border-color: var(--border-strong);
+}
+.m3-btn-outline:hover  { background: var(--surface-2); }
+
+/* Theme toggle icon button */
+.m3-theme-toggle {
+  width: 40px; height: 40px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border-radius: var(--r-pill);
+  background: var(--surface-2);
+  color: var(--text-1);
+  border: 1px solid var(--border);
+  cursor: pointer; font-size: 18px; line-height: 1;
+  transition: background .15s ease, transform .1s ease;
+}
+.m3-theme-toggle:hover { background: var(--surface-3); }
+.m3-theme-toggle:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+.m3-theme-toggle .m3-sun,
+.m3-theme-toggle .m3-moon { display: none; }
+html[data-theme="light"] .m3-theme-toggle .m3-sun  { display: inline; }
+html[data-theme="dark"]  .m3-theme-toggle .m3-moon { display: inline; }
+/* Fallback when data-theme isn't set yet */
+html:not([data-theme]) .m3-theme-toggle .m3-sun { display: inline; }
+
+/* Global focus-visible hardening (does not override existing focus styles, only adds where none exist) */
+:focus-visible {
+  outline: 2px solid var(--border-strong);
+  outline-offset: 2px;
+}
+
+/* Footer */
+.m3-footer {
+  max-width: 1400px; margin: var(--sp-6) auto 0;
+  padding: var(--sp-5) var(--sp-6);
+  border-top: 1px solid var(--border);
+  display: flex; flex-wrap: wrap; gap: var(--sp-4);
+  justify-content: space-between; align-items: center;
+  font-size: var(--fs-xs); color: var(--text-3);
+  background: var(--surface-2);
+  border-radius: var(--r-lg);
+  margin-bottom: var(--sp-3);
+}
+.m3-footer .m3-footer-disclaimer { flex: 1 1 420px; max-width: 720px; line-height: 1.55; }
+.m3-footer a { color: var(--brand-gold-deep); text-decoration: none; }
+html[data-theme="dark"] .m3-footer a,
+body.dark-mode .m3-footer a { color: var(--brand-gold-soft); }
+
+/* ================================================================
+   Fix: 20 templates hardcode  body { background: linear-gradient(...) }
+   with a dark navy gradient AND no theme qualifier. Light mode was
+   effectively broken — body stayed dark in both themes.
+
+   We use !important because (a) the target rule is inside a later
+   <style> block in each template, and (b) several templates repeat
+   the background declaration under other selectors. !important here
+   is intentional and scoped strictly to the top-level body element.
+   ================================================================ */
+html[data-theme="light"] body {
+  background: linear-gradient(145deg, #f5edcc 0%, #fdf9ee 40%, #fffdf5 70%, #f5edcc 100%) !important;
+  color: var(--text-1) !important;
+}
+
+/* Dark theme keeps the original royal navy gradient.
+   Legacy body.dark-mode class is also honored. */
+html[data-theme="dark"] body,
+body.dark-mode {
+  background: linear-gradient(145deg, #07060f 0%, #0f0c29 45%, #1a1550 80%, #07060f 100%) !important;
+}
+
+/* Light-mode overrides for hardcoded navy heading colors on the body
+   level (cards keep their own navy text — cream card on cream body). */
+html[data-theme="light"] body > h1,
+html[data-theme="light"] body > h2 {
+  color: var(--text-1) !important;
+}
+
+/* Cream cards on cream body need a hairline to separate visually */
+html[data-theme="light"] .calc-card,
+html[data-theme="light"] .calc-header,
+html[data-theme="light"] .card,
+html[data-theme="light"] .panel,
+html[data-theme="light"] .chart-card,
+html[data-theme="light"] .table-card,
+html[data-theme="light"] .comparison-card,
+html[data-theme="light"] .sum-card,
+html[data-theme="light"] .page-hdr {
+  border: 1px solid rgba(15,12,41,0.08) !important;
+  box-shadow: 0 4px 16px rgba(15,12,41,0.06), 0 1px 3px rgba(15,12,41,0.04) !important;
+}
+
+/* Input sections in calculators use pale colored tints (#fdf3cc, etc.) —
+   keep them but ensure they remain distinct from the new cream body. */
+html[data-theme="light"] .input-section,
+html[data-theme="light"] .live-preview,
+html[data-theme="light"] .reverse-section {
+  box-shadow: inset 0 0 0 1px rgba(15,12,41,0.04);
+}
+
+/* Smooth theme transitions (no flash on toggle) */
+html { transition: background-color .2s ease; }
+body, .card, .calc-card, .panel, .page-hdr { transition: background-color .2s ease, color .2s ease, border-color .2s ease; }
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition: none !important; animation: none !important; }
+}
+
+/* Responsive table helper (opt-in) */
+.m3-tbl-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  background: var(--surface-1);
+}
+.m3-tbl-wrap table { width: 100%; min-width: 640px; border-collapse: collapse; }
+
+/* Print: hide navbar/footer, expand content */
+@media print {
+  .navbar, .m3-footer, .m3-share-row, .btn-back { display: none !important; }
+  body { background: white !important; color: black !important; padding: 0 !important; }
+}

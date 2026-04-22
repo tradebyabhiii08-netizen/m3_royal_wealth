@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{ a.client_name }} — Meeting Mode</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+html, body { height:100%; overflow:hidden; }
+body {
+    font-family:'DM Sans',sans-serif;
+    background: linear-gradient(145deg,#07060f 0%,#0f0c29 45%,#1a1550 80%,#07060f 100%);
+    color:#f4eed2;
+    user-select:none;
+}
+.deck { height:100vh; width:100vw; position:relative; }
+.slide {
+    position:absolute; inset:0;
+    display:none;
+    flex-direction:column;
+    justify-content:center;
+    align-items:center;
+    padding:6vh 8vw;
+    animation: fadeIn 0.4s ease;
+}
+.slide.active { display:flex; }
+@keyframes fadeIn { from{opacity:0;transform:translateY(12px);} to{opacity:1;transform:translateY(0);} }
+
+/* Header chip — advisor + client */
+.hdr {
+    position:absolute; top:24px; left:32px;
+    font-size:0.8rem; color:rgba(232,200,74,0.7);
+    letter-spacing:0.08em; text-transform:uppercase; font-weight:700;
+}
+.exit {
+    position:absolute; top:20px; right:28px;
+    background:rgba(232,200,74,0.1);
+    border:1px solid rgba(232,200,74,0.3);
+    color:#e8c84a;
+    padding:8px 16px; border-radius:20px;
+    font-size:0.8rem; font-weight:600;
+    text-decoration:none; cursor:pointer;
+    font-family:inherit;
+}
+.exit:hover { background:rgba(232,200,74,0.2); }
+.slide-num {
+    position:absolute; bottom:24px; right:32px;
+    font-size:0.8rem; color:rgba(244,238,210,0.4);
+    letter-spacing:0.1em;
+}
+.nav-hint {
+    position:absolute; bottom:24px; left:32px;
+    font-size:0.75rem; color:rgba(244,238,210,0.3);
+}
+
+/* Typography */
+h1 { font-family:'Cormorant Garamond',serif; font-weight:700; }
+.cover h1 { font-size:5rem; color:#e8c84a; margin-bottom:18px; line-height:1; }
+.cover .sub { font-size:1.3rem; color:rgba(244,238,210,0.7); margin-bottom:40px; font-weight:300; }
+.cover .advisor { font-size:1rem; color:rgba(244,238,210,0.5); letter-spacing:0.1em; }
+.cover .logo-mark {
+    font-family:'Cormorant Garamond',serif; font-size:2.2rem; font-weight:700;
+    color:#e8c84a; margin-bottom:40px;
+    border:2px solid rgba(232,200,74,0.4); padding:10px 26px; border-radius:50%;
+    display:inline-block;
+}
+
+.slide-title { font-size:2.4rem; color:#e8c84a; margin-bottom:40px; text-align:center; font-family:'Cormorant Garamond',serif; }
+
+/* Portfolio card */
+.port-wrap { display:grid; grid-template-columns:1fr 1fr; gap:60px; width:100%; max-width:1200px; align-items:center; }
+.port-canvas-wrap { position:relative; height:420px; }
+.port-center {
+    position:absolute; inset:0; display:flex; flex-direction:column;
+    justify-content:center; align-items:center; pointer-events:none;
+}
+.port-center .big { font-size:2.6rem; font-weight:700; color:#fff; font-family:'Cormorant Garamond',serif; }
+.port-center .lbl { font-size:0.85rem; color:rgba(244,238,210,0.5); letter-spacing:0.1em; margin-top:4px; }
+
+.port-stats .stat {
+    background:rgba(15,12,41,0.6);
+    border:1px solid rgba(232,200,74,0.2);
+    border-radius:14px; padding:20px 26px; margin-bottom:14px;
+}
+.port-stats .stat .k { font-size:0.78rem; color:rgba(244,238,210,0.5); letter-spacing:0.08em; text-transform:uppercase; }
+.port-stats .stat .v { font-size:1.6rem; font-weight:700; color:#fff; margin-top:4px; font-family:'Cormorant Garamond',serif; }
+.port-stats .stat .v.gold { color:#e8c84a; }
+.port-stats .stat .v.green { color:#48bb78; }
+.port-stats .callout {
+    background:linear-gradient(135deg,rgba(232,200,74,0.15),rgba(26,21,80,0.3));
+    border:1px solid rgba(232,200,74,0.4);
+}
+
+/* Projection slide */
+.proj-wrap { width:100%; max-width:1100px; }
+.proj-chart-wrap { height:420px; margin-bottom:20px; }
+.proj-note {
+    text-align:center; font-size:0.95rem; color:rgba(244,238,210,0.6);
+    background:rgba(15,12,41,0.5);
+    padding:14px 26px; border-radius:12px;
+    border:1px solid rgba(232,200,74,0.15);
+}
+
+/* Rating slide */
+.rating-wrap { text-align:center; }
+.rating-big {
+    display:inline-block;
+    padding:30px 60px;
+    border-radius:100px;
+    font-size:3rem; font-weight:700;
+    font-family:'Cormorant Garamond',serif;
+    margin-bottom:28px;
+}
+.rating-Excellent { background:rgba(72,187,120,0.15); color:#48bb78; border:2px solid rgba(72,187,120,0.4); }
+.rating-Good { background:rgba(99,179,237,0.15); color:#63b3ed; border:2px solid rgba(99,179,237,0.4); }
+.rating-Moderate { background:rgba(237,137,54,0.15); color:#ed8936; border:2px solid rgba(237,137,54,0.4); }
+.rating-Poor { background:rgba(252,129,129,0.15); color:#fc8181; border:2px solid rgba(252,129,129,0.4); }
+
+/* Next steps */
+.steps { list-style:none; text-align:left; max-width:700px; width:100%; }
+.steps li {
+    background:rgba(15,12,41,0.6);
+    border-left:4px solid #e8c84a;
+    padding:18px 26px; margin-bottom:14px; border-radius:10px;
+    font-size:1.05rem; color:#f4eed2;
+    display:flex; align-items:center; gap:18px;
+}
+.steps li .num {
+    width:36px; height:36px; border-radius:50%;
+    background:linear-gradient(135deg,#e8c84a,#d4a843);
+    color:#1a0f3c; font-weight:700; font-size:1rem;
+    display:flex; align-items:center; justify-content:center;
+    flex-shrink:0;
+}
+
+/* Progress dots */
+.dots {
+    position:absolute; bottom:24px; left:50%; transform:translateX(-50%);
+    display:flex; gap:8px;
+}
+.dot {
+    width:8px; height:8px; border-radius:50%;
+    background:rgba(244,238,210,0.2);
+    cursor:pointer; transition:background 0.2s;
+}
+.dot.active { background:#e8c84a; width:22px; border-radius:4px; }
+
+@media (max-width:900px) {
+    .cover h1 { font-size:3rem; }
+    .port-wrap { grid-template-columns:1fr; gap:30px; }
+    .port-canvas-wrap { height:300px; }
+    .slide-title { font-size:1.6rem; }
+}
+</style>
+</head>
+<body>
+
+{% set is_indian = (session.get('currency_format','indian') == 'indian') %}
+{% set sym = '₹' if is_indian else '$' %}
+
+<div class="deck" id="deck">
+
+    <!-- Slide 1: Cover -->
+    <div class="slide cover active">
+        <div class="logo-mark">M³</div>
+        <div class="sub">Portfolio Review for</div>
+        <h1>{{ a.client_name }}</h1>
+        <div class="sub">Prepared on {{ (a.created_at|string)[:10] }}</div>
+        <div class="advisor">BY {{ advisor_name }}</div>
+    </div>
+
+    <!-- Slide 2: Current Portfolio -->
+    <div class="slide">
+        <div class="slide-title">📁 Current Portfolio</div>
+        <div class="port-wrap">
+            <div class="port-canvas-wrap">
+                <canvas id="currentChart"></canvas>
+                <div class="port-center">
+                    <div class="big" id="curTotal"></div>
+                    <div class="lbl">TOTAL VALUE</div>
+                </div>
+            </div>
+            <div class="port-stats">
+                <div class="stat"><div class="k">Expected Return</div><div class="v">{{ "%.1f"|format(a.current_return) }}%  <span style="font-size:1rem;color:rgba(244,238,210,0.5)">p.a.</span></div></div>
+                <div class="stat"><div class="k">Equity</div><div class="v">{{ "%.0f"|format(a.r1_equity_pct or 0) }}%</div></div>
+                <div class="stat"><div class="k">Debt</div><div class="v">{{ "%.0f"|format(a.r1_debt_pct or 0) }}%</div></div>
+                <div class="stat"><div class="k">Other (Real Estate + Alt)</div><div class="v">{{ "%.0f"|format((a.r1_real_pct or 0) + (a.r1_alternate_pct or 0)) }}%</div></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Slide 3: Revised Portfolio -->
+    <div class="slide">
+        <div class="slide-title">✨ Revised Portfolio</div>
+        <div class="port-wrap">
+            <div class="port-canvas-wrap">
+                <canvas id="revisedChart"></canvas>
+                <div class="port-center">
+                    <div class="big" id="revTotal"></div>
+                    <div class="lbl">TOTAL VALUE</div>
+                </div>
+            </div>
+            <div class="port-stats">
+                <div class="stat callout">
+                    <div class="k">Return Improvement</div>
+                    <div class="v green">+{{ "%.1f"|format((a.revised_return or 0) - (a.current_return or 0)) }}% p.a.</div>
+                </div>
+                <div class="stat"><div class="k">New Expected Return</div><div class="v gold">{{ "%.1f"|format(a.revised_return) }}% p.a.</div></div>
+                <div class="stat"><div class="k">Equity / Debt</div><div class="v">{{ "%.0f"|format(a.r2_equity_pct or 0) }}% / {{ "%.0f"|format(a.r2_debt_pct or 0) }}%</div></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Slide 4: Projection -->
+    <div class="slide">
+        <div class="slide-title">📈 Projected Growth</div>
+        <div class="proj-wrap">
+            <div class="proj-chart-wrap"><canvas id="projChart"></canvas></div>
+            <div class="proj-note">Based on expected annual returns — compounded. Past performance doesn't guarantee future results.</div>
+        </div>
+    </div>
+
+    <!-- Slide 5: Rating -->
+    <div class="slide rating-wrap">
+        <div class="slide-title">⭐ Overall Rating</div>
+        <div class="rating-big rating-{{ a.overall_rating or 'Moderate' }}">{{ a.overall_rating or 'Moderate' }}</div>
+        <div style="font-size:1.1rem; color:rgba(244,238,210,0.7); max-width:600px; line-height:1.7;">
+            {% if a.overall_rating == 'Excellent' %}
+                Your portfolio is well-optimized. The revisions push it further on the efficient frontier.
+            {% elif a.overall_rating == 'Good' %}
+                Solid foundation. The proposed tweaks will improve risk-adjusted returns meaningfully.
+            {% elif a.overall_rating == 'Moderate' %}
+                Room for improvement. The revised allocation addresses the key gaps in the current mix.
+            {% else %}
+                Significant rebalancing needed. The revised plan brings the portfolio into a healthier structure.
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Slide 6: Next Steps -->
+    <div class="slide">
+        <div class="slide-title">🚀 Next Steps</div>
+        <ul class="steps">
+            <li><span class="num">1</span> Review and approve the proposed allocation</li>
+            <li><span class="num">2</span> Exit or trim underperforming positions gradually (STP recommended)</li>
+            <li><span class="num">3</span> Set up SIPs into the revised funds this month</li>
+            <li><span class="num">4</span> Schedule a 6-month review to track progress</li>
+        </ul>
+        <div style="margin-top:40px; font-size:1rem; color:rgba(244,238,210,0.5);">Questions? Let's discuss — {{ advisor_name }}</div>
+    </div>
+
+</div>
+
+<!-- UI chrome -->
+<div class="hdr">{{ a.client_name }} · {{ advisor_name }}</div>
+<a href="{{ url_for('reports') }}" class="exit">✕ Exit</a>
+<div class="nav-hint">← → or Space to navigate · Esc to exit</div>
+<div class="slide-num"><span id="slideIdx">1</span> / <span id="slideTotal">6</span></div>
+<div class="dots" id="dots"></div>
+
+<script>
+(function(){
+    const IS_INDIAN = {{ 'true' if is_indian else 'false' }};
+    const SYM = IS_INDIAN ? '\u20B9' : '$';
+
+    function fmtShort(n) {
+        if (!isFinite(n)) return '—';
+        const v = Math.abs(n);
+        if (IS_INDIAN) {
+            if (v >= 1e7) return SYM + (n/1e7).toFixed(2) + ' Cr';
+            if (v >= 1e5) return SYM + (n/1e5).toFixed(2) + ' L';
+            if (v >= 1e3) return SYM + (n/1e3).toFixed(1) + ' K';
+        } else {
+            if (v >= 1e9) return SYM + (n/1e9).toFixed(2) + ' B';
+            if (v >= 1e6) return SYM + (n/1e6).toFixed(2) + ' M';
+            if (v >= 1e3) return SYM + (n/1e3).toFixed(1) + ' K';
+        }
+        return SYM + Math.round(n).toLocaleString(IS_INDIAN ? 'en-IN' : 'en-US');
+    }
+
+    const curTotal = {{ a.current_total or 0 }};
+    const revTotal = {{ a.revised_total or 0 }};
+    document.getElementById('curTotal').textContent = fmtShort(curTotal);
+    document.getElementById('revTotal').textContent = fmtShort(revTotal);
+
+    Chart.defaults.color = 'rgba(244,238,210,0.7)';
+    Chart.defaults.font.family = "'DM Sans',sans-serif";
+
+    const PAL = ['#e8c84a','#63b3ed','#ed8936','#9f7aea'];
+    const LBLS = ['Equity','Debt','Real Estate','Alternate'];
+
+    function donut(id, vals) {
+        const ctx = document.getElementById(id);
+        if (!ctx) return;
+        new Chart(ctx, {
+            type:'doughnut',
+            data:{ labels:LBLS, datasets:[{ data:vals, backgroundColor:PAL, borderColor:'rgba(15,12,41,0.8)', borderWidth:3 }]},
+            options:{
+                responsive:true, maintainAspectRatio:false, cutout:'68%',
+                plugins:{ legend:{ position:'bottom', labels:{ padding:14, font:{ size:12 }}}}
+            }
+        });
+    }
+
+    donut('currentChart', [{{ a.r1_equity_pct or 0 }}, {{ a.r1_debt_pct or 0 }}, {{ a.r1_real_pct or 0 }}, {{ a.r1_alternate_pct or 0 }}]);
+    donut('revisedChart', [{{ a.r2_equity_pct or 0 }}, {{ a.r2_debt_pct or 0 }}, {{ a.r2_real_pct or 0 }}, {{ a.r2_alternate_pct or 0 }}]);
+
+    // Projection chart
+    const projCtx = document.getElementById('projChart');
+    new Chart(projCtx, {
+        type:'bar',
+        data:{
+            labels:['5 Years','10 Years','20 Years'],
+            datasets:[
+                { label:'Current', data:[{{ a.fv_5yr_current or 0 }},{{ a.fv_10yr_current or 0 }},{{ a.fv_20yr_current or 0 }}], backgroundColor:'rgba(99,179,237,0.7)', borderColor:'#63b3ed', borderWidth:2, borderRadius:8 },
+                { label:'Revised', data:[{{ a.fv_5yr_revised or 0 }},{{ a.fv_10yr_revised or 0 }},{{ a.fv_20yr_revised or 0 }}], backgroundColor:'rgba(232,200,74,0.8)', borderColor:'#e8c84a', borderWidth:2, borderRadius:8 }
+            ]
+        },
+        options:{
+            responsive:true, maintainAspectRatio:false,
+            plugins:{
+                legend:{ position:'top', labels:{ padding:16 }},
+                tooltip:{ callbacks:{ label:(c)=>c.dataset.label+': '+fmtShort(c.parsed.y) }}
+            },
+            scales:{
+                y:{ ticks:{ callback:(v)=>fmtShort(v) }, grid:{ color:'rgba(244,238,210,0.08)' }},
+                x:{ grid:{ display:false }}
+            }
+        }
+    });
+
+    // Slide navigation
+    const slides = document.querySelectorAll('.slide');
+    const total = slides.length;
+    let idx = 0;
+    document.getElementById('slideTotal').textContent = total;
+
+    const dotsEl = document.getElementById('dots');
+    for (let i=0; i<total; i++) {
+        const d = document.createElement('div');
+        d.className = 'dot' + (i===0?' active':'');
+        d.addEventListener('click', ()=>go(i));
+        dotsEl.appendChild(d);
+    }
+
+    function go(n) {
+        idx = Math.max(0, Math.min(total-1, n));
+        slides.forEach((s,i)=>s.classList.toggle('active', i===idx));
+        document.querySelectorAll('.dot').forEach((d,i)=>d.classList.toggle('active', i===idx));
+        document.getElementById('slideIdx').textContent = idx+1;
+    }
+
+    document.addEventListener('keydown', (e)=>{
+        if (e.key==='ArrowRight' || e.key===' ' || e.key==='PageDown') { e.preventDefault(); go(idx+1); }
+        else if (e.key==='ArrowLeft' || e.key==='PageUp') { e.preventDefault(); go(idx-1); }
+        else if (e.key==='Home') { go(0); }
+        else if (e.key==='End') { go(total-1); }
+        else if (e.key==='Escape') { window.location.href = '{{ url_for("reports") }}'; }
+        else if (e.key==='f' || e.key==='F') {
+            if (document.fullscreenElement) document.exitFullscreen();
+            else document.documentElement.requestFullscreen();
+        }
+    });
+
+    // Touch swipe
+    let touchX = 0;
+    document.addEventListener('touchstart', (e)=>{ touchX = e.touches[0].clientX; });
+    document.addEventListener('touchend', (e)=>{
+        const dx = e.changedTouches[0].clientX - touchX;
+        if (Math.abs(dx) > 50) go(idx + (dx < 0 ? 1 : -1));
+    });
+
+    // Auto-request fullscreen on first click
+    document.body.addEventListener('click', function once(){
+        try { document.documentElement.requestFullscreen(); } catch(e){}
+        document.body.removeEventListener('click', once);
+    }, { once:true });
+})();
+</script>
+</body>
+</html>

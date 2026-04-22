@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Edit' if mode == 'edit' else 'Add' }} Client — M3 Portfolio{% endblock %}
+
+{% block content %}
+<div class="form-page">
+  <div class="form-header">
+    <a href="{{ url_for('view_client', client_id=client.id) if mode == 'edit' else url_for('clients') }}"
+       class="back-link">← Back</a>
+    <h1>{{ '✏️ Edit Client' if mode == 'edit' else '➕ Add New Client' }}</h1>
+    <p>{{ 'Update client information' if mode == 'edit' else 'Add a new client to your portfolio' }}</p>
+  </div>
+
+  {% if error %}
+  <div class="alert alert-error">⚠️ {{ error }}</div>
+  {% endif %}
+
+  <div class="card form-card">
+    <form method="POST"
+          action="{{ url_for('edit_client', client_id=client.id) if mode == 'edit' else url_for('add_client') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+      <div class="form-section">
+        <h3>Basic Information</h3>
+        <div class="form-grid">
+          <div class="form-group required">
+            <label>Full Name</label>
+            <input type="text" name="name"
+                   value="{{ form.name if form else '' }}"
+                   placeholder="e.g. Ramesh Sharma" class="form-input" required>
+          </div>
+          <div class="form-group">
+            <label>Age</label>
+            <input type="number" name="age"
+                   value="{{ form.age if form and form.age else '' }}"
+                   placeholder="e.g. 35" class="form-input" min="1" max="120">
+          </div>
+          <div class="form-group">
+            <label>Email Address</label>
+            <input type="email" name="email"
+                   value="{{ form.email if form else '' }}"
+                   placeholder="e.g. ramesh@email.com" class="form-input">
+          </div>
+          <div class="form-group">
+            <label>Phone Number</label>
+            <input type="text" name="phone"
+                   value="{{ form.phone if form else '' }}"
+                   placeholder="e.g. 9876543210" class="form-input">
+          </div>
+        </div>
+      </div>
+
+      <div class="form-section">
+        <h3>Investment Profile</h3>
+        <div class="form-group">
+          <label>Risk Profile</label>
+          <div class="risk-options">
+            {% for rval, rlabel, rdesc, rcolor in [
+              ('conservative', 'Conservative', 'Prefers stability. Low risk, steady returns. Mostly Debt & FDs.', '#1E7E34'),
+              ('moderate',     'Moderate',     'Balanced approach. Mix of equity and debt instruments.', '#856404'),
+              ('aggressive',   'Aggressive',   'Growth-focused. High equity allocation. Comfortable with volatility.', '#B71C1C')
+            ] %}
+            <label class="risk-option" style="--rcolor: {{ rcolor }}">
+              <input type="radio" name="risk_profile" value="{{ rval }}"
+                     {% if (form and form.risk_profile == rval) or (not form and rval == 'moderate') %}checked{% endif %}>
+              <div class="risk-option-body">
+                <div class="risk-option-title">{{ rlabel }}</div>
+                <div class="risk-option-desc">{{ rdesc }}</div>
+              </div>
+            </label>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+
+      <div class="form-section">
+        <h3>Additional Notes</h3>
+        <div class="form-group">
+          <label>Notes <span class="optional">(optional)</span></label>
+          <textarea name="notes" rows="3" class="form-input"
+                    placeholder="Any special instructions, financial goals, or important details about this client...">{{ form.notes if form and form.notes else '' }}</textarea>
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <a href="{{ url_for('view_client', client_id=client.id) if mode == 'edit' else url_for('clients') }}"
+           class="btn btn-outline">Cancel</a>
+        <button type="submit" class="btn btn-primary">
+          {{ '💾 Save Changes' if mode == 'edit' else '✅ Add Client' }}
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<style>
+.form-page { max-width:680px; margin:0 auto; }
+.form-header { margin-bottom:24px; }
+.back-link { color:#2E75B6; text-decoration:none; font-size:0.9rem; }
+.back-link:hover { text-decoration:underline; }
+.form-header h1 { margin:8px 0 4px; font-size:1.7rem; color:#1F4E79; }
+.form-header p  { margin:0; color:#777; }
+.form-card { padding:30px; }
+.form-section { margin-bottom:28px; }
+.form-section h3 { font-size:1rem; color:#1F4E79; border-bottom:2px solid #e0e8f0; padding-bottom:8px; margin-bottom:18px; }
+.form-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+.form-group { display:flex; flex-direction:column; gap:6px; }
+.form-group.required label::after { content:" *"; color:#dc3545; }
+.form-group label { font-size:0.88rem; font-weight:600; color:#444; }
+.optional { font-weight:400; color: #6b6080; font-size:0.82rem; }
+.form-input { padding:10px 14px; border:1px solid #ddd; border-radius:8px; font-size:0.93rem; transition:border 0.2s, box-shadow 0.2s; outline:none; }
+.form-input:focus { border-color:#2E75B6; box-shadow:0 0 0 3px rgba(46,117,182,0.12); }
+textarea.form-input { resize:vertical; font-family:inherit; }
+.risk-options { display:flex; flex-direction:column; gap:10px; }
+.risk-option { display:flex; align-items:flex-start; gap:12px; padding:14px 16px; border:2px solid #e0e8f0; border-radius:10px; cursor:pointer; transition:border-color 0.2s, background 0.2s; }
+.risk-option:has(input:checked) { border-color:var(--rcolor); background:color-mix(in srgb, var(--rcolor) 8%, white); }
+.risk-option input { margin-top:3px; accent-color:var(--rcolor); }
+.risk-option-title { font-weight:700; font-size:0.93rem; color:#333; }
+.risk-option-desc { font-size:0.82rem; color:#777; margin-top:2px; }
+.form-actions { display:flex; justify-content:flex-end; gap:12px; padding-top:20px; border-top:1px solid #f0f0f0; }
+.alert { padding:12px 16px; border-radius:8px; margin-bottom:20px; font-size:0.92rem; }
+.alert-error { background:#fde8e8; color:#B71C1C; border:1px solid #f5c6c6; }
+@media (max-width:600px) { .form-grid { grid-template-columns:1fr; } }
+</style>
+{% endblock %}

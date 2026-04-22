@@ -1,0 +1,195 @@
+{% extends "base.html" %}
+{% block title %}Clients — M3 Portfolio{% endblock %}
+
+{% block extra_head %}
+<style>
+/* ── Clients Page ── */
+.clients-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:16px; }
+
+.client-card {
+    background:var(--cream); border:var(--card-brd); border-radius:16px;
+    padding:20px; box-shadow:var(--card-shd);
+    transition:all 0.22s; display:flex; flex-direction:column; gap:0;
+}
+.client-card:hover { transform:translateY(-3px); box-shadow:0 10px 28px rgba(15,12,41,0.18); border-color:rgba(232,200,74,0.38); }
+
+.client-card-top { display:flex; align-items:center; gap:12px; margin-bottom:14px; }
+.client-avatar {
+    width:46px; height:46px;
+    background:linear-gradient(135deg,var(--navy),var(--navy-m));
+    color:var(--gold); border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    font-size:1.15em; font-weight:700; flex-shrink:0;
+    font-family:"Cormorant Garamond",serif;
+}
+.client-info { flex:1; min-width:0; }
+.client-name { font-size:1em; font-weight:700; color:var(--navy); margin-bottom:4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.risk-badge { font-size:0.72em; padding:2px 9px; border-radius:20px; font-weight:700; }
+.risk-conservative { background:#d1fae5; color:#065f46; }
+.risk-moderate     { background:#fef3c7; color:#92400e; }
+.risk-aggressive   { background:#fee2e2; color:#991b1b; }
+.client-actions-top { display:flex; gap:5px; }
+.icon-btn { background:rgba(232,200,74,0.1); border:none; cursor:pointer; font-size:0.95em; padding:6px 8px; border-radius:7px; transition:all 0.15s; }
+.icon-btn:hover { background:var(--gold); }
+
+.client-details { display:flex; flex-direction:column; gap:5px; margin-bottom:12px; flex:1; }
+.detail-row { font-size:0.82em; color:var(--muted); display:flex; gap:7px; align-items:center; }
+.client-notes { font-size:0.79em; color:var(--muted); background:rgba(232,200,74,0.08); padding:8px 11px; border-radius:8px; margin-bottom:12px; font-style:italic; border-left:3px solid rgba(232,200,74,0.3); }
+
+.client-card-footer { display:flex; justify-content:space-between; align-items:center; border-top:1px solid rgba(232,200,74,0.15); padding-top:12px; margin-top:auto; }
+.client-date { font-size:0.74em; color:var(--muted); }
+
+/* Filter bar */
+.filter-panel { background:var(--cream); border-radius:12px; padding:16px 20px; margin-bottom:18px; box-shadow:var(--card-shd); border:var(--card-brd); }
+.filter-row { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+.filter-row input,.filter-row select {
+    padding:9px 13px; border:1.5px solid rgba(212,168,67,0.3); border-radius:9px;
+    font-size:0.88em; outline:none; font-family:"DM Sans",sans-serif;
+    background:white; color:var(--ink); transition:all 0.2s;
+}
+.filter-row input:focus,.filter-row select:focus { border-color:var(--gold); box-shadow:0 0 0 3px rgba(232,200,74,0.15); }
+.filter-row input { min-width:200px; flex:1; }
+
+/* Empty state */
+.empty-state { text-align:center; padding:56px 20px; color:var(--muted); }
+.empty-state .ei { font-size:2.8em; margin-bottom:14px; opacity:0.45; }
+.empty-state h2 { color:var(--navy); margin-bottom:8px; }
+.empty-state p { font-size:0.9em; margin-bottom:18px; }
+
+/* Modal */
+.modal-overlay { position:fixed; inset:0; background:rgba(15,12,41,0.55); display:flex; align-items:center; justify-content:center; z-index:1000; backdrop-filter:blur(4px); }
+.modal-box { background:var(--cream); border-radius:16px; padding:28px; max-width:380px; width:90%; box-shadow:0 20px 60px rgba(15,12,41,0.4); border:var(--card-brd); border-top:4px solid #dc2626; }
+.modal-box h3 { color:var(--navy); margin-bottom:10px; font-size:1.2em; }
+.modal-box p { color:var(--muted); font-size:0.88em; margin-bottom:5px; }
+.modal-actions { display:flex; gap:10px; justify-content:flex-end; margin-top:20px; }
+
+/* Dark mode */
+body.dark-mode .client-card { background:#0f0c29 !important; border-color:rgba(232,200,74,0.1) !important; }
+body.dark-mode .client-card:hover { border-color:rgba(232,200,74,0.25) !important; }
+body.dark-mode .client-name { color:#e8c84a !important; }
+body.dark-mode .detail-row { color:#64748b !important; }
+body.dark-mode .client-notes { background:rgba(232,200,74,0.05) !important; color:#64748b !important; }
+body.dark-mode .client-card-footer { border-top-color:rgba(232,200,74,0.08) !important; }
+body.dark-mode .client-date { color:#475569 !important; }
+body.dark-mode .filter-panel { background:#0f0c29 !important; }
+body.dark-mode .filter-row input,.dark-mode .filter-row select { background:#1a1550 !important; color:#f5d96b !important; border-color:rgba(232,200,74,0.15) !important; }
+body.dark-mode .modal-box { background:#0f0c29 !important; }
+body.dark-mode .modal-box h3 { color:#e8c84a !important; }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Page Header -->
+<div class="page-hdr">
+    <div>
+        <h1>👥 Client Management</h1>
+        <p>Manage your clients and their portfolio analyses</p>
+    </div>
+    <div class="page-hdr-right">
+        <a href="{{ url_for('add_client') }}" class="btn-gold">+ Add New Client</a>
+    </div>
+</div>
+
+<!-- Filter Bar -->
+<div class="filter-panel">
+    <form method="GET" action="{{ url_for('clients') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="filter-row">
+            <input type="text" name="search" value="{{ search }}" placeholder="🔍 Search clients...">
+            <select name="risk">
+                <option value="">All Risk Profiles</option>
+                <option value="conservative" {% if risk=='conservative' %}selected{% endif %}>Conservative</option>
+                <option value="moderate"     {% if risk=='moderate'     %}selected{% endif %}>Moderate</option>
+                <option value="aggressive"   {% if risk=='aggressive'   %}selected{% endif %}>Aggressive</option>
+            </select>
+            <button type="submit" class="btn-gold">Filter</button>
+            <a href="{{ url_for('clients') }}" class="btn-ghost">Clear</a>
+        </div>
+    </form>
+</div>
+
+{% if clients %}
+<div class="clients-grid">
+{% for client in clients %}
+<div class="client-card">
+    <div class="client-card-top">
+        <div class="client-avatar">{{ client.name[0].upper() }}</div>
+        <div class="client-info">
+            <div class="client-name">{{ client.name }}</div>
+            <span class="risk-badge risk-{{ client.risk_profile }}">{{ client.risk_profile|capitalize }}</span>
+        </div>
+        <div class="client-actions-top">
+            <a href="{{ url_for('edit_client', client_id=client.id) }}" class="icon-btn" title="Edit">✏️</a>
+            <button class="icon-btn delete-client-btn" data-id="{{ client.id }}" data-name="{{ client.name }}" title="Delete">🗑️</button>
+        </div>
+    </div>
+    <div class="client-details">
+        {% if client.email %}<div class="detail-row"><span>📧</span>{{ client.email }}</div>{% endif %}
+        {% if client.phone %}<div class="detail-row"><span>📱</span>{{ client.phone }}</div>{% endif %}
+        {% if client.age   %}<div class="detail-row"><span>🎂</span>Age {{ client.age }}</div>{% endif %}
+        <div class="detail-row"><span>📊</span>{{ client_analysis_counts.get(client.id,0) }} analys{{ 'es' if client_analysis_counts.get(client.id,0)!=1 else 'is' }}</div>
+    </div>
+    {% if client.notes %}
+    <div class="client-notes">{{ client.notes[:100] }}{% if client.notes|length > 100 %}…{% endif %}</div>
+    {% endif %}
+    <div class="client-card-footer">
+        <a href="{{ url_for('view_client', client_id=client.id) }}" class="btn-gold" style="padding:7px 16px;font-size:0.82em;">View Details →</a>
+        <span class="client-date">Since {{ (client.created_at|string)[:10] }}</span>
+    </div>
+</div>
+{% endfor %}
+</div>
+
+{% else %}
+<div class="empty-state">
+    <div class="ei">👥</div>
+    <h2>No clients yet</h2>
+    {% if search or risk %}
+    <p>No clients match your filters.</p>
+    <a href="{{ url_for('clients') }}" class="btn-ghost">Clear filters</a>
+    {% else %}
+    <p>Start building your client base.</p>
+    <a href="{{ url_for('add_client') }}" class="btn-gold">+ Add First Client</a>
+    {% endif %}
+</div>
+{% endif %}
+
+<!-- Delete Modal -->
+<div class="modal-overlay" id="deleteModal" style="display:none;">
+    <div class="modal-box">
+        <h3>🗑️ Delete Client</h3>
+        <p>Delete <strong id="deleteClientName"></strong>?</p>
+        <p>Their analyses will be kept but unlinked.</p>
+        <div class="modal-actions">
+            <button class="btn-ghost" onclick="closeDeleteModal()">Cancel</button>
+            <button class="btn-red" id="confirmDeleteBtn">Delete</button>
+        </div>
+    </div>
+</div>
+
+<script>
+let deleteClientId = null;
+document.querySelectorAll('.delete-client-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        deleteClientId = btn.dataset.id;
+        document.getElementById('deleteClientName').textContent = btn.dataset.name;
+        document.getElementById('deleteModal').style.display = 'flex';
+    });
+});
+function closeDeleteModal() {
+    document.getElementById('deleteModal').style.display = 'none';
+    deleteClientId = null;
+}
+document.getElementById('confirmDeleteBtn').addEventListener('click', async () => {
+    if (!deleteClientId) return;
+    const res = await fetch(`/clients/delete/${deleteClientId}`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+        body: `csrf_token={{ csrf_token() }}`
+    });
+    const data = await res.json();
+    if (data.success) location.reload();
+    else { alert('Error: ' + data.message); closeDeleteModal(); }
+});
+</script>
+{% endblock %}

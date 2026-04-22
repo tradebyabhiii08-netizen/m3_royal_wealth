@@ -1,0 +1,916 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script>(function(){try{var s=localStorage.getItem('m3-theme');var p=matchMedia('(prefers-color-scheme: dark)').matches;var t=s||(p?'dark':'light');document.documentElement.setAttribute('data-theme',t);document.addEventListener('DOMContentLoaded',function(){if(t==='dark')document.body.classList.add('dark-mode');});}catch(e){}})();</script>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>XIRR Calculator | M3 Portfolio Investment Analysis</title>
+    <link rel="stylesheet" href="/static/design-tokens.css">
+    <link rel="stylesheet" href="/static/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+    <style>
+        :root {
+            --navy:#0f0c29; --navy-m:#1a1550; --gold:#e8c84a; --gold-d:#d4a843;
+            --gold-l:#f5d96b; --gold-xl:#fdf3cc; --cream:#fdf9ee; --muted:#6b6080; --ink:#1a0f3c;
+            --card-shd:0 4px 20px rgba(15,12,41,0.11),0 1px 5px rgba(15,12,41,0.06);
+            --card-brd:1px solid rgba(232,200,74,0.2);
+        }
+        body { min-height: 100vh; padding: 20px;
+            background: linear-gradient(145deg, #f5edcc 0%, #fdf9ee 40%, #fffdf5 70%, #f5edcc 100%);
+            color: #141124;
+        }
+        html[data-theme="dark"] body,
+        body.dark-mode {
+            background: linear-gradient(145deg, #07060f 0%, #0f0c29 45%, #1a1550 80%, #07060f 100%) !important;
+            color: #f4eed2;
+        }
+        .calc-container { max-width: 1400px; margin: 0 auto; }
+        .calc-header { background: var(--cream); padding: 20px 28px; border-radius: 16px; margin-bottom: 20px; box-shadow: var(--card-shd); border: var(--card-brd); border-left: 5px solid var(--gold); display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap; }
+        .calc-card { background: var(--cream); padding: 28px; border-radius: 16px; box-shadow: var(--card-shd); margin-bottom: 18px; border: var(--card-brd); }
+        .btn-back { display: inline-block; padding: 10px 20px; background: #0f0c29; color: #e8c84a; text-decoration: none; border-radius: 8px; margin-bottom: 20px; font-weight: 600; }
+        .btn-calculate { width: 100%; padding: 15px; background: linear-gradient(135deg, #9333EA 0%, #6D28D9 100%); color: white; border: none; border-radius: 10px; font-size: 1.1em; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+        .btn-calculate:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(147,51,234,0.4); }
+
+        .input-section { background: #fdf3cc; border-radius: 14px; padding: 20px 24px; margin-bottom: 18px; border: 1.5px solid #e8d8a8; }
+        .input-section-title { font-size: 0.82em; font-weight: 700; color: #1a1550; letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 16px; display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
+        .hint { font-size: 0.74em; color: #6b6080; }
+
+        /* Cashflow rows */
+        .cf-grid-header { display:grid; grid-template-columns: 1fr 1.3fr 1.3fr 50px; gap:10px; padding: 6px 10px; font-size: 0.74em; font-weight: 700; color: #6b6080; text-transform: uppercase; letter-spacing: 0.05em; }
+        .cf-row { display:grid; grid-template-columns: 1fr 1.3fr 1.3fr 50px; gap:10px; margin-bottom: 8px; align-items:center; }
+        .cf-row select, .cf-row input[type="date"], .cf-row input[type="text"] {
+            width: 100%; padding: 11px 14px; border: 1.5px solid #d4a84340; border-radius: 10px;
+            background: white; color: #333; font-size: 0.95em; font-family: inherit; outline: none;
+            transition: border 0.2s, box-shadow 0.2s;
+        }
+        .cf-row select:focus, .cf-row input:focus { border-color: #9333EA; box-shadow: 0 0 0 3px rgba(147,51,234,0.15); }
+        .cf-row .amt-wrap { display:flex; align-items:center; border:1.5px solid #d4a84340; border-radius:10px; overflow:hidden; background:white; transition: border 0.2s, box-shadow 0.2s; }
+        .cf-row .amt-wrap:focus-within { border-color:#9333EA; box-shadow:0 0 0 3px rgba(147,51,234,0.15); }
+        .cf-row .amt-wrap .amt-pfx { padding:0 12px; font-size:0.88em; color:#6b6080; font-weight:600; background:#fdf6e3; height:44px; display:flex; align-items:center; border-right:1.5px solid #f0f0f0; }
+        .cf-row .amt-wrap input { border: none !important; border-radius:0 !important; background:transparent !important; }
+        .cf-row .amt-wrap input:focus { box-shadow: none !important; }
+        .cf-remove { width:42px; height:42px; background:#fee2e2; color:#b91c1c; border:1.5px solid #fca5a5; border-radius:10px; cursor:pointer; font-size:1.1em; font-weight:700; transition: all 0.2s; }
+        .cf-remove:hover { background:#fca5a5; color:#7f1d1d; }
+        .cf-remove:disabled { opacity:0.35; cursor:not-allowed; }
+
+        .cf-actions { display:flex; gap:10px; margin-top:14px; flex-wrap:wrap; }
+        .cf-btn { padding: 9px 16px; border-radius: 10px; font-size: 0.85em; font-weight: 700; cursor: pointer; border: 1.5px solid; transition: all 0.2s; background: white; }
+        .cf-btn-add { color: #6D28D9; border-color: #c4b5fd; background:#f5f3ff; }
+        .cf-btn-add:hover { background: #ede9fe; border-color: #9333EA; }
+        .cf-btn-clear { color: #991b1b; border-color: #fca5a5; background: #fef2f2; }
+        .cf-btn-clear:hover { background: #fee2e2; border-color: #dc2626; }
+        .cf-btn-example { color: #92400e; border-color: #fcd34d; background: #fffbeb; }
+        .cf-btn-example:hover { background: #fef3c7; border-color: #f59e0b; }
+
+        /* LIVE PREVIEW */
+        .live-preview { background: linear-gradient(135deg, #fdf9ee, #fdf3cc); border-radius: 14px; padding: 20px 24px; margin-bottom: 18px; border: 1.5px solid #d8b4fe; }
+        .lp-title { font-size: 0.82em; font-weight: 700; color: #0f0c29; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 14px; }
+        .lp-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+        .lp-card { background: white; border-radius: 9px; padding: 14px; text-align: center; border: 1.5px solid #e9d5ff; }
+        .lp-label { font-size: 0.72em; color: #6b6080; font-weight: 600; text-transform: uppercase; }
+        .lp-value { font-size: 1.1em; font-weight: 800; color: #0f0c29; margin-top: 5px; }
+
+        /* SUMMARY CARDS */
+        .summary-grid { display: grid; grid-template-columns: repeat(3,1fr) 1.3fr; gap: 14px; margin-bottom: 25px; }
+        .sum-card { background: white; border-radius: 12px; padding: 16px 18px; box-shadow: var(--card-shd); border: var(--card-brd); }
+        .sum-card .sc-label { font-size: 0.75em; color: #6b6080; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
+        .sum-card .sc-val { font-size: 1.5em; font-weight: 700; color: #0f0c29; font-family: 'Cormorant Garamond', serif; margin-top: 8px; }
+        .sum-card .sc-sub { font-size: 0.75em; color: #6b6080; margin-top: 4px; }
+        .sum-card.sum-card-hero { background: linear-gradient(135deg,#9333EA,#6D28D9); }
+        .sum-card.sum-card-hero .sc-label { color: rgba(255,255,255,0.85); }
+        .sum-card.sum-card-hero .sc-val   { color: #ffffff; font-size: 1.9em; }
+        .sum-card.sum-card-hero .sc-sub   { color: rgba(255,255,255,0.75); }
+        body.dark-mode .sum-card.sum-card-hero { background: linear-gradient(135deg,#7e22ce,#4c1d95) !important; }
+        body.dark-mode .sum-card.sum-card-hero .sc-label { color: rgba(255,255,255,0.85) !important; }
+        body.dark-mode .sum-card.sum-card-hero .sc-val   { color: #ffffff !important; }
+        body.dark-mode .sum-card.sum-card-hero .sc-sub   { color: rgba(255,255,255,0.8) !important; }
+
+        .success-box { background: #f5f3ff; border-left: 4px solid #9333EA; padding: 15px; border-radius: 8px; margin: 20px 0; color: #5b21b6; }
+        .error-box   { background: #fef2f2; border-left: 4px solid #dc2626; padding: 15px; border-radius: 8px; margin: 14px 0; color: #991b1b; font-weight:600; }
+
+        /* XIRR vs CAGR vs Absolute explainer */
+        .compare-card { background: var(--cream); border-radius: 14px; box-shadow: var(--card-shd); border: var(--card-brd); padding: 22px; margin-top: 16px; }
+        .compare-card h3 { color: var(--navy); margin-bottom: 6px; font-size: 1.1em; }
+        .compare-card .cc-sub { color: #6b6080; font-size: 0.85em; margin-bottom: 16px; }
+        .compare-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 14px; }
+        .compare-tile { background: #fffdf5; border: 1px solid rgba(232,200,74,0.35); border-radius: 10px; padding: 14px 16px; position: relative; overflow: hidden; }
+        .compare-tile::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: linear-gradient(90deg, var(--gold, #e8c84a), #d4a843); }
+        .compare-tile.winner::before { background: linear-gradient(90deg, #9333EA, #6D28D9); }
+        .ct-head { display: flex; align-items: center; gap: 8px; font-weight: 800; color: #1a0f3c; font-size: 0.95em; }
+        .ct-head .ct-pill { background: #e8c84a; color: #0f0c29; font-size: 0.62em; font-weight: 700; padding: 2px 7px; border-radius: 10px; letter-spacing: 0.05em; }
+        .compare-tile.winner .ct-head .ct-pill { background: #9333EA; color: #fff; }
+        .ct-val { font-family: 'Cormorant Garamond', serif; font-size: 1.7em; font-weight: 700; color: #0f0c29; margin: 8px 0 6px; }
+        .compare-tile.winner .ct-val { color: #6D28D9; }
+        .ct-formula { font-family: 'Courier New', monospace; font-size: 0.72em; color: #6b6080; background: rgba(232,200,74,0.1); padding: 4px 8px; border-radius: 5px; margin-bottom: 8px; display: inline-block; }
+        .ct-desc { font-size: 0.8em; color: #4a3f6d; line-height: 1.5; }
+        .compare-verdict { background: linear-gradient(135deg, rgba(147,51,234,0.08), rgba(109,40,217,0.06)); border-left: 4px solid #9333EA; padding: 14px 18px; border-radius: 8px; color: #1a0f3c; font-size: 0.92em; line-height: 1.55; }
+        .compare-verdict strong { color: #6D28D9; }
+        body.dark-mode .compare-card { background: #0a0818 !important; border: 1px solid #1a1550 !important; color: #e2e8f0 !important; }
+        body.dark-mode .compare-card h3 { color: #c4b5fd !important; }
+        body.dark-mode .compare-card .cc-sub { color: #94a3b8 !important; }
+        body.dark-mode .compare-tile { background: #140a28 !important; border-color: rgba(232,200,74,0.18) !important; }
+        body.dark-mode .ct-head { color: #f5d96b !important; }
+        body.dark-mode .compare-tile .ct-head .ct-pill { background: rgba(232,200,74,0.2) !important; color: #f5d96b !important; }
+        body.dark-mode .compare-tile.winner .ct-head .ct-pill { background: #9333EA !important; color: #fff !important; }
+        body.dark-mode .ct-val { color: #e2e8f0 !important; }
+        body.dark-mode .compare-tile.winner .ct-val { color: #d8b4fe !important; }
+        body.dark-mode .ct-formula { background: rgba(232,200,74,0.08) !important; color: #cbd5e1 !important; }
+        body.dark-mode .ct-desc { color: #cbd5e1 !important; }
+        body.dark-mode .compare-verdict { background: rgba(147,51,234,0.15) !important; color: #e9d5ff !important; }
+        body.dark-mode .compare-verdict strong { color: #d8b4fe !important; }
+        @media (max-width: 768px) { .compare-grid { grid-template-columns: 1fr; } }
+
+        .charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 16px; }
+        .chart-card { background: var(--cream); padding: 22px; border-radius: 14px; box-shadow: var(--card-shd); border: var(--card-brd); }
+        .chart-card.full-width { grid-column: 1 / -1; }
+        .chart-card h3 { color: var(--navy); margin-bottom: 15px; font-size: 1.05em; }
+        .table-card { background: var(--cream); padding: 22px; border-radius: 14px; box-shadow: var(--card-shd); border: var(--card-brd); margin-top: 16px; }
+        .table-card h3 { color: var(--navy); margin-bottom: 15px; font-size: 1.05em; }
+        .data-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        .data-table th { background: #0f0c29; color: #e8c84a; padding: 12px; text-align: left; font-weight: 600; }
+        .data-table td { padding: 10px 12px; border-bottom: 1px solid rgba(232,200,74,0.15); }
+        .data-table tr:hover { background: #fdf3cc; }
+        .pill-invest { display:inline-block; padding:3px 10px; border-radius:14px; background:#fee2e2; color:#991b1b; font-weight:700; font-size:0.78em; }
+        .pill-redeem { display:inline-block; padding:3px 10px; border-radius:14px; background:#dcfce7; color:#166534; font-weight:700; font-size:0.78em; }
+
+        .btn-pdf-download { display: inline-flex; align-items: center; gap: 8px; padding: 12px 28px; background: linear-gradient(135deg, #e8c84a 0%, #d4a843 100%); color: #0f0c29; font-weight: 700; border: none; border-radius: 10px; font-size: 1em; cursor: pointer; margin-top: 20px; box-shadow: 0 4px 15px rgba(15,12,41,0.4); transition: all 0.2s; width: 100%; }
+        .btn-pdf-download:hover { transform: translateY(-2px); }
+
+        /* DARK MODE */
+        body.dark-mode .calc-header, body.dark-mode .calc-card, body.dark-mode .chart-card, body.dark-mode .table-card { background: #0a0818 !important; border: 1px solid #1a1550 !important; box-shadow: 0 8px 32px rgba(0,0,0,0.4) !important; color: #e2e8f0 !important; }
+        body.dark-mode .calc-header h1 { color: #d8b4fe !important; }
+        body.dark-mode .calc-header p { color: #94a3b8 !important; }
+        body.dark-mode .input-section { background: #140a28 !important; border-color: #3b0764 !important; }
+        body.dark-mode .input-section-title { color: #c4b5fd !important; }
+        body.dark-mode .live-preview { background: #140a28 !important; border-color: #3b0764 !important; }
+        body.dark-mode .lp-title { color: #c4b5fd !important; }
+        body.dark-mode .lp-card { background: #0a0818 !important; border-color: #3b0764 !important; }
+        body.dark-mode .lp-label { color: #94a3b8 !important; }
+        body.dark-mode .lp-value { color: #c4b5fd !important; }
+        body.dark-mode .cf-row select, body.dark-mode .cf-row input[type="date"], body.dark-mode .cf-row .amt-wrap { background: #07060f !important; color: #e2e8f0 !important; border-color: #3b0764 !important; }
+        body.dark-mode .cf-row .amt-wrap input { color: #e2e8f0 !important; background: transparent !important; }
+        body.dark-mode .cf-row .amt-wrap .amt-pfx { background:#0f0c29 !important; color:#c4b5fd !important; border-color:#3b0764 !important; }
+        body.dark-mode .cf-remove { background: rgba(220,38,38,0.18) !important; color: #fca5a5 !important; border-color: rgba(220,38,38,0.35) !important; }
+        body.dark-mode .cf-btn-add { background: rgba(147,51,234,0.15) !important; color: #c4b5fd !important; border-color: rgba(147,51,234,0.4) !important; }
+        body.dark-mode .cf-btn-clear { background: rgba(220,38,38,0.12) !important; color: #fca5a5 !important; border-color: rgba(220,38,38,0.35) !important; }
+        body.dark-mode .cf-btn-example { background: rgba(245,158,11,0.12) !important; color: #fcd34d !important; border-color: rgba(245,158,11,0.35) !important; }
+        body.dark-mode .sum-card { background: #0f0c29 !important; }
+        body.dark-mode .sum-card .sc-val { color: #e2e8f0 !important; }
+        body.dark-mode .chart-card h3, body.dark-mode .table-card h3 { color: #c4b5fd !important; }
+        body.dark-mode .data-table th { background: #3b0764 !important; color: #c4b5fd !important; }
+        body.dark-mode .data-table td { background: #0a0818 !important; border-bottom-color: #07060f !important; color: #cbd5e1 !important; }
+        body.dark-mode .data-table tr:hover td { background: #0f0c29 !important; }
+        body.dark-mode .pill-invest { background: rgba(220,38,38,0.2) !important; color: #fca5a5 !important; }
+        body.dark-mode .pill-redeem { background: rgba(34,197,94,0.2) !important; color: #86efac !important; }
+        body.dark-mode .btn-back { background: rgba(232,200,74,0.12) !important; color: #f5d96b !important; }
+        body.dark-mode .success-box { background: rgba(147,51,234,0.12) !important; border-color: #9333EA !important; color: #c4b5fd !important; }
+        body.dark-mode .error-box { background: rgba(220,38,38,0.12) !important; border-color: #dc2626 !important; color: #fca5a5 !important; }
+
+        @media (max-width: 768px) {
+            .cf-grid-header { display:none; }
+            .cf-row { grid-template-columns: 1fr; }
+            .lp-grid { grid-template-columns: repeat(2,1fr); }
+            .summary-grid { grid-template-columns: repeat(2,1fr); }
+            .charts-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+    <script src="/static/calc-core.js"></script>
+</head>
+<body>
+    <script>
+        var CURRENCY_FORMAT = "{{ session.get('currency_format', 'indian') }}";
+        function formatCurrency(num) {
+            num = Math.round(num);
+            if (CURRENCY_FORMAT === 'western') return '$' + num.toLocaleString('en-US');
+            var s = num.toString();
+            if (s.length <= 3) return 'Rs.' + s;
+            var last3 = s.slice(-3), rest = s.slice(0,-3), result = '';
+            while (rest.length > 2) { result = ',' + rest.slice(-2) + result; rest = rest.slice(0,-2); }
+            return 'Rs.' + rest + result + ',' + last3;
+        }
+    </script>
+
+<div class="calc-container">
+    <a href="/dashboard" class="btn-back">← Back to Dashboard</a>
+
+    <div class="calc-header">
+        <div>
+            <h1>📆 XIRR Calculator</h1>
+            <p>Annualized return across irregular cashflows — the real number for SIPs, partial redemptions &amp; lumpy investments.</p>
+        </div>
+    </div>
+
+    <div class="calc-card">
+        <form method="POST" action="/calculator/xirr" id="xirrForm">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+            <div class="input-section">
+                <div class="input-section-title">
+                    <span>📆 Cashflows</span>
+                    <span style="font-size:0.78em; color:#6b6080; text-transform:none; letter-spacing:0; font-weight:500;">Investments → money OUT &nbsp;|&nbsp; Redemptions / Current Value → money IN</span>
+                </div>
+
+                <div class="cf-grid-header">
+                    <div>Type</div>
+                    <div>Date</div>
+                    <div>Amount</div>
+                    <div></div>
+                </div>
+
+                <div id="cfList"></div>
+
+                <div class="cf-actions">
+                    <button type="button" class="cf-btn cf-btn-add"     onclick="addCashflow()">+ Add Cashflow</button>
+                    <button type="button" class="cf-btn cf-btn-example" onclick="loadExample()">✨ Load Example (12 SIPs + Redemption)</button>
+                    <button type="button" class="cf-btn cf-btn-clear"   onclick="clearRows()">🗑 Clear All</button>
+                </div>
+            </div>
+
+            <!-- LIVE PREVIEW -->
+            <div class="live-preview">
+                <div class="lp-title">⚡ Live Preview</div>
+                <div class="lp-grid">
+                    <div class="lp-card">
+                        <div class="lp-label">Total Invested</div>
+                        <div class="lp-value" id="lpInv">—</div>
+                    </div>
+                    <div class="lp-card">
+                        <div class="lp-label">Total Received</div>
+                        <div class="lp-value" id="lpRec">—</div>
+                    </div>
+                    <div class="lp-card">
+                        <div class="lp-label">Net Gain / Loss</div>
+                        <div class="lp-value" id="lpNet">—</div>
+                    </div>
+                    <div class="lp-card">
+                        <div class="lp-label">Cashflows</div>
+                        <div class="lp-value" id="lpCnt">—</div>
+                    </div>
+                </div>
+                <div class="hint" style="margin-top:10px;">Hit <strong>Calculate</strong> to solve XIRR — a client with ₹1L invested monthly and ₹15L received after 10 years earns a very different return than simple average.</div>
+            </div>
+
+            {% if error %}<div class="error-box">⚠️ {{ error }}</div>{% endif %}
+
+            <button type="submit" class="btn-calculate">📆 Calculate XIRR</button>
+        </form>
+
+        {% if result %}
+        <!-- SUMMARY CARDS -->
+        <div class="summary-grid" style="margin-top:30px;">
+            <div class="sum-card" style="border-top:4px solid #dc2626;">
+                <div class="sc-label">Total Invested</div>
+                <div class="sc-val" style="color:#991b1b;">{{ '₹' if session.get('currency_format','indian')=='indian' else '$' }}{{ result.total_invested | indian_currency }}</div>
+                <div class="sc-sub">Money out</div>
+            </div>
+            <div class="sum-card" style="border-top:4px solid #16a34a;">
+                <div class="sc-label">Total Received</div>
+                <div class="sc-val" style="color:#166534;">{{ '₹' if session.get('currency_format','indian')=='indian' else '$' }}{{ result.total_received | indian_currency }}</div>
+                <div class="sc-sub">Redemption + current value</div>
+            </div>
+            <div class="sum-card" style="border-top:4px solid #f59e0b;">
+                <div class="sc-label">Absolute Return</div>
+                <div class="sc-val" style="color:#b45309;">{{ "%.2f"|format(result.abs_return) }}%</div>
+                <div class="sc-sub">Over {{ "%.1f"|format(result.years) }} years ({{ result.days }} days)</div>
+            </div>
+            <div class="sum-card sum-card-hero">
+                <div class="sc-label">🏆 XIRR (Annualized)</div>
+                <div class="sc-val">{{ "%.2f"|format(result.xirr) }}%</div>
+                <div class="sc-sub">Time-weighted annual return</div>
+            </div>
+        </div>
+
+        <div class="success-box">
+            <strong>💡 What this tells you:</strong> Across {{ result.cashflows|length }} cashflows over {{ "%.1f"|format(result.years) }} years, your client's money compounded at
+            <strong>{{ "%.2f"|format(result.xirr) }}% p.a.</strong> — versus a flat absolute return of {{ "%.2f"|format(result.abs_return) }}%. XIRR is the honest figure to report because it accounts for <em>when</em> each rupee went in.
+        </div>
+
+        {# === COMPARE: XIRR vs CAGR vs Absolute === #}
+        {% set _cagr = ((result.total_received / result.total_invested) ** (1.0 / result.years) - 1) * 100 if result.years > 0 and result.total_invested > 0 else 0 %}
+        <div class="compare-card">
+            <h3>🎓 XIRR vs CAGR vs Absolute Return — What's the Difference?</h3>
+            <div class="cc-sub">Three ways to measure the same portfolio. They almost always disagree — here's why each matters.</div>
+
+            <div class="compare-grid">
+                <div class="compare-tile">
+                    <div class="ct-head">Absolute Return <span class="ct-pill">RAW</span></div>
+                    <div class="ct-val">{{ "%.2f"|format(result.abs_return) }}%</div>
+                    <div class="ct-formula">(Received − Invested) / Invested × 100</div>
+                    <div class="ct-desc">Total % gain over the <em>entire</em> holding period. Ignores how long the money was invested — a 50% return over 1 year and over 10 years look identical here.</div>
+                </div>
+
+                <div class="compare-tile">
+                    <div class="ct-head">CAGR <span class="ct-pill">SIMPLE</span></div>
+                    <div class="ct-val">{{ "%.2f"|format(_cagr) }}%</div>
+                    <div class="ct-formula">(End / Start)^(1/Years) − 1</div>
+                    <div class="ct-desc">Annual growth rate, but assumes a <strong>single</strong> lump-sum investment. Wrong for SIPs or multiple cashflows — every rupee is treated as if invested on day one.</div>
+                </div>
+
+                <div class="compare-tile winner">
+                    <div class="ct-head">XIRR <span class="ct-pill">🏆 TRUE</span></div>
+                    <div class="ct-val">{{ "%.2f"|format(result.xirr) }}%</div>
+                    <div class="ct-formula">Σ CF_i / (1+r)^(t_i/365) = 0</div>
+                    <div class="ct-desc">The <strong>correct</strong> annualized return for irregular cashflows. Every investment earns from its own deposit date — the gold standard for SIPs, SWPs, and real portfolios.</div>
+                </div>
+            </div>
+
+            <div class="compare-verdict">
+                💡 <strong>For this portfolio:</strong>
+                {% if result.xirr > result.abs_return %}
+                    XIRR ({{ "%.2f"|format(result.xirr) }}%) is <strong>higher</strong> than Absolute ({{ "%.2f"|format(result.abs_return) }}%) because money that went in <em>later</em> had less time to grow — but still earned at a solid annualized rate.
+                {% else %}
+                    XIRR ({{ "%.2f"|format(result.xirr) }}%) is <strong>lower</strong> than Absolute ({{ "%.2f"|format(result.abs_return) }}%) because the raw % is spread across {{ "%.1f"|format(result.years) }} years of holding — annualizing reveals the true pace.
+                {% endif %}
+                {% if _cagr and (_cagr - result.xirr)|abs > 1 %}
+                    CAGR ({{ "%.2f"|format(_cagr) }}%) differs from XIRR because CAGR wrongly assumes everything was invested upfront — a common mistake when reporting SIP returns.
+                {% endif %}
+                <br><br>
+                <strong>👉 When talking to clients, always quote XIRR.</strong> It's the only figure that answers the real question: <em>"At what annual rate is my money actually compounding?"</em>
+            </div>
+        </div>
+
+        <script type="application/json" id="xirr-data">
+        {
+            "xirr":           {{ result.xirr | tojson }},
+            "totalInvested":  {{ result.total_invested | tojson }},
+            "totalReceived":  {{ result.total_received | tojson }},
+            "netGain":        {{ result.net_gain | tojson }},
+            "absReturn":      {{ result.abs_return | tojson }},
+            "years":          {{ result.years | tojson }},
+            "days":           {{ result.days | tojson }},
+            "cashflows":      {{ result.cashflows | tojson }}
+        }
+        </script>
+
+        <!-- CHARTS -->
+        <div class="charts-grid">
+            <div class="chart-card">
+                <h3>💰 Invested vs Received</h3>
+                <canvas id="pieChart"></canvas>
+            </div>
+            <div class="chart-card">
+                <h3>📊 Cashflow Timeline</h3>
+                <canvas id="timelineChart"></canvas>
+            </div>
+            <div class="chart-card full-width">
+                <h3>📈 Cumulative Net Cashflow</h3>
+                <canvas id="cumulativeChart"></canvas>
+            </div>
+        </div>
+
+        <!-- TABLE -->
+        <div class="table-card">
+            <h3>📋 Cashflow Ledger</h3>
+            <table class="data-table">
+                <thead>
+                    <tr><th>#</th><th>Date</th><th>Type</th><th>Amount</th><th>Running Net</th></tr>
+                </thead>
+                <tbody id="tableBody"></tbody>
+            </table>
+        </div>
+
+        <button class="btn-pdf-download" onclick="downloadPdf()">⬇ Download PDF Report</button>
+
+        <script>
+            (function () {
+                const data    = JSON.parse(document.getElementById('xirr-data').textContent);
+                const isDark  = document.body.classList.contains('dark-mode');
+                const gridCol = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
+                const tickCol = isDark ? '#94a3b8' : '#999';
+                const textCol = isDark ? '#e2e8f0' : '#333';
+
+                function fmtCr(v) {
+                    var a = Math.abs(v);
+                    var sign = v < 0 ? '-' : '';
+                    var sym = '₹';
+                    try {
+                        if (window.M3 && typeof window.M3.currencySymbol === 'function') sym = window.M3.currencySymbol();
+                        else { var cc = localStorage.getItem('m3-currency'); if (cc === 'western') sym = '$'; }
+                    } catch (e) {}
+                    if (sym === '$') {
+                        if (a >= 1e9) return sign + sym + (a/1e9).toFixed(2) + 'B';
+                        if (a >= 1e6) return sign + sym + (a/1e6).toFixed(2) + 'M';
+                        if (a >= 1e3) return sign + sym + (a/1e3).toFixed(1) + 'K';
+                        return sign + sym + Math.round(a).toLocaleString('en-US');
+                    }
+                    if (a >= 10000000) return sign + sym + (a/10000000).toFixed(2) + 'Cr';
+                    if (a >= 100000)   return sign + sym + (a/100000).toFixed(2) + 'L';
+                    if (a >= 1000)     return sign + sym + (a/1000).toFixed(1) + 'K';
+                    return sign + sym + Math.round(a).toLocaleString('en-IN');
+                }
+
+                // PIE
+                new Chart(document.getElementById('pieChart'), {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Invested', 'Received'],
+                        datasets: [{
+                            data: [data.totalInvested, data.totalReceived],
+                            backgroundColor: ['#dc2626', '#16a34a'],
+                            borderWidth: 2, borderColor: isDark ? '#0a0818' : '#fff'
+                        }]
+                    },
+                    options: { responsive:true, cutout:'65%',
+                        plugins:{ legend:{ position:'bottom', labels:{color:textCol} },
+                                  tooltip:{ callbacks:{ label: ctx => ctx.label + ': ' + fmtCr(ctx.parsed) } } } }
+                });
+
+                // TIMELINE — bar per cashflow, color-coded
+                const cfs      = data.cashflows;
+                const tlLabels = cfs.map(c => c.date);
+                const tlData   = cfs.map(c => c.signed);
+                new Chart(document.getElementById('timelineChart'), {
+                    type: 'bar',
+                    data: {
+                        labels: tlLabels,
+                        datasets: [{
+                            label: 'Cashflow',
+                            data: tlData,
+                            backgroundColor: tlData.map(v => v < 0 ? 'rgba(220,38,38,0.75)' : 'rgba(22,163,74,0.75)'),
+                            borderRadius: 6
+                        }]
+                    },
+                    options: { responsive:true,
+                        plugins:{ legend:{display:false},
+                                  tooltip:{ callbacks:{ label: ctx => fmtCr(ctx.parsed.y) } } },
+                        scales:{ x:{ticks:{color:tickCol, maxRotation:45, minRotation:45, autoSkip:true, maxTicksLimit:10}, grid:{color:gridCol}},
+                                 y:{ticks:{color:tickCol, callback:v=>fmtCr(v)}, grid:{color:gridCol}} } }
+                });
+
+                // CUMULATIVE
+                let running = 0;
+                const cumLabels = cfs.map(c => c.date);
+                const cumData   = cfs.map(c => { running += c.signed; return running; });
+                new Chart(document.getElementById('cumulativeChart'), {
+                    type: 'line',
+                    data: {
+                        labels: cumLabels,
+                        datasets: [{
+                            label: 'Cumulative Net Cashflow',
+                            data: cumData,
+                            borderColor: '#9333EA',
+                            backgroundColor: 'rgba(147,51,234,0.12)',
+                            fill: true, tension: 0.3, pointRadius: 3,
+                            borderWidth: 2.5
+                        }]
+                    },
+                    options: { responsive:true,
+                        plugins:{ legend:{position:'top', labels:{color:textCol}},
+                                  tooltip:{ callbacks:{ label: ctx => fmtCr(ctx.parsed.y) } } },
+                        scales:{ x:{ticks:{color:tickCol, maxRotation:45, minRotation:45, autoSkip:true, maxTicksLimit:12}, grid:{color:gridCol}},
+                                 y:{ticks:{color:tickCol, callback:v=>fmtCr(v)}, grid:{color:gridCol}} } }
+                });
+
+                // TABLE
+                const tbody = document.getElementById('tableBody');
+                let net = 0;
+                cfs.forEach((c, i) => {
+                    net += c.signed;
+                    const pill = c.type === 'invest'
+                        ? '<span class="pill-invest">Invest</span>'
+                        : '<span class="pill-redeem">Redeem / Value</span>';
+                    const amtCol = c.type === 'invest' ? '#991b1b' : '#166534';
+                    const sign   = c.type === 'invest' ? '-' : '+';
+                    const tr = document.createElement('tr');
+                    tr.innerHTML =
+                        '<td>' + (i + 1) + '</td>' +
+                        '<td><strong>' + c.date + '</strong></td>' +
+                        '<td>' + pill + '</td>' +
+                        '<td style="color:' + amtCol + ';font-weight:700">' + sign + fmtCr(c.amount) + '</td>' +
+                        '<td style="color:' + (net < 0 ? '#991b1b' : '#166534') + ';font-weight:600">' + fmtCr(net) + '</td>';
+                    tbody.appendChild(tr);
+                });
+            })();
+        </script>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Form helpers -->
+<script>
+    var CF_DEFAULTS = {{ cashflows_in | tojson if cashflows_in else '[]' }};
+
+    function parseAmt(v) { return parseFloat(String(v || '').replace(/,/g,'')) || 0; }
+
+    function todayISO() { return new Date().toISOString().slice(0, 10); }
+
+    function formatINR_input(num) {
+        num = Math.round(parseFloat(num) || 0);
+        if (num <= 0) return '';
+        var cur = 'indian';
+        try { var v = localStorage.getItem('m3-currency'); if (v === 'western' || v === 'indian') cur = v; } catch (e) {}
+        if (cur === 'western') return num.toLocaleString('en-US');
+        var s = num.toString();
+        if (s.length <= 3) return s;
+        var last3 = s.slice(-3), rest = s.slice(0,-3), result = '';
+        while (rest.length > 2) { result = ',' + rest.slice(-2) + result; rest = rest.slice(0,-2); }
+        return rest + result + ',' + last3;
+    }
+    function onAmtKeyup(el) {
+        var raw = el.value.replace(/,/g,'').replace(/[^0-9]/g,'');
+        var pos = el.selectionStart, oldLen = el.value.length;
+        el.value = raw === '' ? '' : formatINR_input(parseInt(raw, 10));
+        var newPos = pos + (el.value.length - oldLen);
+        try { el.setSelectionRange(newPos, newPos); } catch (e) {}
+        updatePreview();
+    }
+
+    function makeRow(type, date, amount) {
+        type   = type   || 'invest';
+        date   = date   || todayISO();
+        amount = amount != null ? amount : '';
+        var row = document.createElement('div');
+        row.className = 'cf-row';
+        row.innerHTML =
+            '<select name="cf_type[]" onchange="updatePreview()">' +
+                '<option value="invest"' + (type === 'invest' ? ' selected' : '') + '>📤 Investment</option>' +
+                '<option value="redeem"' + (type === 'redeem' ? ' selected' : '') + '>📥 Redemption / Current Value</option>' +
+            '</select>' +
+            '<input type="date" name="cf_date[]" value="' + date + '" required>' +
+            '<div class="amt-wrap">' +
+                '<span class="amt-pfx m3-cursym">₹</span>' +
+                '<input type="text" inputmode="numeric" name="cf_amount[]" value="' + (amount ? formatINR_input(amount) : '') + '" placeholder="e.g. 10,000" oninput="onAmtKeyup(this)" required>' +
+            '</div>' +
+            '<button type="button" class="cf-remove" onclick="removeRow(this)" title="Remove this row">✕</button>';
+        return row;
+    }
+
+    function addCashflow(type, date, amount) {
+        document.getElementById('cfList').appendChild(makeRow(type, date, amount));
+        updatePreview();
+        updateRemoveState();
+    }
+
+    function removeRow(btn) {
+        var row = btn.closest('.cf-row');
+        if (row) row.remove();
+        updatePreview();
+        updateRemoveState();
+    }
+
+    function updateRemoveState() {
+        var rows = document.querySelectorAll('#cfList .cf-row');
+        rows.forEach(function (r) {
+            var btn = r.querySelector('.cf-remove');
+            if (btn) btn.disabled = rows.length <= 1;
+        });
+    }
+
+    function clearRows() {
+        document.getElementById('cfList').innerHTML = '';
+        addCashflow('invest', todayISO(), '');
+        addCashflow('redeem', todayISO(), '');
+    }
+
+    function loadExample() {
+        document.getElementById('cfList').innerHTML = '';
+        // 12 monthly SIPs of 10,000 starting 2023-01-01, then a redemption of 1,50,000 at end of 2024
+        var start = new Date('2023-01-01');
+        for (var i = 0; i < 12; i++) {
+            var d = new Date(start);
+            d.setMonth(start.getMonth() + i);
+            addCashflow('invest', d.toISOString().slice(0,10), 10000);
+        }
+        addCashflow('redeem', '2024-12-31', 150000);
+    }
+
+    function updatePreview() {
+        var rows = document.querySelectorAll('#cfList .cf-row');
+        var inv = 0, rec = 0, count = 0;
+        rows.forEach(function (r) {
+            var type = r.querySelector('[name="cf_type[]"]').value;
+            var amt  = parseAmt(r.querySelector('[name="cf_amount[]"]').value);
+            if (!amt) return;
+            count++;
+            if (type === 'invest') inv += amt; else rec += amt;
+        });
+
+        function fmtPrev(n) {
+            n = Math.round(n);
+            if (window.M3 && window.M3.fmtMoneyShort) return window.M3.fmtMoneyShort(n);
+            if (n >= 10000000) return '₹' + (n/10000000).toFixed(2) + ' Cr';
+            if (n >= 100000)   return '₹' + (n/100000).toFixed(1) + ' L';
+            return '₹' + n.toLocaleString('en-IN');
+        }
+
+        document.getElementById('lpInv').textContent = inv ? fmtPrev(inv) : '—';
+        document.getElementById('lpRec').textContent = rec ? fmtPrev(rec) : '—';
+        document.getElementById('lpCnt').textContent = count || '—';
+        var net = rec - inv;
+        var lpNet = document.getElementById('lpNet');
+        if (!inv && !rec) { lpNet.textContent = '—'; lpNet.style.color = ''; }
+        else { lpNet.textContent = (net >= 0 ? '+' : '-') + fmtPrev(Math.abs(net));
+               lpNet.style.color = net >= 0 ? '#166534' : '#991b1b'; }
+    }
+
+    // Boot
+    document.addEventListener('DOMContentLoaded', function () {
+        var list = document.getElementById('cfList');
+        if (CF_DEFAULTS && CF_DEFAULTS.length) {
+            CF_DEFAULTS.forEach(function (cf) { addCashflow(cf.type, cf.date, cf.amount); });
+        } else {
+            // Sensible starter: 1 invest today, 1 redeem today
+            addCashflow('invest', todayISO(), 100000);
+            addCashflow('redeem', todayISO(), '');
+        }
+        updateRemoveState();
+        updatePreview();
+
+        // Strip commas before submit so backend sees clean numbers
+        document.getElementById('xirrForm').addEventListener('submit', function () {
+            document.querySelectorAll('#cfList input[name="cf_amount[]"]').forEach(function (el) {
+                el.value = el.value.replace(/,/g,'');
+            });
+        });
+    });
+
+    // PDF
+    function fmtINR(num) {
+        num = Math.round(num);
+        var cur = 'indian';
+        try { var v = localStorage.getItem('m3-currency'); if (v === 'western' || v === 'indian') cur = v; } catch (e) {}
+        if (cur === 'western') return '$' + num.toLocaleString('en-US');
+        var s = num.toString();
+        if (s.length <= 3) return 'Rs.' + s;
+        var last3 = s.slice(-3), rest = s.slice(0,-3), result = '';
+        while (rest.length > 2) { result = ',' + rest.slice(-2) + result; rest = rest.slice(0,-2); }
+        return 'Rs.' + rest + result + ',' + last3;
+    }
+
+    // Short currency formatter for chart axis labels (K/L/Cr)
+    function shortINRaxis(num) {
+        var cur = 'indian';
+        try { var v = localStorage.getItem('m3-currency'); if (v === 'western' || v === 'indian') cur = v; } catch (e) {}
+        var sym = cur === 'western' ? '$' : 'Rs.';
+        var abs = Math.abs(num), sign = num < 0 ? '-' : '';
+        if (cur === 'western') {
+            if (abs >= 1e9) return sign + sym + (abs/1e9).toFixed(1) + 'B';
+            if (abs >= 1e6) return sign + sym + (abs/1e6).toFixed(1) + 'M';
+            if (abs >= 1e3) return sign + sym + (abs/1e3).toFixed(0) + 'K';
+            return sign + sym + Math.round(abs);
+        }
+        if (abs >= 1e7) return sign + sym + (abs/1e7).toFixed(2) + 'Cr';
+        if (abs >= 1e5) return sign + sym + (abs/1e5).toFixed(2) + 'L';
+        if (abs >= 1e3) return sign + sym + (abs/1e3).toFixed(0) + 'K';
+        return sign + sym + Math.round(abs);
+    }
+
+    function downloadPdf() {
+        var el = document.getElementById('xirr-data');
+        if (!el) { alert('Calculate first!'); return; }
+        var d = JSON.parse(el.textContent);
+        try {
+            var { jsPDF } = window.jspdf;
+            var doc = new jsPDF({ unit:'mm', format:'a4' });
+            var PW = 210, PH = 297;
+            var ACC = [147, 51, 234], ACC_SOFT = [237, 223, 252], DARK = [26, 26, 46], GRAY = [100, 116, 139],
+                GRID = [225, 220, 240], WHITE = [255, 255, 255], LIGHT = [245, 243, 255],
+                POS = [34, 139, 80], NEG = [200, 60, 80];
+
+            // Header
+            doc.setFillColor.apply(doc, DARK); doc.rect(0,0,PW,28,'F');
+            doc.setFillColor.apply(doc, ACC);  doc.rect(0,0,4,28,'F');
+            doc.setTextColor.apply(doc, WHITE); doc.setFont('helvetica','bold'); doc.setFontSize(16);
+            doc.text('XIRR Calculator Report', 10, 12);
+            doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(148,163,184);
+            doc.text('M3 Portfolio Investment Analysis  |  ' + new Date().toLocaleDateString('en-IN'), 10, 21);
+
+            var cy = 36;
+            var cards = [
+                { label:'Total Invested',  value: fmtINR(d.totalInvested) },
+                { label:'Total Received',  value: fmtINR(d.totalReceived) },
+                { label:'Absolute Return', value: d.absReturn.toFixed(2) + '%' },
+                { label:'XIRR (p.a.)',     value: d.xirr.toFixed(2) + '%', highlight:true },
+            ];
+            var cw = (PW - 20 - (cards.length - 1) * 4) / cards.length;
+            cards.forEach(function (card, i) {
+                var x = 10 + i * (cw + 4);
+                if (card.highlight) { doc.setFillColor.apply(doc, ACC); } else { doc.setFillColor.apply(doc, LIGHT); }
+                doc.roundedRect(x, cy, cw, 22, 2, 2, 'F');
+                doc.setFont('helvetica','normal'); doc.setFontSize(6.5);
+                if (card.highlight) { doc.setTextColor.apply(doc, WHITE); } else { doc.setTextColor.apply(doc, GRAY); }
+                doc.text(card.label, x + 3, cy + 7);
+                doc.setFont('helvetica','bold'); doc.setFontSize(10);
+                if (card.highlight) { doc.setTextColor.apply(doc, WHITE); } else { doc.setTextColor.apply(doc, ACC); }
+                doc.text(card.value, x + 3, cy + 17);
+            });
+            cy += 30;
+
+            // === VECTOR Cumulative Cashflow Chart ===
+            // Build cumulative series
+            var cum = [], runCum = 0;
+            d.cashflows.forEach(function (c) { runCum += c.signed; cum.push({ date: c.date, value: runCum }); });
+
+            var chartX = 10, chartY = cy, chartW = PW - 20, chartH = 82;
+            // Card background + border
+            doc.setFillColor(252, 251, 255);
+            doc.roundedRect(chartX, chartY, chartW, chartH, 2, 2, 'F');
+            doc.setDrawColor.apply(doc, GRID); doc.setLineWidth(0.2);
+            doc.roundedRect(chartX, chartY, chartW, chartH, 2, 2, 'S');
+
+            // Title + subtitle
+            doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor.apply(doc, DARK);
+            doc.text('Cumulative Net Cashflow', chartX + 4, chartY + 6.5);
+            doc.setFont('helvetica','normal'); doc.setFontSize(7); doc.setTextColor.apply(doc, GRAY);
+            doc.text('Running total after each transaction', chartX + 4, chartY + 11);
+
+            // Legend (top-right)
+            var legX = chartX + chartW - 42, legY = chartY + 7;
+            doc.setFillColor.apply(doc, ACC); doc.circle(legX, legY + 1.5, 1.1, 'F');
+            doc.setFont('helvetica','normal'); doc.setFontSize(7); doc.setTextColor.apply(doc, GRAY);
+            doc.text('Running Net', legX + 2, legY + 2.2);
+
+            // Plot area
+            var plotL = chartX + 22, plotR = chartX + chartW - 6,
+                plotT = chartY + 16, plotB = chartY + chartH - 14;
+            var plotW = plotR - plotL, plotH = plotB - plotT;
+
+            // Compute Y range
+            var vals = cum.map(function (p) { return p.value; });
+            vals.push(0);
+            var vmin = Math.min.apply(null, vals), vmax = Math.max.apply(null, vals);
+            if (vmin === vmax) { vmin -= 1; vmax += 1; }
+            var vpad = (vmax - vmin) * 0.12;
+            vmin -= vpad; vmax += vpad;
+
+            // Nice ticks
+            function niceStep(range, ticks) {
+                var raw = range / ticks;
+                var mag = Math.pow(10, Math.floor(Math.log10(raw)));
+                var norm = raw / mag;
+                var step;
+                if (norm < 1.5) step = 1;
+                else if (norm < 3) step = 2;
+                else if (norm < 7) step = 5;
+                else step = 10;
+                return step * mag;
+            }
+            var yStep = niceStep(vmax - vmin, 5);
+            var tickMin = Math.floor(vmin / yStep) * yStep;
+            var tickMax = Math.ceil(vmax / yStep) * yStep;
+            var yTicks = [];
+            for (var tv = tickMin; tv <= tickMax + yStep * 0.001; tv += yStep) yTicks.push(tv);
+            vmin = tickMin; vmax = tickMax;
+
+            function xAt(i) { return plotL + (cum.length <= 1 ? plotW/2 : (i / (cum.length - 1)) * plotW); }
+            function yAt(v) { return plotB - ((v - vmin) / (vmax - vmin)) * plotH; }
+
+            // Horizontal gridlines + Y tick labels
+            doc.setDrawColor.apply(doc, GRID); doc.setLineWidth(0.1);
+            doc.setFont('helvetica','normal'); doc.setFontSize(5.8); doc.setTextColor.apply(doc, GRAY);
+            yTicks.forEach(function (tval) {
+                var yy = yAt(tval);
+                doc.line(plotL, yy, plotR, yy);
+                doc.text(shortINRaxis(tval), plotL - 1.5, yy + 1.2, { align:'right' });
+            });
+
+            // Zero baseline (dashed) if zero within range
+            var zeroInRange = vmin < 0 && vmax > 0;
+            if (zeroInRange) {
+                var zy = yAt(0);
+                doc.setDrawColor(130, 130, 155); doc.setLineWidth(0.25);
+                for (var dx = plotL; dx < plotR; dx += 2.2) {
+                    doc.line(dx, zy, Math.min(dx + 1.1, plotR), zy);
+                }
+                // "₹0" label on zero line
+                doc.setFontSize(5.8); doc.setTextColor(120, 120, 140);
+                doc.text('0', plotL - 1.5, zy + 1.2, { align:'right' });
+            }
+
+            // Axes (left + bottom)
+            doc.setDrawColor(170, 170, 190); doc.setLineWidth(0.3);
+            doc.line(plotL, plotT, plotL, plotB);
+            doc.line(plotL, plotB, plotR, plotB);
+
+            // Filled area under the line (to zero baseline if in range, else to plot bottom)
+            if (cum.length > 1) {
+                var baseY = zeroInRange ? yAt(0) : plotB;
+                doc.setFillColor.apply(doc, ACC_SOFT);
+                for (var k = 0; k < cum.length - 1; k++) {
+                    var x1 = xAt(k), y1 = yAt(cum[k].value);
+                    var x2 = xAt(k+1), y2 = yAt(cum[k+1].value);
+                    // Two triangles forming a trapezoid between line and baseline
+                    doc.triangle(x1, y1, x2, y2, x2, baseY, 'F');
+                    doc.triangle(x1, y1, x2, baseY, x1, baseY, 'F');
+                }
+            }
+
+            // Line path
+            doc.setDrawColor.apply(doc, ACC); doc.setLineWidth(0.65);
+            doc.setLineCap(1); doc.setLineJoin(1);
+            for (var k = 0; k < cum.length - 1; k++) {
+                doc.line(xAt(k), yAt(cum[k].value), xAt(k+1), yAt(cum[k+1].value));
+            }
+
+            // Data point markers — color by sign (invest=negative red, redeem/value=positive green, else purple)
+            doc.setDrawColor.apply(doc, WHITE); doc.setLineWidth(0.3);
+            cum.forEach(function (p, i) {
+                var isNeg = p.value < 0;
+                var col = isNeg ? NEG : (p.value > 0 ? POS : ACC);
+                doc.setFillColor.apply(doc, col);
+                doc.circle(xAt(i), yAt(p.value), 1.0, 'FD');
+            });
+
+            // X-axis labels (max ~6 evenly spaced)
+            var maxLabels = cum.length <= 6 ? cum.length : 6;
+            var labelIdxs = [];
+            if (cum.length <= maxLabels) {
+                for (var li = 0; li < cum.length; li++) labelIdxs.push(li);
+            } else {
+                for (var li = 0; li < maxLabels; li++) {
+                    labelIdxs.push(Math.round(li * (cum.length - 1) / (maxLabels - 1)));
+                }
+            }
+            var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+            doc.setFont('helvetica','normal'); doc.setFontSize(6); doc.setTextColor.apply(doc, GRAY);
+            labelIdxs.forEach(function (idx) {
+                var raw = cum[idx].date, lbl = raw;
+                var parts = raw.split('-');
+                if (parts.length === 3) {
+                    var m = parseInt(parts[1], 10) - 1;
+                    if (m >= 0 && m < 12) lbl = parts[2] + '-' + months[m] + '-' + parts[0].slice(2);
+                }
+                var xx = xAt(idx);
+                // Tiny tick mark
+                doc.setDrawColor(170, 170, 190); doc.setLineWidth(0.2);
+                doc.line(xx, plotB, xx, plotB + 1.2);
+                doc.text(lbl, xx, plotB + 4.8, { align:'center' });
+            });
+
+            // Y-axis title
+            doc.setFont('helvetica','normal'); doc.setFontSize(6); doc.setTextColor.apply(doc, GRAY);
+            doc.text('Amount', chartX + 4, chartY + 18);
+
+            cy += chartH + 5;
+
+            // === Compact Ledger Table ===
+            var running = 0;
+            var body = d.cashflows.map(function (c, i) {
+                running += c.signed;
+                return [
+                    String(i + 1),
+                    c.date,
+                    c.type === 'invest' ? 'Investment' : 'Redemption / Value',
+                    (c.type === 'invest' ? '-' : '+') + fmtINR(c.amount),
+                    fmtINR(running)
+                ];
+            });
+            doc.autoTable({
+                startY: cy,
+                head: [['#', 'Date', 'Type', 'Amount', 'Running Net']],
+                body: body,
+                theme: 'grid',
+                headStyles: { fillColor: ACC, textColor: WHITE, fontStyle: 'bold', fontSize: 7.5, cellPadding: 1.5 },
+                bodyStyles: { fontSize: 7, textColor: DARK, cellPadding: 1.2 },
+                alternateRowStyles: { fillColor: [249, 247, 255] },
+                margin: { left: 10, right: 10, bottom: 16 },
+                columnStyles: {
+                    0: { cellWidth: 10, halign: 'center' },
+                    1: { cellWidth: 28 },
+                    2: { cellWidth: 60 },
+                    3: { cellWidth: 42, halign: 'right' },
+                    4: { cellWidth: 50, halign: 'right' }
+                },
+                styles: { lineColor: [225, 220, 240], lineWidth: 0.1 }
+            });
+
+            // Footer on every page
+            var pageCount = doc.internal.getNumberOfPages();
+            for (var p = 1; p <= pageCount; p++) {
+                doc.setPage(p);
+                doc.setFillColor.apply(doc, DARK); doc.rect(0, PH - 12, PW, 12, 'F');
+                doc.setFillColor.apply(doc, ACC);  doc.rect(0, PH - 12, 4, 12, 'F');
+                doc.setFont('helvetica','normal'); doc.setFontSize(7); doc.setTextColor(148, 163, 184);
+                doc.text('M3 Portfolio Investment Analysis  |  For informational purposes only.', 9, PH - 5);
+                doc.text('Page ' + p + ' of ' + pageCount, PW - 10, PH - 5, { align:'right' });
+            }
+
+            doc.save('XIRR_Report.pdf');
+        } catch (e) {
+            alert('PDF Error: ' + e.message);
+        }
+    }
+</script>
+
+<div class="calc-container">{% include '_disclaimer.html' %}</div>
+
+<script>
+// Currency live-update — swap prefix symbols
+(function () {
+  function refreshSyms() {
+    var sym = (window.M3 && typeof window.M3.currencySymbol === 'function')
+              ? window.M3.currencySymbol()
+              : ((function () { try { return localStorage.getItem('m3-currency') === 'western' ? '$' : '₹'; } catch (e) { return '₹'; } })());
+    document.querySelectorAll('.m3-cursym').forEach(function (n) { n.textContent = sym; });
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', refreshSyms);
+  } else { refreshSyms(); }
+  window.addEventListener('m3-currency-change', refreshSyms);
+})();
+</script>
+
+</body>
+</html>

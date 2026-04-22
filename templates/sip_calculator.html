@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script>(function(){try{var s=localStorage.getItem('m3-theme');var p=matchMedia('(prefers-color-scheme: dark)').matches;var t=s||(p?'dark':'light');document.documentElement.setAttribute('data-theme',t);document.addEventListener('DOMContentLoaded',function(){if(t==='dark')document.body.classList.add('dark-mode');});}catch(e){}})();</script>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SIP Calculator | M3 Portfolio Investment Analysis</title>
+    <link rel="stylesheet" href="/static/design-tokens.css">
+    <link rel="stylesheet" href="/static/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+    <style>
+        :root {
+            --navy:#0f0c29; --navy-m:#1a1550; --gold:#e8c84a; --gold-d:#d4a843;
+            --gold-l:#f5d96b; --gold-xl:#fdf3cc; --cream:#fdf9ee; --muted:#6b6080; --ink:#1a0f3c;
+            --card-shd:0 4px 20px rgba(15,12,41,0.11),0 1px 5px rgba(15,12,41,0.06);
+            --card-brd:1px solid rgba(232,200,74,0.2);
+        }
+        body { min-height: 100vh; padding: 20px;
+            background: linear-gradient(145deg, #f5edcc 0%, #fdf9ee 40%, #fffdf5 70%, #f5edcc 100%);
+            color: #141124;
+        }
+        html[data-theme="dark"] body,
+        body.dark-mode {
+            background: linear-gradient(145deg, #07060f 0%, #0f0c29 45%, #1a1550 80%, #07060f 100%) !important;
+            color: #f4eed2;
+        }
+        .calc-container { max-width: 1400px; margin: 0 auto; }
+        .calc-header { background: var(--cream); padding: 20px 28px; border-radius: 16px; margin-bottom: 20px; box-shadow: var(--card-shd); border: var(--card-brd); border-left: 5px solid var(--gold); display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap; }
+        .calc-card { background: var(--cream); padding: 28px; border-radius: 16px; box-shadow: var(--card-shd); margin-bottom: 18px; border: var(--card-brd); }
+        .btn-back { display: inline-block; padding: 10px 20px; background: #0f0c29; color: #e8c84a; text-decoration: none; border-radius: 8px; margin-bottom: 20px; font-weight: 600; }
+        .btn-calculate { width: 100%; padding: 15px; background: linear-gradient(135deg, #4CAF50 0%, #2e7d32 100%); color: white; border: none; border-radius: 10px; font-size: 1.1em; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+        .btn-calculate:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(76,175,80,0.4); }
+
+        /* INPUT SECTION */
+        .input-section { background: #fdf3cc; border-radius: 14px; padding: 20px 24px; margin-bottom: 18px; border: 1.5px solid #c8e6c9; }
+        .input-section-title { font-size: 0.82em; font-weight: 700; color: #1a1550; letter-spacing: 0.04em; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 16px; }
+        .form-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 18px; }
+        .form-group-e { display: flex; flex-direction: column; gap: 6px; }
+        .form-group-e label { font-size: 0.83em; font-weight: 700; color: #3d3050; }
+        .input-wrap { display: flex; align-items: center; border: 1.5px solid #d4a84340; border-radius: 10px; overflow: hidden; background: white; transition: border 0.2s; }
+        .input-wrap:focus-within { border-color: #e8c84a; box-shadow: 0 0 0 3px rgba(232,200,74,0.15); }
+        .input-pfx, .input-sfx { padding: 0 12px; font-size: 0.88em; color: #6b6080; font-weight: 600; background: #fdf6e3; height: 44px; display: flex; align-items: center; white-space: nowrap; }
+        .input-pfx { border-right: 1.5px solid #f0f0f0; }
+        .input-sfx { border-left: 1.5px solid #f0f0f0; }
+        .e-input { flex: 1; padding: 11px 14px; border: none; font-size: 0.95em; color: #333; outline: none; background: transparent; width: 100%; }
+        .hint { font-size: 0.74em; color: #6b6080; }
+        .quick-btns span { font-size: 0.72em; padding: 2px 8px; border-radius: 20px; cursor: pointer; font-weight: 600; display: inline-block; margin-top: 5px; margin-right: 4px; transition: all 0.15s; }
+
+        /* LIVE PREVIEW */
+        .live-preview { background: linear-gradient(135deg, #fdf9ee, #fdf3cc); border-radius: 14px; padding: 20px 24px; margin-bottom: 18px; border: 1.5px solid #a5d6a7; }
+        .lp-title { font-size: 0.82em; font-weight: 700; color: #0f0c29; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 14px; }
+        .lp-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; }
+        .lp-card { background: white; border-radius: 9px; padding: 14px; text-align: center; border: 1.5px solid #c8e6c9; }
+        .lp-label { font-size: 0.72em; color: #6b6080; font-weight: 600; text-transform: uppercase; }
+        .lp-value { font-size: 1.1em; font-weight: 800; color: #0f0c29; margin-top: 5px; }
+
+        /* REVERSE CALCULATOR */
+        .reverse-section { background: #f3e5f5; border-radius: 14px; padding: 20px 24px; margin-bottom: 18px; border: 1.5px solid #ce93d8; }
+        .reverse-title { font-size: 0.82em; font-weight: 700; color: #0f0c29; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 14px; }
+        .reverse-grid { display: grid; grid-template-columns: 1fr 1fr auto; gap: 14px; align-items: end; }
+        .btn-reverse { padding: 12px 20px; background: linear-gradient(135deg, #1a1550 0%, #0f0c29 100%); color: #e8c84a; border: none; border-radius: 10px; font-weight: 700; cursor: pointer; font-size: 0.9em; white-space: nowrap; }
+        .reverse-result { background: #fdf9ee; border-radius: 10px; padding: 14px 18px; margin-top: 12px; border: 1.5px solid #ce93d8; display: none; }
+        .reverse-result.show { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
+        .reverse-result .rr-label { font-size: 0.85em; color: #6b6080; }
+        .reverse-result .rr-val { font-size: 1.4em; font-weight: 800; color: #0f0c29; }
+
+        /* SUMMARY CARDS */
+        .summary-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; margin-bottom: 18px; }
+        .sum-card { background: white; border-radius: 12px; padding: 16px 18px; box-shadow: var(--card-shd); border: var(--card-brd); }
+        .sum-card .sc-label { font-size: 0.75em; color: #6b6080; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
+        .sum-card .sc-val { font-size: 1.5em; font-weight: 700; color: #0f0c29; font-family: 'Cormorant Garamond', serif; margin-top: 8px; }
+        .sum-card .sc-sub { font-size: 0.75em; color: #6b6080; margin-top: 4px; }
+        .sum-card.highlighted { background: linear-gradient(135deg, var(--gold), var(--gold-d)); }
+        .sum-card.highlighted .sc-label { color: rgba(255,255,255,0.8); }
+        .sum-card.highlighted .sc-val { color: #0f0c29; font-size: 1.7em; }
+        .sum-card.highlighted .sc-sub { color: rgba(255,255,255,0.65); }
+
+        .success-box { background: #fdf9ee; border-left: 4px solid #4CAF50; padding: 15px; border-radius: 8px; margin: 20px 0; color: #1b5e20; }
+
+        /* SIP COMPARISON TABLE */
+        .comparison-card { background: var(--cream); border-radius: 14px; padding: 22px; box-shadow: var(--card-shd); border: var(--card-brd); margin-bottom: 16px; }
+        .comparison-card h3 { font-size: 1.05em; color: var(--navy); margin-bottom: 6px; font-family:'DM Sans',sans-serif; }
+        .comparison-card p { font-size: 0.85em; color: #6b6080; margin-bottom: 20px; }
+
+        .charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 16px; }
+        .chart-card { background: var(--cream); padding: 22px; border-radius: 14px; box-shadow: var(--card-shd); border: var(--card-brd); }
+        .chart-card.full-width { grid-column: 1 / -1; }
+        .chart-card h3 { color: var(--navy); margin-bottom: 15px; font-size: 1.05em; }
+        .table-card { background: var(--cream); padding: 22px; border-radius: 14px; box-shadow: var(--card-shd); border: var(--card-brd); margin-top: 16px; }
+        .table-card h3 { color: var(--navy); margin-bottom: 15px; font-size: 1.05em; }
+        .data-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        .data-table th { background: #0f0c29; color: #e8c84a; padding: 12px; text-align: left; font-weight: 600; }
+        .data-table td { padding: 10px 12px; border-bottom: 1px solid rgba(232,200,74,0.15); }
+        .data-table tr:hover { background: #fdf3cc; }
+        .data-table .highlight-row td { background: #fdf9ee !important; font-weight: 700; }
+
+        .btn-pdf-download { display: inline-flex; align-items: center; gap: 8px; padding: 12px 28px; background: linear-gradient(135deg, #e8c84a 0%, #d4a843 100%); color: #0f0c29; font-weight: 700; border: none; border-radius: 10px; font-size: 1em; font-weight: 700; cursor: pointer; margin-top: 20px; box-shadow: 0 4px 15px rgba(15,12,41,0.4); transition: all 0.2s; width: 100%; }
+        .btn-pdf-download:hover { transform: translateY(-2px); }
+
+        /* DARK MODE */
+        body.dark-mode .calc-header, body.dark-mode .calc-card, body.dark-mode .chart-card, body.dark-mode .table-card, body.dark-mode .comparison-card { background: #0a0818 !important; border: 1px solid #1a1550 !important; box-shadow: 0 8px 32px rgba(0,0,0,0.4) !important; color: #e2e8f0 !important; }
+        body.dark-mode .calc-header h1 { color: #a5b4fc !important; }
+        body.dark-mode .calc-header p  { color: #64748b !important; }
+        body.dark-mode .input-section  { background: #071510 !important; border-color: #0d2a1a !important; }
+        body.dark-mode .input-section-title { color: #4ade80 !important; }
+        body.dark-mode .live-preview   { background: #071510 !important; border-color: #0d2a1a !important; }
+        body.dark-mode .lp-title       { color: #4ade80 !important; }
+        body.dark-mode .lp-card        { background: #0a0818 !important; border-color: #0d2a1a !important; }
+        body.dark-mode .lp-label       { color: #64748b !important; }
+        body.dark-mode .lp-value       { color: #4ade80 !important; }
+        body.dark-mode .reverse-section { background: #100a18 !important; border-color: #2d1040 !important; }
+        body.dark-mode .reverse-title  { color: #d8b4fe !important; }
+        body.dark-mode .reverse-result { background: #0f172a !important; border-color: #2d1040 !important; }
+        body.dark-mode .reverse-result .rr-val { color: #d8b4fe !important; }
+        body.dark-mode .form-group-e label { color: #94a3b8 !important; }
+        body.dark-mode .input-wrap     { background: #07060f !important; border-color: #252d4a !important; }
+        body.dark-mode .input-pfx, body.dark-mode .input-sfx { background: #07060f !important; color: #64748b !important; border-color: #252d4a !important; }
+        body.dark-mode .e-input        { color: #e2e8f0 !important; }
+        body.dark-mode .sum-card       { background: #0f0c29 !important; }
+        body.dark-mode .sum-card .sc-val { color: #e2e8f0 !important; }
+        body.dark-mode .chart-card h3, body.dark-mode .table-card h3, body.dark-mode .comparison-card h3 { color: #c7d2fe !important; }
+        body.dark-mode .comparison-card p { color: #64748b !important; }
+        body.dark-mode .data-table th  { background: #0d2a1a !important; color: #4ade80 !important; }
+        body.dark-mode .data-table td  { background: #0a0818 !important; border-bottom-color: #07060f !important; color: #cbd5e1 !important; }
+        body.dark-mode .data-table tr:hover td { background: #0a1a10 !important; }
+        body.dark-mode .data-table .highlight-row td { background: #0d2a1a !important; }
+        body.dark-mode .btn-back       { background: rgba(232,200,74,0.12) !important; color: #f5d96b !important; }
+        body.dark-mode ::-webkit-scrollbar { width: 5px; }
+        body.dark-mode ::-webkit-scrollbar-track { background: #07060f; }
+        body.dark-mode ::-webkit-scrollbar-thumb { background: #252d4a; border-radius: 4px; }
+
+        @media (max-width: 768px) {
+            .form-grid-3 { grid-template-columns: 1fr; }
+            .lp-grid     { grid-template-columns: repeat(2,1fr); }
+            .summary-grid { grid-template-columns: repeat(2,1fr); }
+            .charts-grid  { grid-template-columns: 1fr; }
+            .reverse-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+    <script src="/static/calc-core.js"></script>
+</head>
+<body>
+    <script>
+        var CURRENCY_FORMAT = "{{ session.get('currency_format', 'indian') }}";
+        function formatCurrency(num) {
+            num = Math.round(num);
+            if (CURRENCY_FORMAT === 'western') return '$' + num.toLocaleString('en-US');
+            var s = num.toString();
+            if (s.length <= 3) return 'Rs.' + s;
+            var last3 = s.slice(-3), rest = s.slice(0,-3), result = '';
+            while (rest.length > 2) { result = ',' + rest.slice(-2) + result; rest = rest.slice(0,-2); }
+            return 'Rs.' + rest + result + ',' + last3;
+        }
+    </script>
+
+<div class="calc-container">
+    <a href="/dashboard" class="btn-back">← Back to Dashboard</a>
+
+    <div class="calc-header">
+        <h1>🌱 SIP Calculator</h1>
+        <p>Calculate how your monthly SIP grows over time with the power of compounding</p>
+    </div>
+
+    <div class="calc-card">
+        <form method="POST" action="/calculator/sip">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+            <!-- INPUT SECTION -->
+            <div class="input-section">
+                <div class="input-section-title">💰 SIP Details</div>
+                <div class="form-grid-3">
+                    <div class="form-group-e">
+                        <label>Monthly SIP Amount</label>
+                        <div class="input-wrap">
+                            <span class="input-pfx m3-cursym">₹</span>
+                            <input type="text" inputmode="numeric" class="amt-input e-input"
+                                   name="monthly_investment" id="monthlySip"
+                                   value="{{ monthly_investment or 5000 }}"
+                                   oninput="onAmtKeyup(this); updatePreview();" required>
+                        </div>
+                        <span class="hint">Enter your monthly SIP amount</span>
+                    </div>
+                    <div class="form-group-e">
+                        <label>Expected Annual Return</label>
+                        <div class="input-wrap">
+                            <input type="number" class="e-input" name="expected_return" id="expReturn"
+                                   value="{{ expected_return or 12 }}" min="1" max="18" step="0.5"
+                                   oninput="updatePreview();" required>
+                            <span class="input-sfx">% p.a.</span>
+                        </div>
+                        <div style="display:flex; gap:6px; margin-top:5px; flex-wrap:wrap;">
+                            <span onclick="setReturn(10,this)" style="font-size:0.72em; padding:2px 8px; border-radius:20px; background:#f1fff3; color:#2e7d32; border:1.5px solid #c8e6c9; cursor:pointer; font-weight:600;">10%</span>
+                            <span onclick="setReturn(12,this)" style="font-size:0.72em; padding:2px 8px; border-radius:20px; background:#fdf9ee; color:#2e7d32; border:1.5px solid #4CAF50; cursor:pointer; font-weight:600;">12%</span>
+                            <span onclick="setReturn(15,this)" style="font-size:0.72em; padding:2px 8px; border-radius:20px; background:#f1fff3; color:#2e7d32; border:1.5px solid #c8e6c9; cursor:pointer; font-weight:600;">15%</span>
+                        </div>
+                        <small style="font-size:0.7em; color:#6b6080; display:block; margin-top:4px;">Historical equity MF returns: 10–14% p.a. Capped at 18%.</small>
+                    </div>
+                    <div class="form-group-e">
+                        <label>Investment Period</label>
+                        <div class="input-wrap">
+                            <input type="number" class="e-input" name="time_period" id="timePeriod"
+                                   value="{{ time_period or 10 }}" min="1" max="50"
+                                   oninput="updatePreview();" required>
+                            <span class="input-sfx">Years</span>
+                        </div>
+                        <div style="display:flex; gap:6px; margin-top:5px; flex-wrap:wrap;">
+                            <span onclick="setYears(5,this)" style="font-size:0.72em; padding:2px 8px; border-radius:20px; background:#f1fff3; color:#2e7d32; border:1.5px solid #c8e6c9; cursor:pointer; font-weight:600;">5 Yrs</span>
+                            <span onclick="setYears(10,this)" style="font-size:0.72em; padding:2px 8px; border-radius:20px; background:#fdf9ee; color:#2e7d32; border:1.5px solid #4CAF50; cursor:pointer; font-weight:600;">10 Yrs</span>
+                            <span onclick="setYears(15,this)" style="font-size:0.72em; padding:2px 8px; border-radius:20px; background:#f1fff3; color:#2e7d32; border:1.5px solid #c8e6c9; cursor:pointer; font-weight:600;">15 Yrs</span>
+                            <span onclick="setYears(20,this)" style="font-size:0.72em; padding:2px 8px; border-radius:20px; background:#f1fff3; color:#2e7d32; border:1.5px solid #c8e6c9; cursor:pointer; font-weight:600;">20 Yrs</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- LIVE PREVIEW -->
+            <div class="live-preview">
+                <div class="lp-title">⚡ Live Preview</div>
+                <div class="lp-grid">
+                    <div class="lp-card">
+                        <div class="lp-label">Total Invested</div>
+                        <div class="lp-value" id="lpInvested">—</div>
+                    </div>
+                    <div class="lp-card">
+                        <div class="lp-label">Returns Earned</div>
+                        <div class="lp-value" id="lpReturns">—</div>
+                    </div>
+                    <div class="lp-card">
+                        <div class="lp-label">Final Value</div>
+                        <div class="lp-value" id="lpFinal">—</div>
+                    </div>
+                    <div class="lp-card">
+                        <div class="lp-label">Wealth Multiplier</div>
+                        <div class="lp-value" id="lpMultiple">—</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- REVERSE CALCULATOR -->
+            <div class="reverse-section">
+                <div class="reverse-title">🔄 Reverse Calculator — How much SIP needed for a target?</div>
+                <div class="reverse-grid">
+                    <div class="form-group-e">
+                        <label>Target Corpus</label>
+                        <div class="input-wrap">
+                            <span class="input-pfx m3-cursym">₹</span>
+                            <input type="text" inputmode="numeric" class="amt-input e-input"
+                                   id="targetCorpus" placeholder="e.g. 1,00,00,000"
+                                   oninput="onAmtKeyup(this);">
+                        </div>
+                    </div>
+                    <div class="form-group-e">
+                        <label>In how many years?</label>
+                        <div class="input-wrap">
+                            <input type="number" class="e-input" id="targetYears" placeholder="e.g. 10" value="10">
+                            <span class="input-sfx">Years</span>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-reverse" onclick="calcReverse()">🔄 Find SIP</button>
+                </div>
+                <div class="reverse-result" id="reverseResult">
+                    <div>
+                        <div class="rr-label">Monthly SIP Required</div>
+                        <div class="rr-val" id="rrSip">—</div>
+                    </div>
+                    <div>
+                        <div class="rr-label">Total Investment</div>
+                        <div class="rr-val" id="rrTotal">—</div>
+                    </div>
+                    <div>
+                        <div class="rr-label">Returns</div>
+                        <div class="rr-val" id="rrReturns">—</div>
+                    </div>
+                </div>
+            </div>
+
+            <button type="submit" class="btn-calculate">🌱 Calculate SIP Returns</button>
+        </form>
+
+        {% if result %}
+
+        <!-- SUMMARY CARDS -->
+        <div class="summary-grid" style="margin-top:30px;">
+            <div class="sum-card" style="border-top:4px solid #4CAF50;">
+                <div class="sc-label">Total Invested</div>
+                <div class="sc-val">{{ '₹' if session.get('currency_format','indian')=='indian' else '$' }}{{ result.total_investment | indian_currency }}</div>
+                <div class="sc-sub">{{ monthly_investment | indian_currency }}/mo × {{ time_period }} yrs</div>
+            </div>
+            <div class="sum-card" style="border-top:4px solid #2196F3;">
+                <div class="sc-label">Returns Earned</div>
+                <div class="sc-val" style="color:#1565c0;">{{ '₹' if session.get('currency_format','indian')=='indian' else '$' }}{{ result.total_returns | indian_currency }}</div>
+                <div class="sc-sub">Pure compounding gain</div>
+            </div>
+            <div class="sum-card" style="border-top:4px solid #FF9800;">
+                <div class="sc-label">Wealth Multiplier</div>
+                <div class="sc-val" style="color:#e65100;">{{ "%.1f"|format(result.expected_value / result.total_investment) }}x</div>
+                <div class="sc-sub">Money multiplied</div>
+            </div>
+            <div class="sum-card highlighted">
+                <div class="sc-label">🏆 Final Corpus</div>
+                <div class="sc-val">{{ '₹' if session.get('currency_format','indian')=='indian' else '$' }}{{ result.expected_value | indian_currency }}</div>
+                <div class="sc-sub">After {{ time_period }} years</div>
+            </div>
+        </div>
+
+        <div class="success-box">
+            <strong>🌱 Power of SIP!</strong> Monthly ₹{{ monthly_investment | indian_currency }} at {{ expected_return }}% for {{ time_period }} years →
+            Corpus <strong>₹{{ result.expected_value | indian_currency }}</strong>
+            ({{ "%.1f"|format(result.expected_value / result.total_investment) }}x your investment!) —
+            Returns ₹{{ result.total_returns | indian_currency }} earned purely by compounding.
+        </div>
+
+        <!-- JSON DATA -->
+        <script type="application/json" id="sip-data">
+        {
+            "monthlyInvestment": {{ monthly_investment | tojson }},
+            "expectedReturn":    {{ expected_return | tojson }},
+            "years":             {{ time_period | tojson }},
+            "totalInvestment":   {{ result.total_investment | tojson }},
+            "totalReturns":      {{ result.total_returns | tojson }},
+            "expectedValue":     {{ result.expected_value | tojson }}
+        }
+        </script>
+
+        <!-- SIP COMPARISON TABLE — unique feature -->
+        <div class="comparison-card">
+            <h3>📊 SIP Comparison — Different Amounts & Returns</h3>
+            <p>See how different monthly SIP amounts grow at different return rates over {{ time_period }} years</p>
+            <table class="data-table" id="compTable">
+                <thead id="compHead"></thead>
+                <tbody id="compBody"></tbody>
+            </table>
+        </div>
+
+        <!-- CHARTS -->
+        <div class="charts-grid">
+            <div class="chart-card">
+                <h3>🍩 Investment Breakdown</h3>
+                <canvas id="pieChart"></canvas>
+            </div>
+            <div class="chart-card">
+                <h3>📊 SIP at Different Return Rates</h3>
+                <canvas id="compareChart"></canvas>
+            </div>
+            <div class="chart-card full-width">
+                <h3>📈 Investment Growth Over Time</h3>
+                <canvas id="lineChart"></canvas>
+            </div>
+        </div>
+
+        <!-- YEAR TABLE -->
+        <div class="table-card">
+            <h3>📋 Year-wise Growth</h3>
+            <table class="data-table">
+                <thead>
+                    <tr><th>Year</th><th>Total Invested</th><th>Portfolio Value</th><th>Returns Earned</th><th>Wealth Multiple</th></tr>
+                </thead>
+                <tbody id="tableBody"></tbody>
+            </table>
+        </div>
+
+        <button class="btn-pdf-download" onclick="downloadPdf()">⬇ Download PDF Report</button>
+
+        <script>
+            const data       = JSON.parse(document.getElementById('sip-data').textContent);
+            const sip        = data.monthlyInvestment;
+            const annualRet  = data.expectedReturn / 100;
+            const monthlyRate= annualRet / 12;
+            const years      = data.years;
+            const isDark     = document.body.classList.contains('dark-mode');
+            const gridColor  = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
+            const tickColor  = isDark ? '#64748b' : '#999';
+            const textColor  = isDark ? '#e2e8f0' : '#333';
+
+            function fmtCr(v) {
+                var a = Math.abs(v);
+                if (window.M3 && window.M3.fmtMoneyShort) return window.M3.fmtMoneyShort(v);
+                if (a >= 10000000) return '₹' + (v/10000000).toFixed(2) + 'Cr';
+                if (a >= 100000)   return '₹' + (v/100000).toFixed(2) + 'L';
+                return '₹' + Math.round(v).toLocaleString('en-IN');
+            }
+            function calcSIP(s, r, y) {
+                var m = r / 12 / 100, n = y * 12;
+                return m > 0 ? s * (((1+m)**n - 1)/m) * (1+m) : s * n;
+            }
+
+            // PIE
+            new Chart(document.getElementById('pieChart'), {
+                type: 'doughnut',
+                data: { labels: ['Total Invested', 'Returns Earned'], datasets: [{ data: [data.totalInvestment, data.totalReturns], backgroundColor: ['#4CAF50','#2196F3'], borderWidth: 2, borderColor: isDark ? '#0a0818' : '#fff' }] },
+                options: { responsive: true, cutout: '65%', plugins: { legend:{position:'bottom',labels:{color:textColor}}, tooltip:{callbacks:{label:ctx=>ctx.label+': '+fmtCr(ctx.parsed)}} } }
+            });
+
+            // COMPARE chart - different return rates
+            const rates = [8,10,12,15,18];
+            new Chart(document.getElementById('compareChart'), {
+                type: 'bar',
+                data: {
+                    labels: rates.map(r => r + '%'),
+                    datasets: [{ label: 'Final Value', data: rates.map(r => Math.round(calcSIP(sip, r, years))), backgroundColor: rates.map(r => r === data.expectedReturn ? 'rgba(76,175,80,0.9)' : 'rgba(76,175,80,0.4)'), borderRadius: 8, borderSkipped: false }]
+                },
+                options: { responsive: true, plugins: { legend:{display:false}, tooltip:{callbacks:{label:ctx=>fmtCr(ctx.parsed.y)}} }, scales: { x:{ticks:{color:tickColor},grid:{color:gridColor}}, y:{ticks:{color:tickColor,callback:v=>fmtCr(v)},grid:{color:gridColor}} } }
+            });
+
+            // LINE
+            const yearLabels=[], invData=[], valData=[];
+            for (var y=0; y<=years; y++) {
+                yearLabels.push(y===0?'Now':'Year '+y);
+                invData.push(sip * y * 12);
+                valData.push(y===0 ? 0 : Math.round(calcSIP(sip, data.expectedReturn, y)));
+            }
+            new Chart(document.getElementById('lineChart'), {
+                type: 'line',
+                data: {
+                    labels: yearLabels,
+                    datasets: [
+                        { label: 'Total Invested', data: invData, borderColor: '#e8c84a', backgroundColor: 'rgba(232,200,74,0.08)', fill: true, tension: 0, pointRadius: 0, borderDash: [5,4] },
+                        { label: 'Portfolio Value', data: valData, borderColor: '#4CAF50', backgroundColor: 'rgba(76,175,80,0.12)', fill: true, tension: 0.4, pointRadius: 3 }
+                    ]
+                },
+                options: { responsive: true, plugins: { legend:{position:'top',labels:{color:textColor}}, tooltip:{callbacks:{label:ctx=>ctx.dataset.label+': '+fmtCr(ctx.parsed.y)}} }, scales: { x:{ticks:{color:tickColor},grid:{color:gridColor}}, y:{ticks:{color:tickColor,callback:v=>fmtCr(v)},grid:{color:gridColor}} } }
+            });
+
+            // YEAR TABLE
+            const tbody = document.getElementById('tableBody');
+            for (var y2=1; y2<=years; y2++) {
+                var val = Math.round(calcSIP(sip, data.expectedReturn, y2));
+                var inv = sip * y2 * 12;
+                var tr  = document.createElement('tr');
+                tr.innerHTML =
+                    '<td><strong>Year ' + y2 + '</strong></td>' +
+                    '<td>' + fmtCr(inv) + '</td>' +
+                    '<td style="font-weight:700;color:#2e7d32">' + fmtCr(val) + '</td>' +
+                    '<td style="color:#1565c0">' + fmtCr(val-inv) + '</td>' +
+                    '<td style="font-weight:700;color:#FF9800">' + (val/inv).toFixed(2) + 'x</td>';
+                tbody.appendChild(tr);
+            }
+
+            // SIP COMPARISON TABLE
+            const sipAmounts = [1000,2000,5000,10000,25000,50000];
+            const retRates   = [8,10,12,15];
+            const thead = document.getElementById('compHead');
+            const hRow  = document.createElement('tr');
+            hRow.innerHTML = '<th>Monthly SIP</th>' + retRates.map(r => '<th>' + r + '% Return</th>').join('');
+            thead.appendChild(hRow);
+            const compBody = document.getElementById('compBody');
+            sipAmounts.forEach(function(s) {
+                var tr = document.createElement('tr');
+                if (s === sip) tr.className = 'highlight-row';
+                tr.innerHTML = '<td><strong>' + fmtCr(s) + '/mo</strong>' + (s===sip ? ' ⭐' : '') + '</td>' +
+                    retRates.map(r => '<td>' + fmtCr(Math.round(calcSIP(s, r, years))) + '</td>').join('');
+                compBody.appendChild(tr);
+            });
+        </script>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+    function parseAmt(v) { return parseFloat(String(v).replace(/,/g,'')) || 0; }
+
+    function setReturn(val, el) { document.getElementById('expReturn').value = val; highlight(el,'#4CAF50','#c8e6c9','#fdf9ee'); updatePreview(); }
+    function setYears(val, el) { document.getElementById('timePeriod').value = val; highlight(el,'#4CAF50','#c8e6c9','#fdf9ee'); updatePreview(); }
+    function highlight(el, border, borderDefault, bgActive) {
+        if (!el) return;
+        el.closest('div').querySelectorAll('span').forEach(function(s) { s.style.background='#f1fff3'; s.style.borderColor='#c8e6c9'; });
+        el.style.background = bgActive; el.style.borderColor = border;
+    }
+
+    function fmtPrev(n) {
+        n = Math.round(n);
+        if (window.M3 && window.M3.fmtMoneyShort) return window.M3.fmtMoneyShort(n);
+        if (n >= 10000000) return '₹' + (n/10000000).toFixed(2) + ' Cr';
+        if (n >= 100000)   return '₹' + (n/100000).toFixed(1) + ' L';
+        return '₹' + n.toLocaleString('en-IN');
+    }
+    function calcSIPval(s, r, y) {
+        var m = r/12/100, n = y*12;
+        return m > 0 ? s * (((1+m)**n - 1)/m) * (1+m) : s * n;
+    }
+
+    function updatePreview() {
+        var sip   = parseAmt(document.getElementById('monthlySip').value);
+        var ret   = parseFloat(document.getElementById('expReturn').value) || 0;
+        var years = parseInt(document.getElementById('timePeriod').value) || 0;
+        if (!sip || !ret || !years) return;
+        var val  = calcSIPval(sip, ret, years);
+        var inv  = sip * years * 12;
+        document.getElementById('lpInvested').textContent = fmtPrev(inv);
+        document.getElementById('lpReturns').textContent  = fmtPrev(val - inv);
+        document.getElementById('lpFinal').textContent    = fmtPrev(val);
+        document.getElementById('lpMultiple').textContent = (val / inv).toFixed(2) + 'x';
+    }
+
+    function calcReverse() {
+        var corpus = parseAmt(document.getElementById('targetCorpus').value);
+        var years  = parseInt(document.getElementById('targetYears').value) || 10;
+        var ret    = parseFloat(document.getElementById('expReturn').value) || 12;
+        if (!corpus) { alert('Please enter target corpus!'); return; }
+        var m = ret / 12 / 100, n = years * 12;
+        var sipNeeded = m > 0 ? corpus * m / (((1+m)**n - 1) * (1+m)) : corpus / n;
+        var totalInv  = sipNeeded * n;
+        document.getElementById('rrSip').textContent     = fmtPrev(sipNeeded) + '/mo';
+        document.getElementById('rrTotal').textContent   = fmtPrev(totalInv);
+        document.getElementById('rrReturns').textContent = fmtPrev(corpus - totalInv);
+        document.getElementById('reverseResult').classList.add('show');
+    }
+
+    // Indian comma formatting
+    function formatINR_input(num) {
+        num = Math.round(parseFloat(num) || 0);
+        if (num <= 0) return '';
+        var cur = 'indian';
+        try { var v = localStorage.getItem('m3-currency'); if (v === 'western' || v === 'indian') cur = v; } catch (e) {}
+        if (cur === 'western') return num.toLocaleString('en-US');
+        var s = num.toString();
+        if (s.length <= 3) return s;
+        var last3 = s.slice(-3), rest = s.slice(0,-3), result = '';
+        while (rest.length > 2) { result = ',' + rest.slice(-2) + result; rest = rest.slice(0,-2); }
+        return rest + result + ',' + last3;
+    }
+    function onAmtKeyup(el) {
+        var raw = el.value.replace(/,/g,'').replace(/[^0-9]/g,'');
+        var num = parseInt(raw, 10);
+        var pos = el.selectionStart, oldLen = el.value.length;
+        el.value = raw === '' ? '' : formatINR_input(num);
+        var newPos = pos + (el.value.length - oldLen);
+        el.setSelectionRange(newPos, newPos);
+    }
+    document.addEventListener('DOMContentLoaded', function() {
+        document.querySelectorAll('.amt-input').forEach(function(el) {
+            var num = parseInt((el.value||'').replace(/,/g,''), 10);
+            if (!isNaN(num) && num > 0) el.value = formatINR_input(num);
+        });
+        document.querySelectorAll('form').forEach(function(form) {
+            form.addEventListener('submit', function() {
+                form.querySelectorAll('.amt-input').forEach(function(el) { el.value = el.value.replace(/,/g,''); });
+            });
+        });
+        updatePreview();
+    });
+
+    // PDF
+    function fmtINR(num) {
+        num = Math.round(num);
+        var cur = 'indian';
+        try { var v = localStorage.getItem('m3-currency'); if (v === 'western' || v === 'indian') cur = v; } catch (e) {}
+        if (cur === 'western') {
+            return '$' + num.toLocaleString('en-US');
+        }
+        var s = num.toString();
+        if (s.length <= 3) return 'Rs.' + s;
+        var last3 = s.slice(-3), rest = s.slice(0,-3), result = '';
+        while (rest.length > 2) { result = ',' + rest.slice(-2) + result; rest = rest.slice(0,-2); }
+        return 'Rs.' + rest + result + ',' + last3;
+    }
+    function downloadPdf() {
+        var el = document.getElementById('sip-data');
+        if (!el) { alert('Calculate first!'); return; }
+        var d = JSON.parse(el.textContent);
+        try {
+            var { jsPDF } = window.jspdf;
+            var doc = new jsPDF({ unit:'mm', format:'a4' });
+            var PW=210, PH=297;
+            var ACC=[76,175,80], DARK=[26,26,46], GRAY=[100,116,139], WHITE=[255,255,255], LIGHT=[241,245,251];
+
+            doc.setFillColor(...DARK); doc.rect(0,0,PW,28,'F');
+            doc.setFillColor(...ACC);  doc.rect(0,0,4,28,'F');
+            doc.setTextColor(...WHITE); doc.setFont('helvetica','bold'); doc.setFontSize(16);
+            doc.text('SIP Calculator Report', 10, 12);
+            doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(148,163,184);
+            doc.text('M3 Portfolio Investment Analysis  |  ' + new Date().toLocaleDateString('en-IN'), 10, 21);
+
+            var cy = 36;
+            var inputs = [
+                { label:'Monthly SIP',        value: fmtINR(d.monthlyInvestment) + '/mo' },
+                { label:'Expected Return',    value: d.expectedReturn + '% p.a.' },
+                { label:'Investment Period',  value: d.years + ' Years' },
+            ];
+            doc.setFillColor(...LIGHT); doc.roundedRect(10,cy,PW-20,8+inputs.length*7,2,2,'F');
+            doc.setFillColor(...ACC);   doc.roundedRect(10,cy,3,8+inputs.length*7,1,1,'F');
+            doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(...DARK);
+            doc.text('Input Parameters', 16, cy+6);
+            inputs.forEach(function(inp,i) {
+                doc.setFont('helvetica','normal'); doc.setFontSize(8.5); doc.setTextColor(...GRAY);
+                doc.text(inp.label+':', 16, cy+13+i*7);
+                doc.setFont('helvetica','bold'); doc.setTextColor(...DARK);
+                doc.text(inp.value, 85, cy+13+i*7);
+            });
+            cy += 8+inputs.length*7+8;
+
+            var cards = [
+                { label:'Total Invested',  value: fmtINR(d.totalInvestment) },
+                { label:'Returns Earned',  value: fmtINR(d.totalReturns) },
+                { label:'Wealth Multiple', value: (d.expectedValue/d.totalInvestment).toFixed(1)+'x' },
+                { label:'Final Corpus',    value: fmtINR(d.expectedValue), highlight:true },
+            ];
+            var cw = (PW-20-(cards.length-1)*4)/cards.length;
+            cards.forEach(function(card,i) {
+                var x = 10+i*(cw+4);
+                if (card.highlight) { doc.setFillColor(...ACC); } else { doc.setFillColor(...LIGHT); }
+                doc.roundedRect(x,cy,cw,22,2,2,'F');
+                doc.setFont('helvetica','normal'); doc.setFontSize(6.5);
+                if (card.highlight) { doc.setTextColor(...WHITE); } else { doc.setTextColor(...GRAY); }
+                doc.text(card.label, x+3, cy+7);
+                doc.setFont('helvetica','bold'); doc.setFontSize(10);
+                if (card.highlight) { doc.setTextColor(...WHITE); } else { doc.setTextColor(...ACC); }
+                doc.text(card.value, x+3, cy+17);
+            });
+            cy += 30;
+
+            var canvas = document.getElementById('lineChart');
+            if (canvas) {
+                var img = canvas.toDataURL('image/png');
+                doc.setFillColor(...LIGHT); doc.roundedRect(10,cy,PW-20,68,2,2,'F');
+                doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(...DARK);
+                doc.text('Growth Chart', 14, cy+6);
+                doc.addImage(img,'PNG',12,cy+8,PW-24,58); cy += 76;
+            }
+
+            var mRate3 = d.expectedReturn/12/100;
+            var tBody = [];
+            for (var y3=1; y3<=d.years; y3++) {
+                var n3 = y3*12;
+                var val3 = mRate3>0 ? d.monthlyInvestment*(((1+mRate3)**n3-1)/mRate3)*(1+mRate3) : d.monthlyInvestment*n3;
+                var inv3 = d.monthlyInvestment*n3;
+                tBody.push(['Year '+y3, fmtINR(inv3), fmtINR(val3), fmtINR(val3-inv3), (val3/inv3).toFixed(2)+'x']);
+            }
+            doc.autoTable({ startY:cy, head:[['Year','Total Invested','Portfolio Value','Returns','Multiple']], body:tBody, headStyles:{fillColor:ACC,textColor:WHITE,fontStyle:'bold',fontSize:8}, bodyStyles:{fontSize:8,textColor:DARK}, alternateRowStyles:{fillColor:[241,255,243]}, margin:{left:10,right:10} });
+
+            doc.setFillColor(...DARK); doc.rect(0,PH-12,PW,12,'F');
+            doc.setFillColor(...ACC);  doc.rect(0,PH-12,4,12,'F');
+            doc.setFont('helvetica','normal'); doc.setFontSize(7); doc.setTextColor(148,163,184);
+            doc.text('M3 Portfolio Investment Analysis  |  For informational purposes only.', 9, PH-5);
+            doc.save('SIP_Report.pdf');
+        } catch(e) { alert('PDF Error: '+e.message); }
+    }
+</script>
+
+<script>
+(function () {
+    var params = new URLSearchParams(window.location.search);
+    if (!params.toString()) return;
+    var filled = 0;
+    params.forEach(function (value, key) {
+        var el = document.querySelector('[name="' + key + '"]') || document.getElementById(key);
+        if (!el) return;
+        el.value = value;
+        el.dispatchEvent(new Event('input',  { bubbles: true }));
+        el.dispatchEvent(new Event('change', { bubbles: true }));
+        filled++;
+    });
+    if (filled === 0) return;
+    var style = document.createElement('style');
+    style.textContent = '@keyframes m3BI{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:translateY(0)}}@keyframes m3BO{to{opacity:0;transform:translateY(-10px)}}.m3ab{position:fixed;top:20px;right:20px;z-index:9999;background:linear-gradient(135deg,#fff8f0,#fff3e0);border:2px solid #FF9800;border-radius:12px;padding:12px 18px;font-family: 'DM Sans', 'Segoe UI', sans-serif;font-size:.84em;font-weight:700;color:#e65100;box-shadow:0 6px 24px rgba(255,152,0,.25);display:flex;align-items:center;gap:10px;max-width:320px;animation:m3BI .35s ease}.m3ab .m3bi{font-size:1.3em;flex-shrink:0}.m3ab .m3bs{font-size:.82em;font-weight:400;color:#f57c00;margin-top:2px}body.dark-mode .m3ab{background:rgba(251,146,60,.12)!important;border-color:rgba(251,146,60,.4)!important;color:#fb923c!important}';
+    document.head.appendChild(style);
+    var b = document.createElement('div');
+    b.className = 'm3ab';
+    b.innerHTML = '<span class="m3bi">\uD83C\uDFAF</span><span><div>' + filled + ' field' + (filled > 1 ? 's' : '') + ' pre-filled</div><div class="m3bs">From AI Goal Planner</div></span>';
+    document.body.appendChild(b);
+    setTimeout(function(){ b.style.animation='m3BO .4s ease forwards'; setTimeout(function(){ b.remove(); }, 400); }, 3500);
+    if (typeof updatePreview === 'function') { try { updatePreview(); } catch(e){} }
+})();
+</script>
+
+<div class="calc-container">{% include '_disclaimer.html' %}</div>
+<script>
+// Currency preference live-update: swap input-prefix symbols and re-render preview
+(function () {
+  function refreshSyms() {
+    var sym = (window.M3 && typeof window.M3.currencySymbol === 'function')
+              ? window.M3.currencySymbol()
+              : ((function(){ try { return localStorage.getItem('m3-currency') === 'western' ? '$' : '₹'; } catch(e){ return '₹'; } })());
+    var nodes = document.querySelectorAll('.m3-cursym');
+    for (var i = 0; i < nodes.length; i++) nodes[i].textContent = sym;
+  }
+  function refreshPreview() {
+    if (typeof updatePreview === 'function') { try { updatePreview(); } catch(e){} }
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', refreshSyms);
+  } else { refreshSyms(); }
+  window.addEventListener('m3-currency-change', function () { refreshSyms(); refreshPreview(); });
+})();
+</script>
+
+</body>
+</html>

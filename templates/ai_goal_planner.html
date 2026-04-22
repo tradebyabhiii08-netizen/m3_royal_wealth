@@ -1,0 +1,873 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Goal Planner | M3 Portfolio</title>
+    <link rel="stylesheet" href="/static/design-tokens.css">
+    <script>
+      (function () {
+        try {
+          var saved = localStorage.getItem('m3-theme');
+          var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+          var theme = saved || (prefersDark ? 'dark' : 'light');
+          document.documentElement.setAttribute('data-theme', theme);
+          if (theme === 'dark') {
+            document.addEventListener('DOMContentLoaded', function () { document.body.classList.add('dark-mode'); });
+          }
+        } catch (e) {
+          document.documentElement.setAttribute('data-theme', 'light');
+        }
+      })();
+    </script>
+    <link rel="stylesheet" href="/static/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --navy:#0f0c29; --navy-m:#1a1550; --gold:#e8c84a; --gold-d:#d4a843;
+            --gold-xl:#fdf3cc; --cream:#fdf9ee; --muted:#6b6080; --ink:#1a0f3c;
+            --card-shd:0 4px 20px rgba(15,12,41,0.11),0 1px 5px rgba(15,12,41,0.06);
+            --card-brd:1px solid rgba(232,200,74,0.2);
+        }
+        body {
+            min-height: 100vh;
+            padding: 20px;
+            font-family: 'DM Sans', 'Segoe UI', sans-serif;
+            background: linear-gradient(145deg, #f5edcc 0%, #fdf9ee 40%, #fffdf5 70%, #f5edcc 100%);
+            color: #141124;
+        }
+        html[data-theme="dark"] body,
+        body.dark-mode {
+            background: linear-gradient(145deg, #07060f 0%, #0f0c29 45%, #1a1550 80%, #07060f 100%) !important;
+            color: #f4eed2;
+        }
+        .container { max-width: 1100px; margin: 0 auto; }
+        .navbar { background: #fdf9ee; padding: 18px 35px; border-radius: 15px; margin-bottom: 25px; box-shadow: 0 8px 28px rgba(15,12,41,0.14), 0 2px 8px rgba(15,12,41,0.07); display: flex; justify-content: space-between; align-items: center; }
+        .navbar h1 { color: #e8c84a; font-size: 1.6em; }
+        .navbar .user-info { display: flex; align-items: center; gap: 15px; flex-wrap: wrap; }
+        .navbar .user-name { color: #333; font-weight: 600; }
+        .navbar a { color: #e8c84a; text-decoration: none; font-weight: 600; padding: 7px 18px; border: 2px solid #e8c84a; border-radius: 20px; transition: all 0.3s; }
+        .navbar a:hover { background: #f5d96b; color: #0f0c29; }
+        .navbar .nav-links { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+        .navbar .nav-links a { color: #e8c84a; text-decoration: none; font-weight: 500; padding: 5px 12px; border: none; border-radius: 15px; transition: all 0.2s; font-size: 0.9em; }
+        .navbar .nav-links a:hover { background: #fdf3cc; }
+        .navbar .admin-btn { background: linear-gradient(135deg, #0f0c29, #1a1550); color: white !important; border: none !important; padding: 7px 18px; border-radius: 20px; font-weight: 600; }
+        .btn-back { display: inline-block; padding: 10px 20px; background: #0f0c29; color: #e8c84a; text-decoration: none; border-radius: 8px; margin-bottom: 20px; font-weight: 600; padding: 10px 20px; font-size: 0.9em; font-weight: 600; transition: all 0.2s; }
+        .btn-back:hover { background: #1a1550; color: #e8c84a; }
+        .page-header { background: #fdf9ee; padding: 28px 35px; border-radius: 16px; margin-bottom: 22px; box-shadow: 0 8px 30px rgba(0,0,0,0.15); display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
+        .page-header-icon { width: 60px; height: 60px; border-radius: 16px; flex-shrink: 0; background: linear-gradient(135deg, #FF9800, #e65100); display: flex; align-items: center; justify-content: center; font-size: 1.8em; box-shadow: 0 6px 20px rgba(255,152,0,0.35); }
+        .page-header h1 { color: #FF9800; font-size: 1.7em; font-weight: 800; margin-bottom: 4px; }
+        .page-header p { color: #6b6080; font-size: 0.88em; line-height: 1.5; }
+        .page-badges { display: flex; gap: 7px; margin-top: 8px; flex-wrap: wrap; }
+        .badge { padding: 3px 10px; border-radius: 20px; font-size: 0.72em; font-weight: 700; background: #fff8f0; border: 1.5px solid #ffe0b2; color: #e65100; }
+        .how-steps { display: grid; grid-template-columns: repeat(3,1fr); gap: 14px; margin-bottom: 22px; }
+        .step-card { background: #fdf9ee; border-radius: 14px; padding: 18px 20px; box-shadow: 0 4px 16px rgba(0,0,0,0.08); display: flex; gap: 14px; align-items: flex-start; border-top: 3px solid #FF9800; }
+        .step-num { width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0; background: linear-gradient(135deg,#FF9800,#e65100); color: white; font-size: 0.85em; font-weight: 800; display: flex; align-items: center; justify-content: center; }
+        .step-body strong { display: block; font-size: 0.88em; color: #333; margin-bottom: 3px; }
+        .step-body span { font-size: 0.8em; color: #6b6080; line-height: 1.4; }
+        .chips-wrap { background: #fdf9ee; border-radius: 14px; padding: 18px 22px; box-shadow: 0 4px 16px rgba(0,0,0,0.08); margin-bottom: 20px; }
+        .chips-label { font-size: 0.78em; font-weight: 700; color: #FF9800; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 12px; }
+        .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+        .chip { padding: 7px 16px; border-radius: 20px; font-size: 0.82em; font-weight: 600; cursor: pointer; border: 2px solid #ffe0b2; background: #fff8f0; color: #e65100; transition: all 0.2s; }
+        .chip:hover { background: #FF9800; color: #0f0c29; border-color: #FF9800; transform: translateY(-1px); }
+        .input-card { background: #fdf9ee; border-radius: 20px; padding: 30px 35px; box-shadow: 0 10px 40px rgba(0,0,0,0.15); margin-bottom: 20px; }
+        .input-section { background: #fff8f0; border-radius: 14px; padding: 20px 24px; margin-bottom: 18px; border: 1.5px solid #ffe0b2; }
+        .input-section-title { font-size: 0.82em; font-weight: 700; color: #e65100; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 14px; }
+        .form-group-e { display: flex; flex-direction: column; gap: 6px; }
+        .form-group-e label { font-size: 0.83em; font-weight: 700; color: #3d3050; }
+        .goal-textarea { width: 100%; min-height: 110px; border: 1.5px solid #d4a84340; border-radius: 10px; padding: 13px 16px; font-size: 0.95em; font-family: inherit; resize: vertical; line-height: 1.6; color: #333; outline: none; transition: border 0.2s; background: white; }
+        .goal-textarea:focus { border-color: #FF9800; }
+        .goal-textarea::placeholder { color: #bbb; }
+        .char-hint { font-size: 0.74em; color: #6b6080; margin-top: 4px; }
+        .char-hint span { color: #FF9800; font-weight: 600; }
+        .btn-analyze { width: 100%; padding: 15px; margin-top: 6px; background: linear-gradient(135deg,#FF9800 0%,#e65100 100%); color: white; border: none; border-radius: 10px; font-size: 1.05em; font-weight: 700; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 10px; }
+        .btn-analyze:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(255,152,0,0.4); }
+        .btn-analyze:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
+        .spinner { width: 18px; height: 18px; border: 2px solid rgba(255,255,255,0.4); border-top-color: white; border-radius: 50%; animation: spin 0.8s linear infinite; display: none; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .loading-card { background: #fdf9ee; border-radius: 20px; padding: 40px; box-shadow: 0 10px 40px rgba(0,0,0,0.15); margin-bottom: 20px; text-align: center; display: none; }
+        .dots { display: flex; justify-content: center; gap: 8px; margin-bottom: 18px; }
+        .dot { width: 12px; height: 12px; border-radius: 50%; background: #FF9800; animation: bounce 1.2s ease-in-out infinite; }
+        .dot:nth-child(2) { animation-delay: 0.2s; }
+        .dot:nth-child(3) { animation-delay: 0.4s; }
+        @keyframes bounce { 0%,60%,100%{transform:translateY(0)} 30%{transform:translateY(-12px)} }
+        .loading-stage { font-size: 0.9em; color: #6b6080; }
+        .loading-stage strong { color: #FF9800; }
+        .error-box { background: #fde8e8; color: #B71C1C; padding: 14px 20px; border-radius: 10px; margin-bottom: 18px; border-left: 4px solid #dc3545; font-size: 0.88em; display: none; align-items: center; gap: 10px; }
+        .error-box.show { display: flex; }
+        .result-wrapper { display: none; }
+        .calc-result-card { background: #fdf9ee; border-radius: 20px; box-shadow: 0 10px 40px rgba(0,0,0,0.15); margin-bottom: 20px; overflow: hidden; border-top: 4px solid #FF9800; }
+        .calc-result-header { background: linear-gradient(135deg,#fff8f0,#fff3e0); padding: 16px 28px; border-bottom: 1.5px solid #ffe0b2; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+        .calc-result-title { font-size: 0.9em; font-weight: 800; color: #e65100; display: flex; align-items: center; gap: 8px; }
+        .calc-result-badge { background: #FF9800; color: white; font-size: 0.7em; font-weight: 700; padding: 3px 10px; border-radius: 20px; }
+        .open-calc-btn { padding: 8px 18px; border-radius: 8px; font-size: 0.82em; font-weight: 700; cursor: pointer; border: 2px solid #FF9800; background: white; color: #e65100; transition: all 0.2s; text-decoration: none; }
+        .open-calc-btn:hover { background: #FF9800; color: #0f0c29; }
+        .calc-result-body { padding: 24px 28px; }
+        .calc-summary-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 14px; margin-bottom: 24px; }
+        .calc-sum-card { background: #fdf9ee; border-radius: 14px; padding: 16px 18px; box-shadow: 0 4px 16px rgba(0,0,0,0.08); text-align: center; }
+        .calc-sum-card.highlight { background: linear-gradient(135deg,#FF9800,#e65100); }
+        .calc-sum-card .sc-label { font-size: 0.72em; color: #6b6080; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }
+        .calc-sum-card .sc-val { font-size: 1.3em; font-weight: 800; color: #07060f; margin-top: 6px; }
+        .calc-sum-card.highlight .sc-label { color: rgba(255,255,255,0.85); }
+        .calc-sum-card.highlight .sc-val { color: #0f0c29; font-size: 1.5em; }
+        .calc-sum-card .sc-sub { font-size: 0.72em; color: #6b6080; margin-top: 3px; }
+        .calc-sum-card.highlight .sc-sub { color: rgba(255,255,255,0.7); }
+        .calc-chart-row { display: grid; grid-template-columns: 200px 1fr; gap: 24px; align-items: center; }
+        .chart-wrap { position: relative; width: 180px; height: 180px; }
+        .chart-legend { display: flex; flex-direction: column; gap: 10px; }
+        .legend-item { display: flex; align-items: center; gap: 10px; font-size: 0.84em; }
+        .legend-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+        .legend-label { color: #4a3f5c; }
+        .legend-val { font-weight: 700; color: #333; margin-left: auto; }
+        .breakdown-section { margin-top: 20px; }
+        .breakdown-title { font-size: 0.82em; font-weight: 700; color: #e65100; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 12px; }
+        .breakdown-table { width: 100%; border-collapse: collapse; font-size: 0.84em; }
+        .breakdown-table th { background: #0f0c29; color: #e8c84a; padding: 10px 14px; text-align: left; font-weight: 600; }
+        .breakdown-table th:last-child { text-align: right; }
+        .breakdown-table td { padding: 9px 14px; border-bottom: 1px solid #f5f5f5; color: #333; }
+        .breakdown-table td:last-child { text-align: right; font-weight: 700; color: #FF9800; }
+        .breakdown-table tr:hover td { background: #fff8f0; }
+        .breakdown-table tr.milestone td { background: #fff3e0; font-weight: 700; }
+        .other-calcs-section { margin-top: 20px; padding-top: 18px; border-top: 1.5px solid #f5f5f5; }
+        .other-calcs-label { font-size: 0.78em; font-weight: 700; color: #6b6080; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px; }
+        .other-calcs-row { display: flex; flex-wrap: wrap; gap: 8px; }
+        .other-calc-btn { display: flex; align-items: center; gap: 8px; padding: 8px 16px; border-radius: 10px; text-decoration: none; font-size: 0.82em; font-weight: 600; border: 1.5px solid #e0e0e0; background: #fdf6e3; color: #3d3050; transition: all 0.2s; }
+        .other-calc-btn:hover { border-color: #e8c84a; color: #e8c84a; background: #f5f7ff; }
+        .plan-card { background: #fdf9ee; border-radius: 20px; box-shadow: 0 10px 40px rgba(0,0,0,0.15); overflow: hidden; margin-bottom: 20px; }
+        .plan-card-header { background: linear-gradient(135deg,#fff8f0,#fff3e0); padding: 16px 28px; border-bottom: 1.5px solid #ffe0b2; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+        .plan-card-title { font-size: 0.85em; font-weight: 800; color: #e65100; text-transform: uppercase; letter-spacing: 0.05em; }
+        .plan-card-actions { display: flex; gap: 8px; }
+        .plan-btn { padding: 7px 16px; border-radius: 8px; font-size: 0.8em; font-weight: 600; cursor: pointer; border: 2px solid #ffe0b2; background: white; color: #e65100; transition: all 0.2s; }
+        .plan-btn:hover { background: #FF9800; color: #0f0c29; border-color: #FF9800; }
+        .plan-body { padding: 28px 32px; line-height: 1.75; font-size: 0.92em; color: #333; }
+        .plan-body .ai-section { background: #fff8f0; border-left: 4px solid #FF9800; border-radius: 0 10px 10px 0; padding: 14px 18px; margin-bottom: 14px; }
+        .plan-body .ai-section.amber { background: #fffde7; border-left-color: #FFC107; }
+        .plan-body .ai-section.green { background: #fdf9ee; border-left-color: #4CAF50; }
+        .plan-body .ai-section.purple { background: #f3e5f5; border-left-color: #9C27B0; }
+        .plan-body .section-title { font-weight: 800; font-size: 0.93em; color: #e65100; margin-bottom: 8px; }
+        .plan-body .ai-section.amber .section-title { color: #F57F17; }
+        .plan-body .ai-section.green .section-title { color: #2e7d32; }
+        .plan-body .ai-section.purple .section-title { color: #6a1b9a; }
+        .plan-body .stats-row { display: flex; flex-wrap: wrap; gap: 10px; margin: 10px 0; }
+        .plan-body .stat-pill { background: white; border: 1.5px solid #ffe0b2; border-radius: 10px; padding: 10px 16px; display: flex; flex-direction: column; align-items: center; gap: 2px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+        .plan-body .sval { font-size: 1.15em; font-weight: 800; color: #FF9800; }
+        .plan-body .slbl { font-size: 0.72em; color: #6b6080; font-weight: 600; }
+        .plan-body ul { padding-left: 18px; margin: 8px 0; }
+        .plan-body li { margin-bottom: 4px; color: #3d3050; }
+        .plan-body p { margin-bottom: 6px; color: #444; }
+        .plan-body strong { color: #222; }
+        .btn-new-goal { display: inline-block; margin-top: 6px; padding: 11px 26px; background: white; color: #e8c84a; border: 2px solid #e8c84a; border-radius: 25px; font-weight: 700; font-size: 0.9em; cursor: pointer; transition: all 0.2s; }
+        .btn-new-goal:hover { background: #f5d96b; color: #0f0c29; }
+        body.dark-mode .navbar, body.dark-mode .page-header, body.dark-mode .input-card, body.dark-mode .loading-card, body.dark-mode .chips-wrap, body.dark-mode .step-card, body.dark-mode .calc-result-card, body.dark-mode .plan-card { background: #0a0818 !important; border-color: #1a1550 !important; box-shadow: 0 8px 32px rgba(0,0,0,0.4) !important; }
+        body.dark-mode .navbar h1 { color: #e8c84a !important; }
+        body.dark-mode .navbar .user-name { color: #cbd5e1 !important; }
+        body.dark-mode .navbar a { color: #e8c84a !important; border-color: rgba(232,200,74,0.4) !important; }
+        body.dark-mode .navbar a:hover { background: #e8c84a !important; color: white !important; }
+        body.dark-mode .navbar .nav-links a { border: none !important; }
+        body.dark-mode .navbar .nav-links a:hover { background: #1a1550 !important; }
+        body.dark-mode .page-header h1 { color: #fb923c !important; }
+        body.dark-mode .page-header p { color: #64748b !important; }
+        body.dark-mode .step-card { border-top-color: #fb923c !important; }
+        body.dark-mode .step-body strong { color: #e2e8f0 !important; }
+        body.dark-mode .step-body span { color: #64748b !important; }
+        body.dark-mode .chips-label { color: #fb923c !important; }
+        body.dark-mode .chip { background: rgba(251,146,60,0.1) !important; border-color: rgba(251,146,60,0.25) !important; color: #fb923c !important; }
+        body.dark-mode .chip:hover { background: #fb923c !important; color: white !important; }
+        body.dark-mode .input-section { background: #0d1015 !important; border-color: rgba(251,146,60,0.2) !important; }
+        body.dark-mode .input-section-title { color: #fb923c !important; }
+        body.dark-mode .form-group-e label { color: #94a3b8 !important; }
+        body.dark-mode .goal-textarea { background: #07060f !important; border-color: #252d4a !important; color: #e2e8f0 !important; }
+        body.dark-mode .goal-textarea:focus { border-color: #fb923c !important; }
+        body.dark-mode .goal-textarea::placeholder { color: #3d4a6a !important; }
+        body.dark-mode .loading-stage { color: #64748b !important; }
+        body.dark-mode .calc-result-header { background: rgba(251,146,60,0.08) !important; border-bottom-color: rgba(251,146,60,0.2) !important; }
+        body.dark-mode .calc-result-title { color: #fb923c !important; }
+        body.dark-mode .calc-sum-card { background: #0f0c29 !important; }
+        body.dark-mode .calc-sum-card .sc-label { color: #64748b !important; }
+        body.dark-mode .calc-sum-card .sc-val { color: #e2e8f0 !important; }
+        body.dark-mode .calc-sum-card.highlight { background: linear-gradient(135deg,#FF9800,#e65100) !important; }
+        body.dark-mode .breakdown-table th { background: #e65100 !important; }
+        body.dark-mode .breakdown-table td { background: #0a0818 !important; border-color: #1a1550 !important; color: #cbd5e1 !important; }
+        body.dark-mode .breakdown-table tr:hover td { background: #07060f !important; }
+        body.dark-mode .breakdown-table td:last-child { color: #fb923c !important; }
+        body.dark-mode .other-calc-btn { background: #0f0c29 !important; border-color: #252d4a !important; color: #94a3b8 !important; }
+        body.dark-mode .other-calc-btn:hover { border-color: #e8c84a !important; color: #e8c84a !important; }
+        body.dark-mode .plan-card-header { background: rgba(251,146,60,0.07) !important; border-bottom-color: rgba(251,146,60,0.2) !important; }
+        body.dark-mode .plan-card-title { color: #fb923c !important; }
+        body.dark-mode .plan-btn { background: #0a0818 !important; border-color: rgba(251,146,60,0.25) !important; color: #fb923c !important; }
+        body.dark-mode .plan-btn:hover { background: #fb923c !important; color: white !important; }
+        body.dark-mode .plan-body { color: #cbd5e1 !important; }
+        body.dark-mode .plan-body .ai-section { background: rgba(251,146,60,0.07) !important; border-left-color: #fb923c !important; }
+        body.dark-mode .plan-body .ai-section.amber { background: rgba(255,193,7,0.07) !important; border-left-color: #FFC107 !important; }
+        body.dark-mode .plan-body .ai-section.green { background: rgba(76,175,80,0.07) !important; border-left-color: #4CAF50 !important; }
+        body.dark-mode .plan-body .ai-section.purple { background: rgba(156,39,176,0.07) !important; border-left-color: #CE93D8 !important; }
+        body.dark-mode .plan-body .section-title { color: #fb923c !important; }
+        body.dark-mode .plan-body .ai-section.amber .section-title { color: #FFC107 !important; }
+        body.dark-mode .plan-body .ai-section.green .section-title { color: #4ade80 !important; }
+        body.dark-mode .plan-body .ai-section.purple .section-title { color: #CE93D8 !important; }
+        body.dark-mode .plan-body .stat-pill { background: #0f0c29 !important; border-color: rgba(251,146,60,0.2) !important; }
+        body.dark-mode .plan-body .sval { color: #fb923c !important; }
+        body.dark-mode .plan-body .slbl { color: #64748b !important; }
+        body.dark-mode .plan-body p, body.dark-mode .plan-body li { color: #94a3b8 !important; }
+        body.dark-mode .plan-body strong { color: #e2e8f0 !important; }
+        body.dark-mode .error-box { background: rgba(239,68,68,0.1) !important; color: #fca5a5 !important; }
+        body.dark-mode .badge { background: rgba(251,146,60,0.1) !important; border-color: rgba(251,146,60,0.25) !important; color: #fb923c !important; }
+        body.dark-mode .btn-new-goal { background: transparent !important; color: #e8c84a !important; border-color: rgba(232,200,74,0.5) !important; }
+        body.dark-mode .btn-new-goal:hover { background: #e8c84a !important; color: white !important; }
+        body.dark-mode .legend-label { color: #94a3b8 !important; }
+        body.dark-mode .legend-val { color: #e2e8f0 !important; }
+        .toast { position: fixed; bottom: 24px; right: 24px; z-index: 9999; background: #333; color: white; padding: 12px 20px; border-radius: 10px; font-size: 0.87em; font-weight: 600; transform: translateY(60px); opacity: 0; transition: all 0.3s; pointer-events: none; box-shadow: 0 6px 20px rgba(0,0,0,0.25); }
+        .toast.show { transform: translateY(0); opacity: 1; }
+        @media (max-width: 768px) { .how-steps { grid-template-columns: 1fr; } .calc-summary-grid { grid-template-columns: repeat(2,1fr); } .calc-chart-row { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+    <script>
+        var CURRENCY_FORMAT = (function () {
+            try {
+                var v = localStorage.getItem('m3-currency');
+                if (v === 'indian' || v === 'western') return v;
+            } catch (e) {}
+            return "{{ session.get('currency_format', 'indian') }}";
+        })();
+        window.addEventListener('m3-currency-change', function (e) {
+            CURRENCY_FORMAT = (e && e.detail) || CURRENCY_FORMAT;
+        });
+        function formatCurrency(num) {
+            num = Math.round(num);
+            if (CURRENCY_FORMAT === 'western') return '$' + num.toLocaleString('en-US');
+            var s = num.toString();
+            if (s.length <= 3) return '₹' + s;
+            var last3 = s.slice(-3), rest = s.slice(0,-3), result = '';
+            while (rest.length > 2) { result = ',' + rest.slice(-2) + result; rest = rest.slice(0,-2); }
+            return '₹' + rest + result + ',' + last3;
+        }
+    </script>
+
+    <div class="container">
+        <div class="navbar">
+            <h1>📊 M3 Portfolio Investment Analysis</h1>
+            <div class="user-info">
+                <div class="nav-links">
+                    <a href="/dashboard">🏠 Dashboard</a>
+                    <a href="/clients">👥 Clients</a>
+                    <a href="/portfolio">📈 Portfolio</a>
+                    <a href="/reports">📋 Reports</a>
+                    <a href="/ai/wealth-assistant">🧠 AI Assistant</a>
+                </div>
+                <span class="user-name">👤 {{ session.get('user_name', '') }}</span>
+                {% if session.get('is_admin') %}<a href="/admin" class="admin-btn">🛡️ Admin</a>{% endif %}
+                <a href="/settings">⚙️ Settings</a>
+                <a href="/logout">Logout</a>
+            </div>
+        </div>
+
+        <a href="/dashboard" class="btn-back">← Back to Dashboard</a>
+
+        <div class="page-header">
+            <div class="page-header-icon">🎯</div>
+            <div>
+                <h1>AI Goal Planner</h1>
+                <p>Describe your financial goal — AI builds a plan, runs the calculator instantly, and shows results right here on this page.</p>
+                <div class="page-badges">
+                    <span class="badge">Groq Llama 3.3 70B</span>
+                    <span class="badge">Inline Calculator</span>
+                    <span class="badge">Indian MF Focus</span>
+                    <span class="badge">Tax-aware</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="how-steps">
+            <div class="step-card"><div class="step-num">1</div><div class="step-body"><strong>Describe your goal</strong><span>Target amount, timeline, age, monthly budget.</span></div></div>
+            <div class="step-card"><div class="step-num">2</div><div class="step-body"><strong>AI analyses it</strong><span>Full plan — SIP amount, fund category, tax tips.</span></div></div>
+            <div class="step-card"><div class="step-num">3</div><div class="step-body"><strong>Results here instantly</strong><span>Calculator runs on this page itself — year-wise breakdown included.</span></div></div>
+        </div>
+
+        <div class="error-box" id="errorBox"><span>⚠️</span><span id="errorMsg">Something went wrong.</span></div>
+
+        <div class="chips-wrap">
+            <div class="chips-label">🚀 Quick Goals — click to fill</div>
+            <div class="chips">
+                <div class="chip" onclick="fillGoal('I want to save ₹1 crore for retirement in 25 years. I am 32 years old and can invest ₹15,000 per month.')">🏦 Retirement</div>
+                <div class="chip" onclick="fillGoal('I want ₹50 lakhs for my child higher education in 15 years. Child is 3 years old. I can invest ₹10,000 per month.')">🎓 Child Education</div>
+                <div class="chip" onclick="fillGoal('I want to save ₹20 lakhs down payment for a house in 5 years. I can invest ₹25,000 per month.')">🏠 Home Down Payment</div>
+                <div class="chip" onclick="fillGoal('I have ₹10 lakhs lumpsum to invest for 10 years. Moderate risk appetite.')">💰 Invest Lumpsum</div>
+                <div class="chip" onclick="fillGoal('I want to save ₹30 lakhs for my wedding in 3 years. I can invest ₹50,000 per month.')">💍 Wedding Fund</div>
+                <div class="chip" onclick="fillGoal('I want to invest ₹5000 per month in SIP for 20 years.')">🌱 Start SIP</div>
+                <div class="chip" onclick="fillGoal('I want to create emergency fund of ₹3 lakhs in 12 months. Monthly expenses are ₹50,000.')">🛡️ Emergency Fund</div>
+                <div class="chip" onclick="fillGoal('I have been investing ₹10,000 per month SIP for 3 years. Current portfolio value is ₹5 lakhs. What is my actual annualized XIRR return?')">📆 Check My XIRR</div>
+            </div>
+        </div>
+
+        <div class="input-card">
+            <div class="input-section">
+                <div class="input-section-title">🎯 Your Financial Goal</div>
+                <div class="form-group-e">
+                    <label>Describe your goal in detail</label>
+                    <textarea id="goalInput" class="goal-textarea" maxlength="500"
+                        placeholder="Example: I want to save ₹1 crore in 20 years for retirement. I am 35 years old, can invest ₹20,000/month..."
+                        oninput="updateCount()"></textarea>
+                    <div class="char-hint"><span id="charCount">0</span> / 500 &nbsp;·&nbsp; Ctrl+Enter to submit</div>
+                </div>
+            </div>
+            <button class="btn-analyze" id="analyzeBtn" onclick="analyzeGoal()">
+                <div class="spinner" id="btnSpinner"></div>
+                <span id="btnText">🎯 Analyse Goal &amp; Calculate</span>
+            </button>
+        </div>
+
+        <div class="loading-card" id="loadingCard">
+            <div class="dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
+            <div class="loading-stage" id="loadingStage">Step 1 of 2 &nbsp;·&nbsp; <strong>Building your financial plan...</strong></div>
+        </div>
+
+        <div class="result-wrapper" id="resultWrapper">
+            <div class="calc-result-card" id="calcResultCard">
+                <div class="calc-result-header">
+                    <div class="calc-result-title">
+                        <span id="calcResultIcon">🌱</span>
+                        <span id="calcResultName">SIP Calculator</span>
+                        <span class="calc-result-badge" id="calcResultBadge">Auto-calculated</span>
+                    </div>
+                    <a href="#" class="open-calc-btn" id="openCalcBtn" target="_blank">Open Full Calculator ↗</a>
+                </div>
+                <div class="calc-result-body">
+                    <div class="calc-summary-grid" id="calcSummaryGrid"></div>
+                    <div class="calc-chart-row">
+                        <div class="chart-wrap"><canvas id="calcDonut"></canvas></div>
+                        <div class="chart-legend" id="calcLegend"></div>
+                    </div>
+                    <div class="breakdown-section">
+                        <div class="breakdown-title">📅 Year-wise Growth</div>
+                        <table class="breakdown-table">
+                            <thead><tr><th>Year</th><th>Invested So Far</th><th>Returns Earned</th><th>Total Value</th></tr></thead>
+                            <tbody id="breakdownBody"></tbody>
+                        </table>
+                    </div>
+                    <div class="other-calcs-section">
+                        <div class="other-calcs-label">Also try</div>
+                        <div class="other-calcs-row" id="otherCalcsRow"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="plan-card">
+                <div class="plan-card-header">
+                    <span class="plan-card-title">📋 Full AI Analysis</span>
+                    <div class="plan-card-actions">
+                        <button class="plan-btn" onclick="shareWhatsApp()">📱 WhatsApp</button>
+                        <button class="plan-btn" onclick="copyPlan()">📋 Copy</button>
+                    </div>
+                </div>
+                <div class="plan-body" id="planBody"></div>
+            </div>
+
+            <button class="btn-new-goal" onclick="resetPlanner()">🔄 Plan a Different Goal</button>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script>
+    var CALC_META = {
+        'sip':        { name: 'SIP Calculator',       icon: '🌱', url: '/calculator/sip' },
+        'stepup-sip': { name: 'Step-up SIP',           icon: '📈', url: '/calculator/stepup-sip' },
+        'lumpsum':    { name: 'Lumpsum Calculator',    icon: '💰', url: '/calculator/lumpsum' },
+        'retirement': { name: 'Retirement Calculator', icon: '🏖️', url: '/calculator/retirement' },
+        'goal-sip':   { name: 'Goal Based SIP',        icon: '🎯', url: '/calculator/goal-sip' },
+        'swp':        { name: 'SWP Calculator',        icon: '🏦', url: '/calculator/swp' },
+        'xirr':       { name: 'XIRR Calculator',       icon: '📆', url: '/calculator/xirr' }
+    };
+    var donutChart = null;
+    var currentGoal = '';
+
+    function updateCount() { document.getElementById('charCount').textContent = document.getElementById('goalInput').value.length; }
+    function fillGoal(text) { document.getElementById('goalInput').value = text; updateCount(); document.getElementById('goalInput').focus(); }
+    function showToast(msg) { var t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show'); setTimeout(function(){ t.classList.remove('show'); }, 2500); }
+    function showError(msg) { document.getElementById('errorMsg').textContent = msg; document.getElementById('errorBox').classList.add('show'); setTimeout(function(){ document.getElementById('errorBox').classList.remove('show'); }, 6000); }
+    function resetBtn() { document.getElementById('analyzeBtn').disabled = false; document.getElementById('btnSpinner').style.display = 'none'; document.getElementById('btnText').textContent = '🎯 Analyse Goal & Calculate'; }
+    function resetPlanner() { document.getElementById('resultWrapper').style.display = 'none'; document.getElementById('goalInput').value = ''; updateCount(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
+
+    function calcSIP(monthly, rateAnnual, years) {
+        var r = rateAnnual / 100 / 12, n = years * 12;
+        var fv = monthly * (Math.pow(1 + r, n) - 1) / r * (1 + r);
+        return { fv: fv, invested: monthly * n, returns: fv - monthly * n };
+    }
+
+    // Client-side XIRR solver (Newton-Raphson + bisection fallback)
+    function computeXIRR(cashflows) {
+        if (!cashflows || cashflows.length < 2) return null;
+        var cf = cashflows.slice().sort(function(a,b){ return a.date - b.date; });
+        var d0 = cf[0].date;
+        var hasNeg = cf.some(function(c){ return c.amount < 0; });
+        var hasPos = cf.some(function(c){ return c.amount > 0; });
+        if (!hasNeg || !hasPos) return null;
+        function npv(r) {
+            if (r <= -1) return Infinity;
+            var s = 0;
+            for (var i = 0; i < cf.length; i++) {
+                var t = (cf[i].date - d0) / (1000*60*60*24*365);
+                s += cf[i].amount / Math.pow(1 + r, t);
+            }
+            return s;
+        }
+        function dnpv(r) {
+            var s = 0;
+            for (var i = 0; i < cf.length; i++) {
+                var t = (cf[i].date - d0) / (1000*60*60*24*365);
+                if (t === 0) continue;
+                s -= t * cf[i].amount / Math.pow(1 + r, t + 1);
+            }
+            return s;
+        }
+        var r = 0.1;
+        for (var it = 0; it < 100; it++) {
+            var v = npv(r);
+            if (Math.abs(v) < 1e-6) return r;
+            var dv = dnpv(r);
+            if (dv === 0) break;
+            var nr = r - v / dv;
+            if (nr <= -0.9999) nr = -0.9999;
+            if (Math.abs(nr - r) < 1e-9) return nr;
+            r = nr;
+        }
+        // Bisection fallback
+        var lo = -0.9999, hi = 10.0;
+        var vLo = npv(lo), vHi = npv(hi);
+        if (!isFinite(vLo) || !isFinite(vHi) || vLo * vHi > 0) return null;
+        for (var b = 0; b < 200; b++) {
+            var mid = (lo + hi) / 2, vm = npv(mid);
+            if (Math.abs(vm) < 1e-6) return mid;
+            if (vLo * vm < 0) { hi = mid; vHi = vm; } else { lo = mid; vLo = vm; }
+        }
+        return (lo + hi) / 2;
+    }
+
+    // Build a monthly SIP cashflow series ending with a "current value" redemption
+    function buildXirrSeries(monthly, months, currentValue, startDate) {
+        var series = [];
+        var d0;
+        if (startDate) {
+            d0 = new Date(startDate);
+        } else {
+            var today = new Date();
+            d0 = new Date(today.getFullYear(), today.getMonth() - months, 1);
+        }
+        for (var i = 0; i < months; i++) {
+            var d = new Date(d0.getFullYear(), d0.getMonth() + i, Math.min(d0.getDate(), 28));
+            series.push({ date: d, amount: -monthly, type: 'invest' });
+        }
+        series.push({ date: new Date(), amount: currentValue, type: 'redeem' });
+        return series;
+    }
+    function calcLumpsum(principal, rateAnnual, years) {
+        var fv = principal * Math.pow(1 + rateAnnual / 100, years);
+        return { fv: fv, invested: principal, returns: fv - principal };
+    }
+    function calcGoalSIP(targetAmount, currentSavings, rateAnnual, years, inflationRate) {
+        var r = rateAnnual / 100 / 12, n = years * 12;
+        var inflatedTarget = targetAmount;
+        if (inflationRate && inflationRate > 0) inflatedTarget = targetAmount * Math.pow(1 + inflationRate / 100, years);
+        var remaining = inflatedTarget - currentSavings * Math.pow(1 + rateAnnual / 100, years);
+        var monthly = remaining * r / ((Math.pow(1 + r, n) - 1) * (1 + r));
+        if (monthly < 0) monthly = 0;
+        var invested = monthly * n + currentSavings;
+        return { fv: inflatedTarget, invested: invested, returns: inflatedTarget - invested, monthly: monthly, inflatedTarget: inflatedTarget, originalTarget: targetAmount };
+    }
+    function calcYearWise(type, params) {
+        var rows = [];
+        for (var y = 1; y <= params.years; y++) {
+            var res = (type === 'lumpsum') ? calcLumpsum(params.principal, params.rate, y) : calcSIP(params.monthly, params.rate, y);
+            rows.push({ year: y, invested: res.invested, returns: res.returns, total: res.fv });
+        }
+        return rows;
+    }
+
+    function renderCalcResult(calcKey, params, calcUrl) {
+        var meta = CALC_META[calcKey] || CALC_META['sip'];
+        document.getElementById('calcResultIcon').textContent = meta.icon;
+        document.getElementById('calcResultName').textContent = meta.name;
+
+        function getVal(val, fallback) { return (val !== undefined && val !== null && !isNaN(val) && val > 0) ? val : fallback; }
+        function getValAllowZero(val, fallback) { return (val !== undefined && val !== null && !isNaN(val)) ? val : fallback; }
+
+        var result = null, yearRows = [], resolvedParams = {};
+        var rate = getVal(params.expected_return, 12);
+        var years = getVal(params.time_period, 10);
+
+        if (calcKey === 'xirr') {
+            var xMonthly = getVal(params.monthly, 10000);
+            var xMonths  = getVal(params.months, 36);
+            var xValue   = getVal(params.value, xMonthly * xMonths * 1.3);
+            var xYears   = xMonths / 12;
+            // Build series (monthly SIPs + final current-value redemption)
+            var series = buildXirrSeries(xMonthly, xMonths, xValue);
+            var xrate = computeXIRR(series);
+            var invested = xMonthly * xMonths;
+            var absReturn = invested > 0 ? ((xValue - invested) / invested) * 100 : 0;
+            var cagr = (xYears > 0 && invested > 0) ? (Math.pow(xValue / invested, 1 / xYears) - 1) * 100 : 0;
+            result = {
+                fv: xValue,
+                invested: invested,
+                returns: xValue - invested,
+                xirr: xrate !== null ? xrate * 100 : null,
+                absReturn: absReturn,
+                cagr: cagr,
+                months: xMonths,
+                isXirr: true
+            };
+            // Year-wise rows = cumulative invested vs (current value scaled linearly for preview)
+            yearRows = [];
+            for (var yy = 1; yy <= Math.max(1, Math.ceil(xYears)); yy++) {
+                var frac = Math.min(1, yy / xYears);
+                var inv_y = invested * frac;
+                var val_y = xValue * frac;
+                yearRows.push({ year: yy, invested: inv_y, returns: val_y - inv_y, total: val_y });
+            }
+            resolvedParams.monthly = xMonthly;
+            resolvedParams.months  = xMonths;
+            resolvedParams.value   = Math.round(xValue);
+            years = Math.max(1, Math.round(xYears));
+        } else if (calcKey === 'lumpsum') {
+            var principal = getVal(params.investment_amount, 100000);
+            result = calcLumpsum(principal, rate, years);
+            yearRows = calcYearWise('lumpsum', { principal: principal, rate: rate, years: years });
+            if (params.investment_amount > 0) resolvedParams.investment_amount = principal;
+            if (params.expected_return > 0) resolvedParams.expected_return = rate;
+            if (params.time_period > 0) resolvedParams.time_period = years;
+        } else if (calcKey === 'goal-sip') {
+            var target = getVal(params.goal_amount, 1000000);
+            var savings = getValAllowZero(params.current_savings, 0);
+            var infl = getValAllowZero(params.inflation_rate, 0);
+            result = calcGoalSIP(target, savings, rate, years, infl);
+            yearRows = calcYearWise('sip', { monthly: result.monthly, rate: rate, years: years });
+            if (params.goal_amount > 0) resolvedParams.goal_amount = target;
+            resolvedParams.current_savings = savings;
+            if (params.time_period > 0) resolvedParams.time_period = years;
+            if (params.expected_return > 0) resolvedParams.expected_return = rate;
+            if (params.inflation_rate !== undefined && params.inflation_rate !== null) resolvedParams.inflation_rate = infl;
+        } else if (calcKey === 'stepup-sip') {
+            var monthly = getVal(params.initial_investment || params.monthly_investment, 5000);
+            var increment = getVal(params.annual_increment, 10);
+            result = calcSIP(monthly, rate, years);
+            yearRows = calcYearWise('sip', { monthly: monthly, rate: rate, years: years });
+            if (params.initial_investment > 0) resolvedParams.initial_investment = monthly;
+            if (params.annual_increment > 0) resolvedParams.annual_increment = increment;
+            if (params.expected_return > 0) resolvedParams.expected_return = rate;
+            if (params.time_period > 0) resolvedParams.time_period = years;
+        } else if (calcKey === 'retirement') {
+            var curAge = getVal(params.current_age, 30);
+            var retAge = getVal(params.retirement_age, 60);
+            var expense = getVal(params.monthly_expense, 50000);
+            var infl = getValAllowZero(params.inflation_rate, 6);
+            var prRet = getVal(params.post_retirement_return, 8);
+            var prInfl = getValAllowZero(params.post_retirement_inflation, 5);
+            var lifeExp = getVal(params.life_expectancy, 80);
+            years = retAge - curAge;
+            result = calcSIP(expense * 12, rate, years);
+            yearRows = calcYearWise('sip', { monthly: expense, rate: rate, years: years });
+            if (params.current_age > 0) resolvedParams.current_age = curAge;
+            if (params.retirement_age > 0) resolvedParams.retirement_age = retAge;
+            if (params.life_expectancy > 0) resolvedParams.life_expectancy = lifeExp;
+            if (params.monthly_expense > 0) resolvedParams.monthly_expense = expense;
+            if (params.expected_return > 0) resolvedParams.expected_return = rate;
+            if (params.inflation_rate !== undefined) resolvedParams.inflation_rate = infl;
+            if (params.post_retirement_return > 0) resolvedParams.post_retirement_return = prRet;
+            if (params.post_retirement_inflation !== undefined) resolvedParams.post_retirement_inflation = prInfl;
+        } else if (calcKey === 'swp') {
+            var corpus = getVal(params.initial_investment, 1000000);
+            var withdrawal = getVal(params.monthly_withdrawal, 10000);
+            var infl = getValAllowZero(params.inflation_rate, 6);
+            result = calcLumpsum(corpus, rate, years);
+            yearRows = calcYearWise('lumpsum', { principal: corpus, rate: rate, years: years });
+            if (params.initial_investment > 0) resolvedParams.initial_investment = corpus;
+            if (params.monthly_withdrawal > 0) resolvedParams.monthly_withdrawal = withdrawal;
+            if (params.expected_return > 0) resolvedParams.expected_return = rate;
+            if (params.time_period > 0) resolvedParams.time_period = years;
+            if (params.inflation_rate !== undefined) resolvedParams.inflation_rate = infl;
+        } else {
+            var monthly = getVal(params.monthly_investment || params.initial_investment, 5000);
+            result = calcSIP(monthly, rate, years);
+            yearRows = calcYearWise('sip', { monthly: monthly, rate: rate, years: years });
+            if (params.monthly_investment > 0) resolvedParams.monthly_investment = monthly;
+            else if (params.initial_investment > 0) resolvedParams.initial_investment = monthly;
+            if (params.expected_return > 0) resolvedParams.expected_return = rate;
+            if (params.time_period > 0) resolvedParams.time_period = years;
+        }
+
+        var url = new URL(calcUrl, window.location.origin);
+        Object.keys(resolvedParams).forEach(function(k) {
+            if (resolvedParams[k] !== null && resolvedParams[k] !== undefined && resolvedParams[k] !== '') url.searchParams.set(k, resolvedParams[k]);
+        });
+        document.getElementById('openCalcBtn').href = url.toString();
+
+        if (!result) return;
+
+        var cards = [];
+        if (calcKey === 'xirr') {
+            var xirrStr = (result.xirr !== null && isFinite(result.xirr)) ? result.xirr.toFixed(2) + '%' : 'N/A';
+            cards = [
+                { label: 'XIRR (p.a.)',      val: xirrStr,                       sub: 'true annualized return', highlight: true },
+                { label: 'Total Invested',   val: formatCurrency(result.invested), sub: 'over ' + result.months + ' months' },
+                { label: 'Current Value',    val: formatCurrency(result.fv),       sub: 'now worth' },
+                { label: 'Absolute Return',  val: result.absReturn.toFixed(2) + '%', sub: 'raw % gain (vs ' + result.cagr.toFixed(2) + '% CAGR)' }
+            ];
+        } else if (calcKey === 'goal-sip') {
+            var hasInflation = (params.inflation_rate !== undefined && params.inflation_rate !== null && params.inflation_rate > 0);
+            cards = [
+                { label: 'Monthly SIP Needed', val: formatCurrency(result.monthly), sub: 'per month', highlight: true },
+                { label: hasInflation ? 'Inflated Target' : 'Target Amount', val: formatCurrency(result.fv), sub: hasInflation ? formatCurrency(result.originalTarget) + ' @ ' + params.inflation_rate + '% inflation' : 'goal corpus' },
+                { label: 'Total Invested', val: formatCurrency(result.invested), sub: 'over ' + years + ' years' },
+                { label: 'Returns Earned', val: formatCurrency(result.returns), sub: 'wealth gained' }
+            ];
+        } else if (calcKey === 'retirement') {
+            cards = [
+                { label: 'Corpus at Retirement', val: formatCurrency(result.fv), sub: 'at year ' + years, highlight: true },
+                { label: 'Total Invested', val: formatCurrency(result.invested), sub: 'principal' },
+                { label: 'Returns Earned', val: formatCurrency(result.returns), sub: 'wealth gained' },
+                { label: 'Expected Return', val: rate + '%', sub: 'p.a.' }
+            ];
+        } else if (calcKey === 'swp') {
+            cards = [
+                { label: 'Final Corpus', val: formatCurrency(result.fv), sub: 'after ' + years + ' years', highlight: true },
+                { label: 'Initial Investment', val: formatCurrency(result.invested), sub: 'principal' },
+                { label: 'Returns Earned', val: formatCurrency(result.returns), sub: 'growth' },
+                { label: 'Return Rate', val: rate + '%', sub: 'p.a. expected' }
+            ];
+        } else {
+            cards = [
+                { label: 'Future Value', val: formatCurrency(result.fv), sub: 'after ' + years + ' years', highlight: true },
+                { label: 'Total Invested', val: formatCurrency(result.invested), sub: 'principal' },
+                { label: 'Returns Earned', val: formatCurrency(result.returns), sub: 'wealth gained' },
+                { label: 'Return Rate', val: rate + '%', sub: 'p.a. expected' }
+            ];
+        }
+        document.getElementById('calcSummaryGrid').innerHTML = cards.map(function(c) {
+            return '<div class="calc-sum-card' + (c.highlight ? ' highlight' : '') + '"><div class="sc-label">' + c.label + '</div><div class="sc-val">' + c.val + '</div><div class="sc-sub">' + c.sub + '</div></div>';
+        }).join('');
+
+        if (donutChart) donutChart.destroy();
+        var isDark = document.body.classList.contains('dark-mode');
+        donutChart = new Chart(document.getElementById('calcDonut').getContext('2d'), {
+            type: 'doughnut',
+            data: { labels: ['Total Invested', 'Returns Earned'], datasets: [{ data: [Math.round(result.invested), Math.round(result.returns)], backgroundColor: ['#e8c84a', '#FF9800'], borderWidth: 3, borderColor: isDark ? '#0a0818' : '#ffffff', hoverOffset: 4 }] },
+            options: { responsive: true, maintainAspectRatio: false, cutout: '65%', plugins: { legend: { display: false }, tooltip: { callbacks: { label: function(ctx) { return ' ' + formatCurrency(ctx.raw); } } } } }
+        });
+
+        document.getElementById('calcLegend').innerHTML =
+            '<div class="legend-item"><div class="legend-dot" style="background:#e8c84a"></div><span class="legend-label">Total Invested</span><span class="legend-val">' + formatCurrency(result.invested) + '</span></div>' +
+            '<div class="legend-item"><div class="legend-dot" style="background:#FF9800"></div><span class="legend-label">Returns Earned</span><span class="legend-val">' + formatCurrency(result.returns) + '</span></div>' +
+            '<div class="legend-item" style="border-top:1.5px solid #f5f5f5;padding-top:10px;margin-top:4px"><span class="legend-label" style="font-weight:700">Total Corpus</span><span class="legend-val" style="color:#FF9800;font-size:1.1em">' + formatCurrency(result.fv) + '</span></div>';
+
+        var tbody = document.getElementById('breakdownBody');
+        tbody.innerHTML = '';
+        yearRows.forEach(function(row) {
+            var isMilestone = (row.year % 5 === 0 || row.year === 1 || row.year === years);
+            if (!isMilestone && years > 10) return;
+            var tr = document.createElement('tr');
+            if (isMilestone && years > 5) tr.className = 'milestone';
+            tr.innerHTML = '<td>Year ' + row.year + '</td><td>' + formatCurrency(row.invested) + '</td><td>' + formatCurrency(row.returns) + '</td><td>' + formatCurrency(row.total) + '</td>';
+            tbody.appendChild(tr);
+        });
+
+        document.getElementById('otherCalcsRow').innerHTML = Object.keys(CALC_META).filter(function(k){ return k !== calcKey; }).map(function(k) {
+            return '<a href="' + CALC_META[k].url + '" class="other-calc-btn">' + CALC_META[k].icon + ' ' + CALC_META[k].name + '</a>';
+        }).join('');
+    }
+
+    async function analyzeGoal() {
+        var goal = document.getElementById('goalInput').value.trim();
+        if (!goal || goal.length < 10) { showError('Please describe your goal in more detail.'); return; }
+        currentGoal = goal;
+
+        document.getElementById('analyzeBtn').disabled = true;
+        document.getElementById('btnSpinner').style.display = 'block';
+        document.getElementById('btnText').textContent = 'Analysing...';
+        document.getElementById('loadingCard').style.display = 'block';
+        document.getElementById('resultWrapper').style.display = 'none';
+        document.getElementById('errorBox').classList.remove('show');
+
+        document.getElementById('loadingStage').innerHTML = 'Step 1 of 2 &nbsp;·&nbsp; <strong>Building your financial plan...</strong>';
+        var planHtml = '';
+        try {
+            var r1 = await fetch('/ai/goal-planner', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token() }}' },
+                body: JSON.stringify({ goal: goal })
+            });
+            var d1 = await r1.json();
+            if (!r1.ok || d1.error) throw new Error(d1.error || 'Plan generation failed');
+            planHtml = d1.result || '';
+        } catch(e) {
+            document.getElementById('loadingCard').style.display = 'none';
+            showError('Could not generate plan: ' + e.message);
+            resetBtn(); return;
+        }
+
+        document.getElementById('loadingStage').innerHTML = 'Step 2 of 2 &nbsp;·&nbsp; <strong>Running the calculator...</strong>';
+        var calcData = null;
+
+        function extractNumbers(text) {
+            var out = {};
+            function parseAmount(str) {
+                var m = str.match(/([\d,]+(?:\.\d+)?)\s*crore/i); if (m) return parseFloat(m[1].replace(/,/g,'')) * 10000000;
+                m = str.match(/([\d,]+(?:\.\d+)?)\s*(?:billion|bn)/i); if (m) return parseFloat(m[1].replace(/,/g,'')) * 1000000000;
+                m = str.match(/([\d,]+(?:\.\d+)?)\s*(?:million|mn|m)(?:\s|$|,)/i); if (m) return parseFloat(m[1].replace(/,/g,'')) * 1000000;
+                m = str.match(/([\d,]+(?:\.\d+)?)\s*(?:lakh|lac)/i); if (m) return parseFloat(m[1].replace(/,/g,'')) * 100000;
+                m = str.match(/([\d,]+(?:\.\d+)?)\s*k(?:\s|$|,)/i); if (m) return parseFloat(m[1].replace(/,/g,'')) * 1000;
+                m = str.match(/[₹$]\s*([\d,]+)/); if (m) return parseFloat(m[1].replace(/,/g,''));
+                m = str.match(/(?:rs\.?|inr)\s*([\d,]+)/i); if (m) return parseFloat(m[1].replace(/,/g,''));
+                return null;
+            }
+            function extractPlainNumber(str) { var m = str.match(/([\d,]+(?:\.\d+)?)/); return m ? parseFloat(m[1].replace(/,/g,'')) : null; }
+
+            var mm = text.match(/₹\s*([\d,]+)\s*(?:\/month|per\s*month|pm|monthly)/i) || text.match(/([\d,]+)\s*(?:\/month|per\s*month|pm|monthly)/i) || text.match(/invest\s+(?:[₹$]\s*)?([\d,]+)/i) || text.match(/sip\s+(?:of\s+)?(?:[₹$]\s*)?([\d,]+)/i);
+            if (mm) out.monthly = parseFloat(mm[1].replace(/,/g,''));
+
+            var ym = text.match(/(?:in|for|over|within)\s+(\d+)\s*years?/i) || text.match(/(\d+)\s*years?\s+(?:time|period|horizon)/i) || text.match(/(\d+)\s+yr/i);
+            if (ym) out.years = parseInt(ym[1]);
+
+            var tp = [/(?:save|accumulate|build|create|target|goal|need)\s+(?:[₹$]\s*)?([\d,]+(?:\.\d+)?(?:\s*(?:crore|lakh|lac|k))?)/i];
+            for (var i = 0; i < tp.length; i++) {
+                var ts = text.match(tp[i]);
+                if (ts) { var amt = parseAmount(ts[0]); if (!amt) amt = extractPlainNumber(ts[1] || ts[0]); if (amt && amt > 1000) { out.target = amt; break; } }
+            }
+            if (!out.target) { var isSIP = /invest\s+|sip\s+|per\s*month/i.test(text); var la = text.match(/[₹$]?\s*([\d,]+)\s*(?:crore|lakh|lac)/i); if (la && !isSIP) { var lav = parseAmount(la[0]); if (lav) out.target = lav; } }
+
+            var am = text.match(/(?:i\s*am|am|age|aged?)\s+(\d+)\s*(?:years?\s*old)?/i) || text.match(/(\d+)\s*years?\s*old/i);
+            if (am) out.currentAge = parseInt(am[1]);
+
+            var rm = text.match(/retire\s+(?:at|by)?\s*(\d+)/i) || text.match(/retirement\s+(?:at|by)?\s*(\d+)/i) || text.match(/by\s+age\s+(\d+)/i);
+            if (rm) out.retirementAge = parseInt(rm[1]);
+
+            var lm = text.match(/(?:i\s*have|have|got)\s+(?:[₹$]\s*)?([\d,]+(?:\.\d+)?(?:\s*(?:crore|lakh|lac|k))?)/i);
+            if (lm) { var lv = parseAmount((CURRENCY_FORMAT==='western'?'$':'₹') + lm[1]); if (!lv) lv = extractPlainNumber(lm[1]); if (lv) out.lumpsum = lv; }
+
+            var wm = text.match(/(?:withdraw|income)\s+(?:of\s+)?(?:[₹$]\s*)?([\d,]+)/i);
+            if (wm) out.withdrawal = parseFloat(wm[1].replace(/,/g,''));
+
+            // Current portfolio value for XIRR analysis
+            var cvm = text.match(/(?:current\s+value|now\s+worth|worth\s+now|portfolio\s+value|value\s+is|received|corpus|maturity)\s+(?:of\s+|is\s+)?(?:[₹$]\s*)?([\d,]+(?:\.\d+)?(?:\s*(?:crore|lakh|lac|k))?)/i);
+            if (cvm) { var cvv = parseAmount(cvm[0]); if (!cvv) cvv = extractPlainNumber(cvm[1]); if (cvv) out.current_value = cvv; }
+
+            // Months — explicit
+            var mom = text.match(/(\d+)\s*months?/i);
+            if (mom) out.months = parseInt(mom[1]);
+
+            var im = text.match(/(?:inflation\s+(?:is\s+)?|inflation\s+rate\s+(?:is\s+)?)(\d+(?:\.\d+)?)\s*%/i) || text.match(/(\d+(?:\.\d+)?)\s*%\s+inflation/i);
+            if (im) out.inflation_rate = parseFloat(im[1]);
+            if (/no\s+inflation/i.test(text)) out.inflation_rate = 0;
+
+            console.log('Extracted:', out);
+            return out;
+        }
+
+        function pickCalculator(text, nums) {
+            var t = text.toLowerCase(), key = 'sip', params = {};
+            // XIRR: user wants to measure ACTUAL annualized return on real cashflows (backward-looking)
+            var xirrIntent = t.includes('xirr') || t.includes('actual return') || t.includes('actual annualized')
+                          || t.includes('annualized return') || t.includes('real return')
+                          || t.includes('what return did') || t.includes('how much did my')
+                          || t.includes('portfolio return') || t.includes('what is my return')
+                          || (t.includes('current value') && (nums.monthly || nums.lumpsum))
+                          || (nums.current_value && (nums.monthly || nums.lumpsum));
+            if (xirrIntent) {
+                key = 'xirr';
+                // Resolve months: explicit > years*12 > default 36
+                var xMonths = nums.months || (nums.years ? nums.years * 12 : 36);
+                var xMonthly = nums.monthly || 10000;
+                var xValue = nums.current_value || nums.target || (xMonthly * xMonths * 1.3); // default 30% gain
+                params = { monthly: xMonthly, months: xMonths, value: xValue };
+                console.log('pickCalculator: XIRR', params);
+                return { calculator: key, params: params };
+            }
+            if (t.includes('lumpsum') || t.includes('lump sum') || t.includes('one-time') || t.includes('one time') || (nums.lumpsum && !nums.monthly && !t.includes('per month') && !t.includes('/month'))) {
+                key = 'lumpsum';
+                params = { investment_amount: nums.lumpsum || nums.target || 100000, expected_return: 12, time_period: nums.years || 10 };
+            } else if (t.includes('withdraw') || t.includes('swp') || t.includes('passive income') || (t.includes('monthly income') && nums.lumpsum)) {
+                key = 'swp';
+                params = { initial_investment: nums.lumpsum || nums.target || 1000000, monthly_withdrawal: nums.withdrawal || nums.monthly || 10000, expected_return: 8, time_period: nums.years || 20, inflation_rate: 6 };
+            } else if (t.includes('step') || t.includes('increment') || t.includes('step-up')) {
+                key = 'stepup-sip';
+                params = { initial_investment: nums.monthly || 5000, annual_increment: 10, expected_return: 12, time_period: nums.years || 10 };
+            } else if (t.includes('retire') && (nums.currentAge || t.includes('age'))) {
+                if (nums.target && nums.target > 0) {
+                    key = 'goal-sip';
+                    params = { goal_amount: nums.target, current_savings: 0, time_period: nums.years || (nums.retirementAge ? nums.retirementAge - (nums.currentAge || 30) : 27) };
+                    if (nums.monthly) params.monthly_investment = nums.monthly;
+                } else if (nums.currentAge) {
+                    key = 'retirement';
+                    params = { current_age: nums.currentAge, retirement_age: nums.retirementAge || (nums.years ? nums.currentAge + nums.years : 60), time_period: nums.years || (nums.retirementAge ? nums.retirementAge - nums.currentAge : 30) };
+                    if (nums.monthly) params.monthly_expense = nums.monthly;
+                } else {
+                    key = 'goal-sip';
+                    params = { goal_amount: nums.target || 10000000, time_period: nums.years || 20 };
+                }
+            } else if (nums.target && nums.target > 0) {
+                key = 'goal-sip';
+                params = { goal_amount: nums.target, current_savings: nums.lumpsum || 0, time_period: nums.years || 10, expected_return: 12 };
+                if (nums.inflation_rate !== undefined && nums.inflation_rate !== null) params.inflation_rate = nums.inflation_rate;
+            } else if (nums.monthly && nums.monthly > 0) {
+                key = 'sip';
+                params = { monthly_investment: nums.monthly, expected_return: 12, time_period: nums.years || 10 };
+            } else {
+                key = 'sip';
+                params = { monthly_investment: 5000, expected_return: 12, time_period: nums.years || 10 };
+            }
+            if (nums.years && nums.years > 0) params.time_period = nums.years;
+            console.log('pickCalculator:', key, params);
+            return { calculator: key, params: params };
+        }
+
+        var extracted = extractNumbers(goal);
+        var localResult = pickCalculator(goal, extracted);
+        calcData = { primary: localResult };
+
+        try {
+            var structPrompt = 'Goal: "' + goal + '"\n\nReturn ONLY this JSON (no text, no markdown):\n{"calculator":"<sip|stepup-sip|lumpsum|retirement|goal-sip|swp|xirr>","monthly_investment":0,"investment_amount":0,"goal_amount":0,"current_savings":0,"time_period":0,"expected_return":0,"inflation_rate":0,"current_age":0,"retirement_age":0,"life_expectancy":0,"monthly_expense":0,"monthly_withdrawal":0,"annual_increment":0,"monthly":0,"months":0,"value":0}\n\nUse "xirr" when the user wants to MEASURE ACTUAL return on real past investments (e.g., mentions xirr, actual return, annualized return, portfolio return, or gives a current/present portfolio value along with SIP history).\nFill numbers from goal ONLY if explicitly mentioned. Use 0 for fields not stated.';
+            var r2 = await fetch('/ai/goal-planner', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token() }}' },
+                body: JSON.stringify({ goal: structPrompt })
+            });
+            var d2 = await r2.json();
+            if (r2.ok && d2.result) {
+                var raw = d2.result.trim().replace(/```json|```/gi,'').trim();
+                var match = raw.match(/\{[\s\S]*\}/);
+                if (match) {
+                    var aiJson = JSON.parse(match[0]);
+                    var aiParams = {};
+                    ['monthly_investment','investment_amount','goal_amount','current_savings','time_period','expected_return','inflation_rate','current_age','retirement_age','life_expectancy','monthly_expense','monthly_withdrawal','annual_increment','post_retirement_return','post_retirement_inflation','initial_investment','monthly','months','value'].forEach(function(k) {
+                        if (extracted[k] === undefined && aiJson[k] !== undefined && aiJson[k] !== null) aiParams[k] = aiJson[k];
+                    });
+                    if (Object.keys(aiParams).length > 0) calcData = { primary: { calculator: localResult.calculator, params: Object.assign({}, localResult.params, aiParams) } };
+                }
+            }
+        } catch(e) { console.warn('AI step 2 failed:', e); }
+
+        document.getElementById('loadingCard').style.display = 'none';
+        document.getElementById('planBody').innerHTML = planHtml;
+
+        var calcKey = calcData.primary.calculator || 'sip';
+        var calcParams = calcData.primary.params || {};
+        var calcUrl = (CALC_META[calcKey] || CALC_META['sip']).url;
+
+        renderCalcResult(calcKey, calcParams, calcUrl);
+        document.getElementById('resultWrapper').style.display = 'block';
+        document.getElementById('resultWrapper').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        resetBtn();
+    }
+
+    function copyPlan() { navigator.clipboard.writeText(document.getElementById('planBody').innerText).then(function(){ showToast('✅ Plan copied!'); }); }
+    function shareWhatsApp() {
+        var msg = '*M3 Portfolio — AI Goal Plan*\n\n*Goal:* ' + currentGoal.slice(0,100) + '\n\n' + document.getElementById('planBody').innerText + '\n\n_M3 Portfolio Investment Analysis_';
+        window.open('https://wa.me/?text=' + encodeURIComponent(msg), '_blank');
+    }
+    document.addEventListener('DOMContentLoaded', function() {
+        document.getElementById('goalInput').addEventListener('keydown', function(e) { if (e.key === 'Enter' && e.ctrlKey) analyzeGoal(); });
+    });
+    </script>
+</body>
+</html>

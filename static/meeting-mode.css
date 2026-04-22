@@ -1,0 +1,53 @@
+/* ═══ MEETING MODE — client-facing display ═══
+   Toggled by body.meeting-mode class (set by meeting-mode.js from localStorage).
+   Hides advisor chrome, enlarges fonts, and reveals an Exit pill. */
+
+/* Hide all elements tagged advisor-only */
+body.meeting-mode .advisor-only { display: none !important; }
+
+/* Larger base text for across-the-table viewing */
+body.meeting-mode { font-size: 17px; }
+body.meeting-mode h1 { font-size: 2.2em; }
+body.meeting-mode h2 { font-size: 1.5em; }
+body.meeting-mode h3 { font-size: 1.15em; }
+
+/* Dim the admin-heavy internal IDs automatically */
+body.meeting-mode .aid,
+body.meeting-mode [data-advisor-meta] { display: none !important; }
+
+/* Toggle button base style (works in any navbar) */
+.mm-toggle {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 7px 14px; border-radius: 20px;
+    font-size: 0.85em; font-weight: 700; cursor: pointer;
+    border: 1.5px solid rgba(232,200,74,0.5);
+    background: transparent; color: #1a0f3c;
+    transition: all 0.2s;
+    font-family: inherit;
+}
+.mm-toggle:hover { background: rgba(232,200,74,0.12); }
+body.dark-mode .mm-toggle { color: #e8c84a; border-color: rgba(232,200,74,0.35); }
+body.dark-mode .mm-toggle:hover { background: rgba(232,200,74,0.1); }
+
+body.meeting-mode .mm-toggle {
+    background: linear-gradient(135deg,#e8c84a,#d4a843);
+    color: #1a0f3c; border-color: #e8c84a;
+}
+
+/* Persistent exit pill, only visible when meeting mode is on */
+.mm-exit-pill {
+    display: none;
+    position: fixed; top: 12px; right: 12px;
+    z-index: 9999;
+    background: linear-gradient(135deg,#e8c84a,#d4a843);
+    color: #1a0f3c;
+    padding: 8px 16px;
+    border-radius: 24px;
+    font-weight: 700; font-size: 0.8em;
+    cursor: pointer; border: none;
+    box-shadow: 0 4px 20px rgba(15,12,41,0.3);
+    font-family: inherit;
+    letter-spacing: 0.04em;
+}
+.mm-exit-pill:hover { transform: translateY(-1px); box-shadow: 0 6px 24px rgba(232,200,74,0.5); }
+body.meeting-mode .mm-exit-pill { display: inline-flex; align-items: center; gap: 6px; }

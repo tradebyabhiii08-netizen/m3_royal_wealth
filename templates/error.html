@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Error — M3 Portfolio</title>
+  <link rel="stylesheet" href="/static/design-tokens.css">
+  <script>
+    (function () {
+      try {
+        var saved = localStorage.getItem('m3-theme');
+        var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        var theme = saved || (prefersDark ? 'dark' : 'light');
+        document.documentElement.setAttribute('data-theme', theme);
+      if (theme === 'dark') { document.addEventListener('DOMContentLoaded', function () { document.body.classList.add('dark-mode'); }); }
+      } catch (e) {
+        document.documentElement.setAttribute('data-theme', 'light');
+      }
+    })();
+  </script>
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body {
+      font-family: 'DM Sans', 'Segoe UI', sans-serif;
+      min-height:100vh;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:20px;
+      background: linear-gradient(145deg, #f5edcc 0%, #fdf9ee 40%, #fffdf5 70%, #f5edcc 100%);
+      color: #141124;
+    }
+    html[data-theme="dark"] body,
+    body.dark-mode {
+      background: linear-gradient(145deg, #07060f 0%, #0f0c29 45%, #1a1550 80%, #07060f 100%) !important;
+      color: #f4eed2;
+    }
+    .box { background:#fff; border-radius:20px; padding:50px 40px; max-width:480px; width:100%; text-align:center; box-shadow: 0 8px 28px rgba(15,12,41,0.14), 0 2px 8px rgba(15,12,41,0.07); }
+    .icon { font-size:3.5rem; margin-bottom:16px; }
+    h1 { color:#1F4E79; font-size:1.8rem; margin-bottom:12px; }
+    p { color:#666; font-size:1rem; line-height:1.6; margin-bottom:28px; }
+    .btn { display:inline-block; background:linear-gradient(145deg, #07060f 0%, #0f0c29 45%, #1a1550 80%, #07060f 100%); color:#fff; text-decoration:none; padding:14px 32px; border-radius:8px; font-size:1rem; font-weight:600; transition:transform 0.2s; }
+    .btn:hover { transform:translateY(-2px); }
+    .back { margin-top:16px; display:block; color:#e8c84a; text-decoration:none; font-size:0.9rem; }
+  </style>
+</head>
+<body>
+  <div class="box">
+    <div class="icon">⚠️</div>
+    <h1>{{ error_title or 'Something went wrong' }}</h1>
+    <p>{{ error_message or 'An unexpected error occurred. Please try again.' }}</p>
+    <a href="/login" class="btn">Go to Login</a>
+    <a href="/" class="back">← Back to Home</a>
+  </div>
+</body>
+</html>

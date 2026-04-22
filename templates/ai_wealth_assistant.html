@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Wealth Assistant | M3 Portfolio</title>
+    <link rel="stylesheet" href="/static/design-tokens.css">
+    <script>
+      (function () {
+        try {
+          var saved = localStorage.getItem('m3-theme');
+          var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+          var theme = saved || (prefersDark ? 'dark' : 'light');
+          document.documentElement.setAttribute('data-theme', theme);
+          if (theme === 'dark') {
+            document.addEventListener('DOMContentLoaded', function () { document.body.classList.add('dark-mode'); });
+          }
+        } catch (e) {
+          document.documentElement.setAttribute('data-theme', 'light');
+        }
+      })();
+    </script>
+    <link rel="stylesheet" href="/static/style.css">
+    <style>
+        :root {
+            --navy:    #0f0c29;
+            --navy-m:  #1a1550;
+            --navy-l:  #252070;
+            --gold:    #e8c84a;
+            --gold-d:  #d4a843;
+            --gold-l:  #f5d96b;
+            --gold-xl: #fdf3cc;
+            --cream:   #fdf9ee;
+            --muted:   #6b6080;
+            --ink:     #1a0f3c;
+            /* Card tokens for dark chat UI */
+            --chat-card:  rgba(15,12,41,0.85);
+            --chat-brd:   rgba(232,200,74,0.18);
+            --chat-brd-h: rgba(232,200,74,0.45);
+        }
+        * { margin:0; padding:0; box-sizing:border-box; }
+
+        /* ── BODY ──
+           This page is an always-dark chat UI by design — all panels below
+           assume a navy body. Theme toggle on other pages still works and
+           persists, but this one page stays dark for visual consistency. */
+        body {
+            font-family: 'DM Sans','Segoe UI',sans-serif;
+            min-height: 100vh;
+            padding: 20px;
+            background: linear-gradient(145deg, #07060f 0%, #0f0c29 45%, #1a1550 80%, #07060f 100%);
+            color: #f4eed2;
+        }
+
+        /* ── NAVBAR ── */
+        .navbar {
+            background: var(--cream);
+            border-bottom: 3px solid var(--gold);
+            padding: 12px 26px;
+            border-radius: 16px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 20px rgba(15,12,41,0.18);
+        }
+        .navbar-brand {
+            color: var(--navy);
+            font-size: 1.2em;
+            font-weight: 700;
+            font-family: 'Cormorant Garamond',serif;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .navbar-links { display:flex; align-items:center; gap:6px; }
+        .navbar-links .nav-user {
+            display: flex; align-items: center; gap: 7px;
+            background: rgba(232,200,74,0.1);
+            border: 1px solid rgba(232,200,74,0.25);
+            border-radius: 50px;
+            padding: 5px 13px;
+            font-size: 0.83em; font-weight: 600; color: var(--navy);
+        }
+        .navbar-links a {
+            color: var(--navy); text-decoration:none; font-weight:600;
+            font-size: 0.84em; padding: 6px 12px;
+            border-radius: 8px; transition:all 0.2s;
+        }
+        .navbar-links a:hover { background: var(--gold-xl); }
+        .navbar-links a.logout {
+            background: linear-gradient(135deg,var(--gold),var(--gold-d));
+            color: var(--navy); font-weight:700;
+            border-radius: 20px; padding: 6px 14px;
+        }
+        .navbar-links a.logout:hover { opacity:0.9; }
+
+        .container { max-width:1100px; margin:0 auto; }
+
+        /* ── HERO ── */
+        .hero {
+            background: linear-gradient(135deg, var(--navy) 0%, var(--navy-m) 100%);
+            border-radius: 18px;
+            padding: 24px 32px;
+            margin-bottom: 18px;
+            border: 1px solid rgba(232,200,74,0.2);
+            box-shadow: 0 12px 40px rgba(15,12,41,0.4);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+        .hero::before {
+            content:'';
+            position:absolute; top:0; left:0;
+            width:5px; height:100%;
+            background: linear-gradient(180deg,var(--gold),var(--gold-d));
+            border-radius:18px 0 0 18px;
+        }
+        .hero::after {
+            content:'';
+            position:absolute; top:-40px; right:-40px;
+            width:180px; height:180px; border-radius:50%;
+            background: radial-gradient(circle,rgba(232,200,74,0.08) 0%,transparent 70%);
+            pointer-events:none;
+        }
+        .hero-left { display:flex; align-items:center; gap:18px; }
+        .hero-avatar {
+            width:52px; height:52px; border-radius:50%;
+            background: linear-gradient(135deg,var(--gold),var(--gold-d));
+            display:flex; align-items:center; justify-content:center;
+            font-size:1.5em; flex-shrink:0;
+            box-shadow: 0 0 20px rgba(232,200,74,0.4);
+        }
+        .hero-title {
+            font-size:1.4em; font-weight:700; color:white;
+            font-family:'Cormorant Garamond',serif;
+            margin-bottom:3px;
+        }
+        .hero-title span { color:var(--gold); }
+        .hero-sub { font-size:0.82em; color:rgba(255,255,255,0.6); margin-bottom:8px; }
+        .hero-badges { display:flex; gap:7px; flex-wrap:wrap; }
+        .hbadge {
+            background: rgba(232,200,74,0.12);
+            border: 1px solid rgba(232,200,74,0.25);
+            color: var(--gold);
+            padding: 2px 10px; border-radius:20px;
+            font-size:0.7em; font-weight:600;
+            display:inline-flex; align-items:center; gap:4px;
+        }
+        .live-dot::before {
+            content:''; width:5px; height:5px;
+            background:var(--gold); border-radius:50%;
+            display:inline-block;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse { 0%,100%{opacity:1;}50%{opacity:0.3;} }
+
+        /* ── CLIENT CONTEXT BAR ── */
+        .context-bar {
+            background: var(--chat-card);
+            border: 1px solid var(--chat-brd);
+            border-radius: 14px;
+            padding: 12px 20px;
+            margin-bottom: 18px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .ctx-label {
+            font-size:0.74em; font-weight:700;
+            color: var(--gold);
+            text-transform:uppercase; letter-spacing:0.06em;
+            white-space:nowrap;
+        }
+        .ctx-field {
+            background: rgba(15,12,41,0.7);
+            border: 1.5px solid rgba(232,200,74,0.2);
+            border-radius: 8px;
+            padding: 0 12px;
+            color: #e2e8f0;
+            font-size: 0.85em;
+            font-family: inherit;
+            transition: border 0.2s;
+            height: 38px;
+        }
+        .ctx-field:focus { outline:none; border-color:var(--gold); box-shadow:0 0 0 2px rgba(232,200,74,0.15); }
+        .ctx-field::placeholder { color:rgba(255,255,255,0.2); }
+        .ctx-name { width:155px; }
+        .ctx-age  { width:75px; }
+        .ctx-risk {
+            background: rgba(15,12,41,0.7);
+            border: 1.5px solid rgba(232,200,74,0.2);
+            border-radius: 8px;
+            padding: 0 12px;
+            color: #e2e8f0;
+            font-size: 0.85em;
+            cursor: pointer;
+            height: 38px;
+            -webkit-appearance:none; appearance:none;
+        }
+        .ctx-risk:focus { outline:none; border-color:var(--gold); }
+        .ctx-portfolio { width:160px; }
+        .ctx-active-badge {
+            background: rgba(232,200,74,0.15);
+            border: 1px solid rgba(232,200,74,0.35);
+            color: var(--gold);
+            padding: 4px 12px; border-radius:20px;
+            font-size:0.72em; font-weight:700;
+            display:none; align-items:center; gap:4px;
+        }
+        .ctx-active-badge.show { display:inline-flex; }
+        .ctx-clear {
+            font-size:0.72em; cursor:pointer;
+            padding: 4px 10px; border-radius:6px;
+            border: 1px solid rgba(239,68,68,0.3);
+            color: #f87171;
+            background: rgba(239,68,68,0.06);
+            transition:all 0.2s;
+        }
+        .ctx-clear:hover { background:rgba(239,68,68,0.15); }
+
+        /* ── LAYOUT ── */
+        .main-layout { display:grid; grid-template-columns:1fr; gap:18px; transition:grid-template-columns 0.3s; }
+        .main-layout.has-pins { grid-template-columns:1fr 290px; }
+
+        /* ── TAB BAR ── */
+        .tabs-section { margin-bottom:18px; }
+        .tab-bar { display:flex; gap:6px; margin-bottom:13px; flex-wrap:wrap; align-items:center; }
+        .tab-btn {
+            padding: 7px 16px;
+            border-radius: 20px;
+            font-size: 0.78em;
+            font-weight: 600;
+            cursor: pointer;
+            border: 1.5px solid rgba(232,200,74,0.18);
+            background: rgba(15,12,41,0.6);
+            color: rgba(255,255,255,0.5);
+            transition: all 0.2s;
+            font-family:'DM Sans',sans-serif;
+        }
+        .tab-btn:hover { border-color:rgba(232,200,74,0.4); color:rgba(255,255,255,0.8); }
+        .tab-btn.active {
+            background: linear-gradient(135deg,var(--gold),var(--gold-d));
+            border-color: var(--gold);
+            color: var(--navy);
+            font-weight: 700;
+        }
+        .tab-panel { display:none; }
+        .tab-panel.active {
+            display: grid;
+            grid-template-columns: repeat(3,1fr);
+            gap: 10px;
+            align-items: stretch;
+        }
+
+        /* ── QUICK CARDS ── */
+        .quick-card {
+            background: var(--chat-card);
+            border: 1.5px solid var(--chat-brd);
+            border-radius: 12px;
+            padding: 14px 16px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            gap: 10px;
+            align-items: flex-start;
+            min-height: 70px;
+        }
+        .quick-card:hover {
+            border-color: var(--chat-brd-h);
+            background: rgba(232,200,74,0.07);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(232,200,74,0.12);
+        }
+        .qc-icon { font-size:1.3em; flex-shrink:0; line-height:1; }
+        .qc-label { font-size:0.8em; font-weight:700; color:#e2e8f0; margin-bottom:3px; font-family:'DM Sans',sans-serif; }
+        .qc-desc  { font-size:0.7em; color:var(--muted); line-height:1.3; }
+
+        /* ── INPUT CARD ── */
+        .input-card {
+            background: var(--chat-card);
+            border: 1px solid var(--chat-brd);
+            border-radius: 16px;
+            padding: 20px 24px;
+            margin-bottom: 18px;
+            box-shadow: 0 8px 28px rgba(15,12,41,0.2);
+        }
+        .input-card-title {
+            font-size:0.88em; font-weight:700;
+            color: var(--gold);
+            margin-bottom: 12px;
+            display:flex; align-items:center; gap:7px;
+            font-family:'DM Sans',sans-serif;
+            letter-spacing:0.02em;
+        }
+        .input-wrap { display:flex; gap:12px; align-items:flex-end; }
+        .msg-input {
+            flex:1;
+            background: rgba(15,12,41,0.7);
+            border: 1.5px solid rgba(232,200,74,0.2);
+            border-radius: 12px;
+            padding: 13px 18px;
+            color: #e2e8f0;
+            font-size: 0.92em;
+            font-family: inherit;
+            resize: none;
+            min-height: 50px;
+            max-height: 120px;
+            transition: border 0.2s;
+            line-height: 1.6;
+        }
+        .msg-input:focus { outline:none; border-color:var(--gold); box-shadow:0 0 0 3px rgba(232,200,74,0.15); }
+        .msg-input::placeholder { color:rgba(255,255,255,0.2); }
+        .btn-send {
+            padding: 0 26px;
+            background: linear-gradient(135deg,var(--gold),var(--gold-d));
+            color: var(--navy);
+            border: none;
+            border-radius: 12px;
+            height: 50px;
+            font-weight: 700;
+            font-size: 0.9em;
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
+            box-shadow: 0 4px 14px rgba(232,200,74,0.35);
+            flex-shrink: 0;
+            font-family:'DM Sans',sans-serif;
+        }
+        .btn-send:hover { transform:translateY(-2px); box-shadow:0 8px 22px rgba(232,200,74,0.5); }
+        .btn-send:disabled { opacity:0.4; cursor:not-allowed; transform:none; box-shadow:none; }
+        .input-hint { font-size:0.72em; color:rgba(255,255,255,0.3); margin-top:8px; }
+
+        /* ── CHAT SECTION ── */
+        .chat-section {
+            background: var(--chat-card);
+            border: 1px solid var(--chat-brd);
+            border-radius: 18px;
+            padding: 20px 24px;
+        }
+        .chat-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; }
+        .chat-title { font-size:0.78em; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:0.06em; }
+        .chat-actions { display:flex; gap:8px; }
+        .btn-sm {
+            font-size:0.72em; padding:4px 10px; border-radius:6px;
+            cursor:pointer; border:1px solid rgba(232,200,74,0.2);
+            background:rgba(232,200,74,0.06); color:var(--muted);
+            transition:all 0.2s; font-weight:600; font-family:'DM Sans',sans-serif;
+        }
+        .btn-sm:hover { background:rgba(232,200,74,0.15); color:var(--gold); }
+        .btn-sm.danger { border-color:rgba(239,68,68,0.2); color:#f87171; background:rgba(239,68,68,0.06); }
+        .btn-sm.danger:hover { background:rgba(239,68,68,0.15); }
+
+        .chat-messages {
+            display:flex; flex-direction:column; gap:20px;
+            max-height:500px; overflow-y:auto; padding:6px 0;
+            scrollbar-width:thin; scrollbar-color:rgba(232,200,74,0.2) transparent;
+        }
+        .chat-messages::-webkit-scrollbar { width:4px; }
+        .chat-messages::-webkit-scrollbar-thumb { background:rgba(232,200,74,0.2); border-radius:4px; }
+
+        /* ── MESSAGES ── */
+        .msg { display:flex; gap:10px; align-items:flex-start; animation:msgIn 0.3s ease; }
+        @keyframes msgIn { from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);} }
+        .msg.user { flex-direction:row-reverse; }
+        .msg-avatar {
+            width:34px; height:34px; border-radius:50%; flex-shrink:0;
+            display:flex; align-items:center; justify-content:center;
+            font-size:0.95em;
+        }
+        .msg.ai   .msg-avatar { background:linear-gradient(135deg,var(--navy),var(--navy-m)); border:2px solid rgba(232,200,74,0.3); }
+        .msg.user .msg-avatar { background:linear-gradient(135deg,var(--gold),var(--gold-d)); }
+        .msg-bubble {
+            border-radius:16px; padding:14px 18px;
+            font-size:0.9em; line-height:1.7; max-width:75%;
+        }
+        .msg.ai   .msg-bubble {
+            background: rgba(15,12,41,0.8);
+            border: 1px solid rgba(232,200,74,0.15);
+            color: #cbd5e1;
+            border-radius: 4px 16px 16px 16px;
+        }
+        .msg.user .msg-bubble {
+            background: linear-gradient(135deg,rgba(232,200,74,0.15),rgba(26,21,80,0.3));
+            border: 1px solid rgba(232,200,74,0.25);
+            color: #e2e8f0;
+            border-radius: 16px 4px 16px 16px;
+        }
+        /* AI response formatting */
+        .msg.ai .msg-bubble strong { color: var(--gold-l); }
+        .msg.ai .msg-bubble ul,.msg.ai .msg-bubble ol { padding-left:16px; margin:6px 0; }
+        .msg.ai .msg-bubble li { margin-bottom:4px; }
+        .msg.ai .msg-bubble p { margin-bottom:7px; }
+        .msg.ai .msg-bubble h2,.msg.ai .msg-bubble h3 { color:#e2e8f0; font-size:0.97em; margin:10px 0 5px; }
+        .ai-section {
+            background: rgba(232,200,74,0.06);
+            border-left: 3px solid var(--gold);
+            border-radius: 0 10px 10px 0;
+            padding: 10px 14px; margin: 8px 0;
+        }
+        .ai-section.amber { border-left-color:#fbbf24; background:rgba(251,191,36,0.07); }
+        .ai-section.purple { border-left-color:var(--gold-l); background:rgba(245,217,107,0.06); }
+        .ai-section.green  { border-left-color:#059669; background:rgba(5,150,105,0.06); }
+        .section-title { font-weight:700; font-size:0.88em; color:#e2e8f0; margin-bottom:7px; display:flex; align-items:center; gap:5px; }
+        .stats-row { display:grid; grid-template-columns:repeat(auto-fit,minmax(110px,1fr)); gap:8px; margin:8px 0; }
+        .stat-pill {
+            background: rgba(232,200,74,0.08);
+            border: 1px solid rgba(232,200,74,0.2);
+            border-radius: 10px; padding:10px; text-align:center;
+        }
+        .stat-pill .sval { font-size:1em; font-weight:700; color:var(--gold); display:block; font-family:'Cormorant Garamond',serif; }
+        .stat-pill .slbl { font-size:0.68em; color:var(--muted); margin-top:2px; }
+
+        /* Msg footer */
+        .msg-footer { display:flex; gap:6px; margin-top:6px; flex-wrap:wrap; align-items:center; }
+        .msg.user .msg-footer { justify-content:flex-end; }
+        .msg-time { font-size:0.65em; color:rgba(255,255,255,0.25); }
+        .msg-action {
+            font-size:0.65em; color:rgba(255,255,255,0.3); cursor:pointer;
+            padding:1px 7px; border-radius:4px;
+            border: 1px solid rgba(232,200,74,0.1);
+            background: rgba(232,200,74,0.04);
+            transition:all 0.15s;
+        }
+        .msg-action:hover { color:var(--gold); background:rgba(232,200,74,0.1); border-color:rgba(232,200,74,0.25); }
+        .msg-action.pinned { color:#fbbf24; border-color:rgba(251,191,36,0.3); background:rgba(251,191,36,0.08); }
+
+        /* Typing */
+        .typing-dots {
+            display:flex; gap:5px; padding:12px 16px;
+            background:rgba(15,12,41,0.8);
+            border:1px solid rgba(232,200,74,0.15);
+            border-radius:4px 16px 16px 16px; width:fit-content;
+        }
+        .typing-dots span { width:6px; height:6px; background:var(--gold); border-radius:50%; animation:bounce 1.2s infinite; opacity:0.4; }
+        .typing-dots span:nth-child(2){animation-delay:0.2s;} .typing-dots span:nth-child(3){animation-delay:0.4s;}
+        @keyframes bounce{0%,80%,100%{transform:scale(0.6);opacity:0.3;}40%{transform:scale(1);opacity:1;}}
+
+        /* ── PINS PANEL ── */
+        .pins-panel {
+            background: var(--chat-card);
+            border: 1px solid rgba(232,200,74,0.2);
+            border-radius: 16px; padding:18px;
+            height:fit-content; position:sticky; top:20px;
+        }
+        .pins-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; }
+        .pins-title { font-size:0.8em; font-weight:700; color:var(--gold); text-transform:uppercase; letter-spacing:0.06em; }
+        .pins-empty { font-size:0.8em; color:var(--muted); text-align:center; padding:20px; line-height:1.5; }
+        .pin-item {
+            background: rgba(232,200,74,0.06);
+            border: 1px solid rgba(232,200,74,0.18);
+            border-radius: 10px; padding:10px 12px; margin-bottom:8px;
+            font-size:0.78em; color:#cbd5e1;
+        }
+        .pin-item-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; }
+        .pin-label { font-size:0.68em; color:var(--gold); font-weight:700; }
+        .pin-remove { font-size:0.68em; color:var(--muted); cursor:pointer; }
+        .pin-remove:hover { color:#f87171; }
+        .pin-content { line-height:1.4; color:#94a3b8; max-height:80px; overflow-y:auto; }
+        .pin-copy { font-size:0.65em; color:var(--muted); cursor:pointer; margin-top:6px; }
+        .pin-copy:hover { color:var(--gold); }
+
+        /* Welcome empty state */
+        .welcome-msg {
+            text-align:center; padding:28px;
+            background: rgba(15,12,41,0.5);
+            border: 1px dashed rgba(232,200,74,0.18);
+            border-radius:14px;
+        }
+        .welcome-msg .wm-icon { font-size:2em; margin-bottom:10px; opacity:0.7; }
+        .welcome-msg p { color:rgba(255,255,255,0.3); font-size:0.85em; }
+
+        /* Error + Toast */
+        .error-card { background:rgba(239,68,68,0.1); border:1.5px solid rgba(239,68,68,0.3); border-radius:10px; padding:10px 16px; color:#fca5a5; margin-bottom:14px; display:none; }
+        .error-card.show { display:block; }
+        .toast {
+            position:fixed; bottom:24px; right:24px;
+            background: var(--navy-m);
+            border: 1px solid rgba(232,200,74,0.35);
+            color: var(--gold);
+            padding:10px 18px; border-radius:10px;
+            font-size:0.85em; font-weight:600;
+            opacity:0; transition:opacity 0.3s;
+            z-index:999; box-shadow:0 8px 28px rgba(15,12,41,0.4);
+        }
+        .toast.show { opacity:1; }
+
+        /* ── LIGHT MODE ── same dark chat UI, only navbar changes ── */
+        body.light-mode {
+            background: linear-gradient(145deg,#07060f 0%,#0f0c29 45%,#1a1550 80%,#07060f 100%) !important;
+        }
+        /* Navbar stays cream in light mode — already cream in base styles */
+        /* Chat UI stays dark in both modes — it's a chat interface, dark is always better */
+
+        /* ── RESPONSIVE ── */
+        @media (max-width:768px) {
+            .main-layout.has-pins { grid-template-columns:1fr; }
+            .tab-panel.active { grid-template-columns:1fr 1fr; }
+            .input-wrap { flex-direction:column; }
+            .btn-send { width:100%; height:44px; }
+            .context-bar { flex-direction:column; align-items:flex-start; }
+            .hero { flex-direction:column; }
+        }
+    </style>
+</head>
+<body id="mainBody">
+<script>
+(function(){
+    var t="{{ session.get('theme','light') }}";
+    if(t==='light') document.getElementById('mainBody').classList.add('light-mode');
+    else if(t==='auto' && !window.matchMedia('(prefers-color-scheme:dark)').matches)
+        document.getElementById('mainBody').classList.add('light-mode');
+})();
+</script>
+
+<!-- NAVBAR -->
+<div class="navbar">
+    <span class="navbar-brand">📊 M3 Portfolio Investment Analysis</span>
+    <div class="navbar-links">
+        <span class="nav-user">👤 {{ session.get('user_name', '') }}</span>
+        <a href="/dashboard">🏠 Dashboard</a>
+        <a href="/ai/goal-planner">🎯 Goal Planner</a>
+        <a href="/settings">⚙️</a>
+        <a href="/logout" class="logout">Logout</a>
+    </div>
+</div>
+
+<div class="container">
+
+    <!-- HERO -->
+    <div class="hero">
+        <div class="hero-left">
+            <div class="hero-avatar">🧠</div>
+            <div>
+                <div class="hero-title">AI <span>Wealth Assistant</span></div>
+                <div class="hero-sub">Expert advisor for client meetings — live market data included</div>
+                <div class="hero-badges">
+                    <span class="hbadge live-dot">Live Market</span>
+                    <span class="hbadge">🇮🇳 India MFD</span>
+                    <span class="hbadge">📌 Pin Answers</span>
+                    <span class="hbadge">📱 WhatsApp Share</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- CLIENT CONTEXT BAR -->
+    <div class="context-bar">
+        <span class="ctx-label">📋 Client Context</span>
+        <input type="text" class="ctx-field ctx-name" id="ctxName" placeholder="Client name" oninput="updateContext()">
+        <input type="number" class="ctx-field ctx-age" id="ctxAge" placeholder="Age" min="18" max="90" oninput="updateContext()">
+        <select class="ctx-risk ctx-field" id="ctxRisk" onchange="updateContext()">
+            <option value="">Risk Profile</option>
+            <option value="Conservative">Conservative</option>
+            <option value="Moderate">Moderate</option>
+            <option value="Aggressive">Aggressive</option>
+            <option value="Very Aggressive">Very Aggressive</option>
+        </select>
+        <input type="text" class="ctx-field ctx-portfolio" id="ctxPortfolio" placeholder="Portfolio size (e.g. ₹20L)" oninput="updateContext()">
+        <span class="ctx-active-badge" id="ctxBadge">✓ Context Active</span>
+        <button class="ctx-clear" onclick="clearContext()">Clear</button>
+    </div>
+
+    <!-- QUICK PROMPT TABS -->
+    <div class="tabs-section">
+        <div class="tab-bar">
+            <button class="tab-btn active" onclick="switchTab('portfolio',this)">📊 Portfolio</button>
+            <button class="tab-btn" onclick="switchTab('objections',this)">🛡️ Objections</button>
+            <button class="tab-btn" onclick="switchTab('tax',this)">📋 Tax & ELSS</button>
+            <button class="tab-btn" onclick="switchTab('sip',this)">🌱 SIP Planning</button>
+            <button class="tab-btn" onclick="switchTab('market',this)">📈 Market</button>
+        </div>
+
+        <!-- Portfolio Tab -->
+        <div class="tab-panel active" id="tab-portfolio">
+            <div class="quick-card" onclick="usePrompt('Best mutual fund allocation for aggressive investor with ₹50,000/month SIP capacity and 15 year horizon')">
+                <div class="qc-icon">🚀</div><div><div class="qc-label">Aggressive Portfolio</div><div class="qc-desc">₹50K/mo, 15yr horizon</div></div>
+            </div>
+            <div class="quick-card" onclick="usePrompt('Client has ₹20 lakh lumpsum to invest. STP or direct lumpsum? Best strategy with fund names.')">
+                <div class="qc-icon">💰</div><div><div class="qc-label">Lumpsum Strategy</div><div class="qc-desc">STP vs direct — best approach</div></div>
+            </div>
+            <div class="quick-card" onclick="usePrompt('Flexi Cap vs Multi Cap vs Large & Mid Cap — which is better for a moderate investor in 2024?')">
+                <div class="qc-icon">⚖️</div><div><div class="qc-label">Fund Comparison</div><div class="qc-desc">Flexi vs Multi vs Large&Mid</div></div>
+            </div>
+            <div class="quick-card" onclick="usePrompt('Conservative investor, 55 years old, ₹50 lakh portfolio. Best allocation for capital preservation with some growth?')">
+                <div class="qc-icon">🛡️</div><div><div class="qc-label">Conservative Plan</div><div class="qc-desc">55yr, ₹50L, safe growth</div></div>
+            </div>
+            <div class="quick-card" onclick="usePrompt('How to rebalance a portfolio that is 80% in FD and only 20% in equity? Step by step plan.')">
+                <div class="qc-icon">🔄</div><div><div class="qc-label">Portfolio Rebalancing</div><div class="qc-desc">FD-heavy to MF strategy</div></div>
+            </div>
+            <div class="quick-card" onclick="usePrompt('Retirement plan for 40-year-old with ₹30,000/month SIP capacity. What corpus will they build by 60?')">
+                <div class="qc-icon">🏖️</div><div><div class="qc-label">Retirement Planning</div><div class="qc-desc">₹30K/mo, retire at 60</div></div>
+            </div>
+        </div>
+
+        <!-- Objections Tab -->
+        <div class="tab-panel" id="tab-objections">
+            <div class="quick-card" onclick="usePrompt('Client wants to move FD to Mutual Funds — give me convincing arguments with real numbers comparing FD vs equity MF returns over 10 years.')">
+                <div class="qc-icon">🏦</div><div><div class="qc-label">FD → MF Shift</div><div class="qc-desc">Real numbers comparison</div></div>
+            </div>
+            <div class="quick-card" onclick="usePrompt('Client insists on continuing LIC endowment policy. Show IRR calculation and convince to switch to Term + MF.')">
+                <div class="qc-icon">📋</div><div><div class="qc-label">LIC Endowment</div><div class="qc-desc">IRR calc + Term+MF switch</div></div>
+            </div>
+            <div class="quick-card" onclick="usePrompt('Client says market is at all time high and will invest when it falls. How do I handle this objection with data?')">
+                <div class="qc-icon">📉</div><div><div class="qc-label">Market High Fear</div><div class="qc-desc">Data-backed response</div></div>
+            </div>
+            <div class="quick-card" onclick="usePrompt('Client says mutual funds are risky, I prefer safe investments. How to explain risk vs return with simple examples?')">
+                <div class="qc-icon">😰</div><div><div class="qc-label">MF is Risky Fear</div><div class="qc-desc">Explain risk vs return simply</div></div>
+            </div>
+            <div class="quick-card" onclick="usePrompt('Client wants to invest in gold instead of MF. Compare Gold ETF vs equity MF returns over 10-15 years with real data.')">
+                <div class="qc-icon">🥇</div><div><div class="qc-label">Gold vs MF</div><div class="qc-desc">Long-term return comparison</div></div>
+            </div>
+            <div class="quick-card" onclick="usePrompt('Client lost money in direct stocks and now distrusts all investments. How to rebuild trust and explain SIP benefits?')">
+                <div class="qc-icon">💔</div><div><div class="qc-label">Trust Issue</div><div class="qc-desc">Lost in stocks — rebuild trust</div></div>
+            </div>
+        </div>
+
+        <!-- Tax Tab -->
+        <div class="tab-panel" id="tab-tax">
+            <div class="quick-card" onclick="usePrompt('Tax efficient strategy to invest ₹1.5 lakh under Section 80C. Detailed comparison of ELSS vs PPF vs NPS with pros/cons.')">
+                <div class="qc-icon">📊</div><div><div class="qc-label">80C Strategy</div><div class="qc-desc">ELSS vs PPF vs NPS</div></div>
+            </div>
+            <div class="quick-card" onclick="usePrompt('How to do LTCG tax harvesting in equity mutual funds? Step by step process to save tax each year.')">
+                <div class="qc-icon">🌾</div><div><div class="qc-label">LTCG Harvesting</div><div class="qc-desc">Step-by-step tax saving</div></div>
+            </div>
+            <div class="quick-card" onclick="usePrompt('Client wants to invest ₹10 lakh lumpsum. From tax angle, should they use STP via liquid fund? Explain tax implications.')">
+                <div class="qc-icon">💸</div><div><div class="qc-label">STP Tax Impact</div><div class="qc-desc">Lumpsum STP tax planning</div></div>
+            </div>
+            <div class="quick-card" onclick="usePrompt('Explain LTCG and STCG on equity vs debt mutual funds with current tax rates and examples.')">
+                <div class="qc-icon">📜</div><div><div class="qc-label">LTCG vs STCG</div><div class="qc-desc">Current rates + examples</div></div>
+            </div>
+            <div class="quick-card" onclick="usePrompt('Client is in 30% tax bracket. Which is better for debt investment — FD, Debt MF, or Arbitrage fund? Tax comparison.')">
+                <div class="qc-icon">🏛️</div><div><div class="qc-label">30% Bracket Strategy</div><div class="qc-desc">FD vs Debt MF vs Arbitrage</div></div>
+            </div>
+            <div class="quick-card" onclick="usePrompt('NPS vs ELSS — which is better for 80C and 80CCD? Complete comparison with lock-in, returns, tax treatment.')">
+                <div class="qc-icon">🆚</div><div><div class="qc-label">NPS vs ELSS</div><div class="qc-desc">Complete 80C/80CCD guide</div></div>
+            </div>
+        </div>
+
+        <!-- SIP Tab -->
+        <div class="tab-panel" id="tab-sip">
+            <div class="quick-card" onclick="usePrompt('Client can invest ₹10,000/month. What corpus will they build in 10, 15, 20 years? Show at 10%, 12%, 15% returns.')">
+                <div class="qc-icon">🌱</div><div><div class="qc-label">SIP Growth Calc</div><div class="qc-desc">₹10K/mo at multiple rates</div></div>
+            </div>
+            <div class="quick-card" onclick="usePrompt('Explain step-up SIP to client — how increasing SIP by 10% every year drastically improves corpus vs flat SIP. Show real numbers.')">
+                <div class="qc-icon">📈</div><div><div class="qc-label">Step-up SIP Pitch</div><div class="qc-desc">+10%/yr vs flat — real numbers</div></div>
+            </div>
+            <div class="quick-card" onclick="usePrompt('Client wants to start SIP but confused about which fund to choose — Large Cap, Mid Cap, or Flexi Cap for a 10-year first-time investor.')">
+                <div class="qc-icon">🎯</div><div><div class="qc-label">First SIP Choice</div><div class="qc-desc">Best fund for beginners</div></div>
+            </div>
+            <div class="quick-card" onclick="usePrompt('How many mutual funds should a client have in their SIP portfolio? What is over-diversification and how to optimize?')">
+                <div class="qc-icon">📦</div><div><div class="qc-label">Portfolio Size</div><div class="qc-desc">How many funds is ideal?</div></div>
+            </div>
+            <div class="quick-card" onclick="usePrompt('Client wants to pause SIP due to financial difficulty. Should they pause, stop, or reduce? What are the implications?')">
+                <div class="qc-icon">⏸️</div><div><div class="qc-label">Pause SIP?</div><div class="qc-desc">Pause vs stop vs reduce</div></div>
+            </div>
+            <div class="quick-card" onclick="usePrompt('Client has 3 SIPs in same category — Large Cap overlap. How to explain and restructure without disturbing existing investments?')">
+                <div class="qc-icon">🔀</div><div><div class="qc-label">Overlap Fix</div><div class="qc-desc">Restructure overlapping SIPs</div></div>
+            </div>
+        </div>
+
+        <!-- Market Tab -->
+        <div class="tab-panel" id="tab-market">
+            <div class="quick-card" onclick="usePrompt('Current market situation — is it a good time to invest lumpsum or start SIP? What does the data say?')">
+                <div class="qc-icon">🌡️</div><div><div class="qc-label">Market Timing</div><div class="qc-desc">Lumpsum or SIP now?</div></div>
+            </div>
+            <div class="quick-card" onclick="usePrompt('How does RBI repo rate change affect debt mutual funds and bond prices? What should clients do?')">
+                <div class="qc-icon">🏛️</div><div><div class="qc-label">RBI Rate Impact</div><div class="qc-desc">Effect on debt MF & bonds</div></div>
+            </div>
+            <div class="quick-card" onclick="usePrompt('Nifty is at all time high. What sectors are currently undervalued and where should clients invest for next 2-3 years?')">
+                <div class="qc-icon">🔭</div><div><div class="qc-label">Sector Outlook</div><div class="qc-desc">Undervalued sectors now</div></div>
+            </div>
+            <div class="quick-card" onclick="usePrompt('What is the current inflation rate in India and how does it affect investment decisions and real returns?')">
+                <div class="qc-icon">📊</div><div><div class="qc-label">Inflation Impact</div><div class="qc-desc">Real returns vs inflation</div></div>
+            </div>
+            <div class="quick-card" onclick="usePrompt('India vs US market — should clients have international fund exposure? What % allocation makes sense?')">
+                <div class="qc-icon">🌍</div><div><div class="qc-label">International Funds</div><div class="qc-desc">India vs US allocation</div></div>
+            </div>
+            <div class="quick-card" onclick="usePrompt('What is the current FD rate vs best liquid fund return? When should client choose liquid fund over FD?')">
+                <div class="qc-icon">💧</div><div><div class="qc-label">FD vs Liquid Fund</div><div class="qc-desc">Current rates comparison</div></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- INPUT -->
+    <div class="input-card">
+        <div class="input-card-title">💬 Ask anything</div>
+        <div class="input-wrap">
+            <textarea class="msg-input" id="msgInput"
+                placeholder="Ask about client strategy, fund comparison, tax planning... (Enter to send)"
+                rows="2"></textarea>
+            <button class="btn-send" id="sendBtn" onclick="sendMessage()">🧠 Ask AI</button>
+        </div>
+        <div class="input-hint">💡 Client context above gets auto-included in every question for personalized advice.</div>
+    </div>
+
+    <!-- ERROR -->
+    <div class="error-card" id="errorCard">❌ <span id="errorMsg"></span></div>
+
+    <!-- MAIN LAYOUT -->
+    <div class="main-layout" id="mainLayout">
+        <div class="chat-section" id="chatSection" style="display:none;">
+            <div class="chat-header">
+                <div class="chat-title">💬 Conversation</div>
+                <div class="chat-actions">
+                    <button class="btn-sm" onclick="exportChat()">💾 Export</button>
+                    <button class="btn-sm danger" onclick="clearChat()">🗑 Clear</button>
+                </div>
+            </div>
+            <div class="chat-messages" id="chatMessages"></div>
+        </div>
+        <div class="pins-panel" id="pinsPanel" style="display:none;">
+            <div class="pins-header">
+                <div class="pins-title">📌 Pinned</div>
+                <button class="btn-sm danger" onclick="clearAllPins()">Clear All</button>
+            </div>
+            <div id="pinsList"><div class="pins-empty">Pin important answers for quick reference during meetings</div></div>
+        </div>
+    </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+let chatHistory=[],pins=[],isLoading=false,msgCounter=0;
+function updateContext(){const n=document.getElementById('ctxName').value.trim(),a=document.getElementById('ctxAge').value.trim(),r=document.getElementById('ctxRisk').value,p=document.getElementById('ctxPortfolio').value.trim();document.getElementById('ctxBadge').classList.toggle('show',!!(n||a||r||p));}
+function clearContext(){['ctxName','ctxAge','ctxPortfolio'].forEach(id=>document.getElementById(id).value='');document.getElementById('ctxRisk').value='';document.getElementById('ctxBadge').classList.remove('show');}
+function buildContextPrefix(){const n=document.getElementById('ctxName').value.trim(),a=document.getElementById('ctxAge').value.trim(),r=document.getElementById('ctxRisk').value,p=document.getElementById('ctxPortfolio').value.trim();if(!n&&!a&&!r&&!p)return'';let ctx='\n[CLIENT CONTEXT: ';if(n)ctx+='Name: '+n+'. ';if(a)ctx+='Age: '+a+'. ';if(r)ctx+='Risk Profile: '+r+'. ';if(p)ctx+='Portfolio: '+p+'. ';return ctx+'] Please tailor your advice to this specific client.\n';}
+function switchTab(tab,btn){document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));btn.classList.add('active');document.getElementById('tab-'+tab).classList.add('active');}
+function usePrompt(text){document.getElementById('msgInput').value=text;document.getElementById('msgInput').focus();document.getElementById('msgInput').scrollIntoView({behavior:'smooth',block:'center'});}
+function getTime(){return new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});}
+function escHtml(t){return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500);}
+function addMessage(role,content){const section=document.getElementById('chatSection'),container=document.getElementById('chatMessages');section.style.display='block';const id='msg-'+(++msgCounter),msg=document.createElement('div');msg.className='msg '+role;msg.id=id;let footer='<div class="msg-footer"><span class="msg-time">'+getTime()+'</span>';if(role==='ai'){footer+='<span class="msg-action" onclick="copyMsg(\''+id+'\')">📋 Copy</span>';footer+='<span class="msg-action" onclick="pinMsg(\''+id+'\')" id="pin-btn-'+id+'">📌 Pin</span>';footer+='<span class="msg-action" onclick="shareWhatsApp(\''+id+'\')">📱 Share</span>';}footer+='</div>';msg.innerHTML='<div class="msg-avatar">'+(role==='ai'?'🧠':'👤')+'</div><div><div class="msg-bubble" id="bubble-'+id+'">'+content+'</div>'+footer+'</div>';container.appendChild(msg);container.scrollTop=container.scrollHeight;}
+function addTyping(){const c=document.getElementById('chatMessages'),el=document.createElement('div');el.className='msg ai';el.id='typing';el.innerHTML='<div class="msg-avatar">🧠</div><div class="typing-dots"><span></span><span></span><span></span></div>';c.appendChild(el);c.scrollTop=c.scrollHeight;}
+function removeTyping(){const el=document.getElementById('typing');if(el)el.remove();}
+function copyMsg(id){const b=document.getElementById('bubble-'+id),text=b?b.innerText:'';navigator.clipboard.writeText(text).then(()=>showToast('✅ Copied!')).catch(()=>{const ta=document.createElement('textarea');ta.value=text;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);showToast('✅ Copied!');});}
+function pinMsg(id){const b=document.getElementById('bubble-'+id),text=b?b.innerText.substring(0,300):'',btn=document.getElementById('pin-btn-'+id);pins.push({id:Date.now(),text,msgId:id});if(btn){btn.textContent='📌 Pinned';btn.classList.add('pinned');}renderPins();showToast('📌 Pinned!');}
+function renderPins(){const panel=document.getElementById('pinsPanel'),list=document.getElementById('pinsList'),layout=document.getElementById('mainLayout');if(!pins.length){panel.style.display='none';layout.classList.remove('has-pins');list.innerHTML='<div class="pins-empty">Pin important answers for quick reference during meetings</div>';return;}panel.style.display='block';layout.classList.add('has-pins');list.innerHTML=pins.map((p,i)=>'<div class="pin-item"><div class="pin-item-header"><span class="pin-label">📌 Note '+(i+1)+'</span><span class="pin-remove" onclick="removePin('+p.id+')">✕</span></div><div class="pin-content">'+escHtml(p.text)+(p.text.length>=300?'...':'')+'</div><div class="pin-copy" onclick="navigator.clipboard.writeText(\''+p.text.replace(/'/g,"\\'")+'\'). then(()=>showToast(\'✅ Copied!\'))">📋 Copy note</div></div>').join('');}
+function removePin(id){pins=pins.filter(p=>p.id!==id);renderPins();}
+function clearAllPins(){pins=[];renderPins();}
+function shareWhatsApp(id){const b=document.getElementById('bubble-'+id),text=b?b.innerText:'',name=document.getElementById('ctxName').value.trim(),header=name?'*M3 Advisory — '+name+'*\n\n':'*M3 AI Wealth Assistant*\n\n',msg=header+text+'\n\n_M3 Portfolio Investment Analysis_';window.open('https://wa.me/?text='+encodeURIComponent(msg),'_blank');}
+function exportChat(){const msgs=document.querySelectorAll('.msg');let txt='M3 AI Wealth Assistant — Chat Export\n'+new Date().toLocaleString('en-IN')+'\n',name=document.getElementById('ctxName').value.trim();if(name)txt+='Client: '+name+'\n';txt+='='.repeat(50)+'\n\n';msgs.forEach(function(msg){const role=msg.classList.contains('user')?'ADVISOR':'AI',bubble=msg.querySelector('.msg-bubble');if(bubble)txt+='['+role+']\n'+bubble.innerText+'\n\n';});const blob=new Blob([txt],{type:'text/plain'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='M3_Chat_'+(name||'Session')+'_'+new Date().toISOString().slice(0,10)+'.txt';a.click();showToast('💾 Chat exported!');}
+function clearChat(){if(!confirm('Clear conversation?'))return;chatHistory=[];msgCounter=0;document.getElementById('chatMessages').innerHTML='';document.getElementById('chatSection').style.display='none';}
+function showError(msg){document.getElementById('errorMsg').textContent=msg;document.getElementById('errorCard').classList.add('show');setTimeout(()=>document.getElementById('errorCard').classList.remove('show'),5000);}
+async function sendMessage(){if(isLoading)return;const input=document.getElementById('msgInput'),message=input.value.trim();if(!message){input.focus();return;}const ctxPrefix=buildContextPrefix(),fullMessage=ctxPrefix+message;input.value='';input.style.height='auto';isLoading=true;document.getElementById('sendBtn').disabled=true;document.getElementById('errorCard').classList.remove('show');addMessage('user',escHtml(message).replace(/\n/g,'<br>'));chatHistory.push({role:'user',content:fullMessage});addTyping();try{const res=await fetch('/ai/wealth-assistant',{method:'POST',headers:{'Content-Type':'application/json','X-CSRFToken':'{{ csrf_token() }}'},body:JSON.stringify({message:fullMessage,history:chatHistory.slice(-8)})});removeTyping();const data=await res.json();if(!res.ok||data.error){showError(data.error||'Something went wrong.');addMessage('ai','<span style="color:#f87171">⚠️ '+(data.error||'Error')+'</span>');}else{const reply=data.result||data.response||'';addMessage('ai',reply);chatHistory.push({role:'assistant',content:reply});if(chatHistory.length>20)chatHistory=chatHistory.slice(-20);}}catch(e){removeTyping();showError('Connection error. Please try again.');}isLoading=false;document.getElementById('sendBtn').disabled=false;input.focus();}
+document.getElementById('msgInput').addEventListener('input',function(){this.style.height='auto';this.style.height=Math.min(this.scrollHeight,120)+'px';});
+document.getElementById('msgInput').addEventListener('keydown',function(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMessage();}});
+</script>
+</body>
+</html>

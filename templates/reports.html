@@ -1,0 +1,1230 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Reports | M3 Portfolio Investment Analysis</title>
+    <link rel="stylesheet" href="/static/design-tokens.css">
+    <script>
+      (function () {
+        try {
+          var saved = localStorage.getItem('m3-theme');
+          var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+          var theme = saved || (prefersDark ? 'dark' : 'light');
+          document.documentElement.setAttribute('data-theme', theme);
+          if (theme === 'dark') {
+            document.addEventListener('DOMContentLoaded', function () { document.body.classList.add('dark-mode'); });
+          }
+        } catch (e) {
+          document.documentElement.setAttribute('data-theme', 'light');
+        }
+      })();
+    </script>
+    <link rel="stylesheet" href="/static/style.css">
+    <!-- jsPDF for PDF export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+
+    <style>
+        body {
+            min-height: 100vh;
+            padding: 20px;
+            background: linear-gradient(145deg, #f5edcc 0%, #fdf9ee 40%, #fffdf5 70%, #f5edcc 100%);
+            color: #141124;
+        }
+        html[data-theme="dark"] body,
+        body.dark-mode {
+            background: linear-gradient(145deg, #07060f 0%, #0f0c29 45%, #1a1550 80%, #07060f 100%) !important;
+            color: #f4eed2;
+        }
+        .container { max-width: 1200px; margin: 0 auto; }
+
+        .page-header {
+            background: var(--cream); padding: 22px 28px; border-radius: 16px;
+            margin-bottom: 20px; box-shadow: var(--card-shd); border: var(--card-brd);
+            border-left: 5px solid var(--gold);
+            display: flex; justify-content: space-between; align-items: center; gap:16px; flex-wrap:wrap;
+        }
+        .page-header h1 { margin: 0; font-size: 1.65em; color: var(--navy); font-family: 'Cormorant Garamond', serif; }
+        .page-header p { margin: 4px 0 0; color: var(--muted); font-size:0.87em; }
+        .header-actions { display: flex; gap: 10px; flex-shrink: 0; }
+
+        .btn-back {
+            display: inline-block; padding: 9px 18px;
+            background: transparent; color: var(--navy);
+            border: 1.5px solid rgba(232,200,74,0.42);
+            text-decoration: none; border-radius: 50px; font-weight: 600; font-size:0.87em;
+            transition: all 0.2s;
+        }
+        .btn-back:hover { background: var(--gold-xl); }
+        .btn-new {
+            display: inline-block; padding: 10px 20px;
+            background: linear-gradient(135deg, #9C27B0 0%, #7B1FA2 100%);
+            color: white; text-decoration: none; border-radius: 8px; font-weight: 600;
+        }
+
+        /* Search & Filter Bar */
+        .filter-bar {
+            background: #fdf9ee; padding: 20px 25px; border-radius: 12px;
+            margin-bottom: 25px; box-shadow: 0 8px 28px rgba(15,12,41,0.14), 0 2px 8px rgba(15,12,41,0.07);
+        }
+        .filter-bar form {
+            display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap;
+        }
+        .filter-group { display: flex; flex-direction: column; gap: 5px; flex: 1; min-width: 160px; }
+        .filter-group label { font-size: 0.8em; font-weight: 700; color: #3d3050; text-transform: uppercase; letter-spacing: 0.5px; }
+        .filter-group input {
+            padding: 10px 12px; border: 1.5px solid #d4a84340; border-radius: 8px;
+            font-size: 0.95em; outline: none; transition: border-color 0.2s;
+        }
+        .filter-group input:focus { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(232,200,74,0.15); }
+        .btn-search {
+            padding: 10px 22px; background: linear-gradient(135deg, #e8c84a 0%, #d4a843 100%); color: #0f0c29; font-weight: 700;
+            border: none; border-radius: 8px; font-weight: 600; cursor: pointer;
+            white-space: nowrap;
+        }
+        .btn-clear {
+            padding: 10px 16px; background: #f5f5f5; color: #3d3050;
+            border: none; border-radius: 8px; font-weight: 600; cursor: pointer;
+            text-decoration: none; white-space: nowrap;
+        }
+        .filter-results {
+            margin-top: 12px; font-size: 0.9em; color: #6b6080;
+        }
+        .filter-results strong { color: var(--navy); font-weight:700; }
+        .search-highlight { background: #fde68a; color: #92400e; border-radius: 3px; padding: 0 2px; font-weight: 700; }
+
+        /* Stats bar */
+        .stats-bar {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+            gap: 15px; margin-bottom: 25px;
+        }
+        .stat-card {
+            background: #fdf9ee; padding: 20px 18px 16px; border-radius: 16px;
+            box-shadow: 0 8px 28px rgba(15,12,41,0.14), 0 2px 8px rgba(15,12,41,0.07);
+            border-top: 4px solid #9C27B0;
+            display: flex; flex-direction: column; align-items: center;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .stat-card:hover { transform: translateY(-3px); box-shadow: 0 10px 30px rgba(0,0,0,0.15); }
+        .stat-card:nth-child(1) { border-top-color: var(--gold); }
+        .stat-card:nth-child(2) { border-top-color: var(--navy-m); }
+        .stat-card:nth-child(3) { border-top-color: #059669; }
+        .stat-card:nth-child(4) { border-top-color: var(--gold-d); }
+        .stat-icon { font-size: 1.6em; margin-bottom: 6px; }
+        .stat-card .stat-value { font-size: 1.9em; font-weight: 700; color: var(--navy); line-height: 1; font-family: 'Cormorant Garamond', serif; }
+        .stat-card:nth-child(1) .stat-value { color: var(--navy); font-family: 'Cormorant Garamond', serif; }
+        .stat-card:nth-child(2) .stat-value { color: var(--navy-m); font-family: 'Cormorant Garamond', serif; }
+        .stat-card:nth-child(3) .stat-value { color: #059669; font-family: 'Cormorant Garamond', serif; }
+        .stat-card:nth-child(4) .stat-value { color: var(--gold-d); font-family: 'Cormorant Garamond', serif; }
+        .stat-card .stat-label { font-size: 0.78em; color: #6b6080; margin-top: 5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
+
+        /* Report cards */
+        .reports-grid { display: grid; gap: 20px; }
+        .report-card {
+            background: #fdf9ee; border-radius: 16px;
+            box-shadow: 0 8px 28px rgba(15,12,41,0.14), 0 2px 8px rgba(15,12,41,0.07); overflow: hidden;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .report-card:hover { transform: translateY(-3px); box-shadow: 0 10px 30px rgba(0,0,0,0.15); }
+
+        .report-header {
+            background: linear-gradient(135deg, #fdf3cc 0%, #f5edcc 100%);
+            color: #1a0f3c; padding: 18px 25px;
+            border-bottom: 1px solid rgba(232,200,74,0.35);
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        html[data-theme="dark"] .report-header,
+        body.dark-mode .report-header {
+            background: linear-gradient(135deg, #9C27B0 0%, #7B1FA2 100%);
+            color: #0f0c29;
+            border-bottom: none;
+        }
+        .report-header .client-name { font-size: 1.2em; font-weight: 700; }
+        .report-header .report-date { font-size: 0.85em; opacity: 0.85; margin-top: 3px; }
+        .header-right { display: flex; align-items: center; gap: 10px; }
+
+        .rating-badge {
+            padding: 5px 13px; border-radius: 20px; font-weight: 700; font-size: 0.88em;
+        }
+        .rating-Excellent { background: linear-gradient(135deg,#059669,#047857); color: white; }
+        .rating-Good      { background: linear-gradient(135deg,#2563EB,#1d4ed8); color: white; }
+        .rating-Moderate  { background: linear-gradient(135deg,#D97706,#b45309); color: white; }
+        .rating-Poor      { background: linear-gradient(135deg,#DC2626,#b91c1c); color: white; }
+
+        /* Action buttons in header */
+        .btn-pdf {
+            padding: 6px 13px; background: #fdf3cc; color: #0f0c29;
+            border: 1px solid rgba(232,200,74,0.35); border-radius: 6px;
+            font-size: 0.82em; font-weight: 600; cursor: pointer; transition: all 0.2s;
+        }
+        .btn-pdf:hover { background: #e8c84a; color: #0f0c29; font-weight: 700; }
+
+        .btn-edit {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 6px 14px; border-radius: 20px; font-size: 0.8em; font-weight: 600;
+    background: #e8f4fd; color: #1565C0; border: 1.5px solid #90caf9;
+    text-decoration: none; transition: all 0.2s; cursor: pointer;
+}
+.btn-edit:hover { background: #e8c84a; color: #0f0c29; font-weight: 700; }
+.btn-delete {
+            padding: 6px 13px; background: #fde4e1; color: #b91c1c;
+            border: 1px solid #f5b7b1; border-radius: 6px;
+            font-size: 0.82em; font-weight: 600; cursor: pointer; transition: background 0.2s;
+        }
+        .btn-delete:hover { background: #f5b7b1; color: #7f1d1d; }
+        html[data-theme="dark"] .btn-delete,
+        body.dark-mode .btn-delete {
+            background: rgba(244,67,54,0.2); color: white;
+            border-color: rgba(255,255,255,0.3);
+        }
+        html[data-theme="dark"] .btn-delete:hover,
+        body.dark-mode .btn-delete:hover { background: rgba(244,67,54,0.5); }
+
+        .report-body { padding: 25px; }
+
+        .portfolio-grid {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;
+        }
+        .portfolio-box { border-radius: 10px; padding: 15px; }
+        .portfolio-box.current { background: #f3e5f5; border-left: 4px solid #9C27B0; }
+        .portfolio-box.revised { background: #fdf9ee; border-left: 4px solid #4CAF50; }
+        .portfolio-box .box-title {
+            font-size: 0.78em; font-weight: 700; text-transform: uppercase;
+            letter-spacing: 0.5px; color: #3d3050; margin-bottom: 8px;
+        }
+        .portfolio-box .box-amount { font-size: 1.3em; font-weight: 700; color: #333; }
+        .portfolio-box .box-return { font-size: 0.88em; color: #4a3f5c; margin-top: 3px; }
+
+        .fv-section { margin-top: 15px; }
+        .fv-title {
+            font-size: 0.82em; font-weight: 700; color: #3d3050; margin-bottom: 10px;
+            text-transform: uppercase; letter-spacing: 0.5px;
+        }
+        .fv-table { width: 100%; border-collapse: collapse; font-size: 0.9em; }
+        .fv-table th {
+            background: #f5f5f5; padding: 8px 10px; text-align: left;
+            color: #4a3f5c; font-weight: 600;
+        }
+        .fv-table td { padding: 8px 10px; border-bottom: 1px solid #f0f0f0; }
+        .fv-table .gain { color: #2e7d32; font-weight: 600; }
+        .fv-table .loss { color: #c62828; font-weight: 600; }
+
+        .report-footer {
+            background: #fdf6e3; padding: 10px 25px; border-top: 1px solid rgba(232,200,74,0.15);
+            display: flex; justify-content: space-between; align-items: center;
+            font-size: 0.82em; color: #6b6080;
+        }
+        .report-number { font-weight: 600; color: #9C27B0; }
+
+        /* Delete confirmation modal */
+        .modal-overlay {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center;
+        }
+        .modal-overlay.active { display: flex; }
+        .modal {
+            background: #fdf9ee; border-radius: 16px; padding: 35px; max-width: 420px;
+            width: 90%; text-align: center; box-shadow: 0 20px 60px rgba(15,12,41,0.35);
+        }
+        .modal .modal-icon { font-size: 3em; margin-bottom: 15px; }
+        .modal h3 { margin: 0 0 10px; font-size: 1.3em; }
+        .modal p { color: #4a3f5c; margin-bottom: 25px; }
+        .modal-actions { display: flex; gap: 10px; justify-content: center; }
+        .btn-confirm-delete {
+            padding: 10px 25px; background: #dc2626; color: white;
+            border: none; border-radius: 8px; font-weight: 600; cursor: pointer;
+        }
+        .btn-cancel {
+            padding: 10px 25px; background: #f5f5f5; color: #3d3050;
+            border: none; border-radius: 8px; font-weight: 600; cursor: pointer;
+        }
+
+        /* Toast notification */
+        .toast {
+            position: fixed; bottom: 25px; right: 25px; padding: 14px 20px;
+            border-radius: 10px; color: #0f0c29; font-weight: 700;
+            z-index: 2000; opacity: 0; transition: opacity 0.3s;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+        }
+        .toast.success { background: #4CAF50; }
+        .toast.error { background: #F44336; }
+        .toast.show { opacity: 1; }
+
+        /* Empty state */
+        .empty-state {
+            background: #fdf9ee; border-radius: 20px; padding: 80px 40px;
+            text-align: center; box-shadow: 0 8px 28px rgba(15,12,41,0.14), 0 2px 8px rgba(15,12,41,0.07);
+        }
+        .empty-state .icon { font-size: 4em; margin-bottom: 20px; }
+        .empty-state h2 { color: #333; margin-bottom: 10px; }
+        .empty-state p { color: #6b6080; margin-bottom: 30px; }
+
+        .no-results {
+            background: white; border-radius: 12px; padding: 40px;
+            text-align: center; box-shadow: 0 8px 28px rgba(15,12,41,0.14), 0 2px 8px rgba(15,12,41,0.07);
+        }
+        .no-results p { color: #6b6080; margin: 0; }
+
+        .liq-chip { padding:3px 10px; border-radius:20px; font-size:0.75em; font-weight:700; }
+        .liq-high { background:#d1fae5; color:#065f46; }
+        .liq-med  { background:#fef3c7; color:#92400e; }
+        .liq-low  { background:#fee2e2; color:#991b1b; }
+        body.dark-mode .liq-high { background:rgba(5,150,105,0.15) !important; color:#6ee7b7 !important; }
+        body.dark-mode .liq-med  { background:rgba(234,179,8,0.15) !important; color:#fcd34d !important; }
+        body.dark-mode .liq-low  { background:rgba(239,68,68,0.15) !important; color:#fca5a5 !important; }
+        @media (max-width: 768px) {
+            .portfolio-grid { grid-template-columns: 1fr; }
+            .page-header { flex-direction: column; gap: 15px; align-items: flex-start; }
+            .filter-bar form { flex-direction: column; }
+        }
+    
+/* ══ REPORTS DARK MODE ══ */
+body.dark-mode .page-header {
+    background: #0a0818 !important;
+    border: 1px solid #1a1550 !important;
+    box-shadow: 0 8px 28px rgba(15,12,41,0.14), 0 2px 8px rgba(15,12,41,0.07);
+}
+body.dark-mode .page-header h1 { color: #a5b4fc !important; }
+body.dark-mode .page-header p { color: #64748b !important; }
+body.dark-mode .btn-back {
+    background: #07060f !important;
+    color: #94a3b8 !important;
+    border: 1px solid #252d4a !important;
+}
+body.dark-mode .btn-back:hover { background: #252d4a !important; color: #e2e8f0 !important; }
+body.dark-mode .filter-bar {
+    background: #0a0818 !important;
+    border: 1px solid #1a1550 !important;
+    box-shadow: 0 8px 28px rgba(15,12,41,0.14), 0 2px 8px rgba(15,12,41,0.07);
+}
+body.dark-mode .filter-group label { color: #64748b !important; }
+body.dark-mode .filter-group input {
+    background: #07060f !important;
+    border: 1.5px solid #252d4a !important;
+    color: #e2e8f0 !important;
+}
+body.dark-mode .filter-group input:focus { border-color: #e8c84a !important; background: #07060f !important; outline: none !important; }
+body.dark-mode .filter-group input::placeholder { color: #2e3a55 !important; }
+body.dark-mode .btn-clear {
+    background: #07060f !important;
+    color: #94a3b8 !important;
+    border: 1px solid #252d4a !important;
+}
+body.dark-mode .btn-clear:hover { background: #252d4a !important; }
+body.dark-mode .filter-results { color: #64748b !important; }
+body.dark-mode .stat-card {
+    background: #0a0818 !important;
+    border: 1px solid rgba(232,200,74,0.12) !important;
+    border-top: 1px solid rgba(232,200,74,0.12) !important;
+    box-shadow: 0 8px 28px rgba(15,12,41,0.14), 0 2px 8px rgba(15,12,41,0.07);
+}
+body.dark-mode .stat-card:nth-child(1),
+body.dark-mode .stat-card:nth-child(2),
+body.dark-mode .stat-card:nth-child(3),
+body.dark-mode .stat-card:nth-child(4) { border-top-color: rgba(232,200,74,0.12) !important; }
+body.dark-mode .stat-card .stat-value { color: #f5d96b !important; }
+body.dark-mode .stat-card:nth-child(1) .stat-value { color: #e8c84a !important; }
+body.dark-mode .stat-card:nth-child(2) .stat-value { color: #a5b4fc !important; }
+body.dark-mode .stat-card:nth-child(3) .stat-value { color: #6ee7b7 !important; }
+body.dark-mode .stat-card:nth-child(4) .stat-value { color: #fcd34d !important; }
+body.dark-mode .stat-card .stat-label { color: #cbd5e1 !important; }
+body.dark-mode .search-highlight { background: rgba(252,211,77,0.3) !important; color: #fcd34d !important; }
+body.dark-mode .report-card {
+    background: #0a0818 !important;
+    border: 1px solid rgba(232,200,74,0.12) !important;
+    border-left: 1px solid rgba(232,200,74,0.12) !important;
+    box-shadow: 0 8px 28px rgba(15,12,41,0.14), 0 2px 8px rgba(15,12,41,0.07);
+}
+body.dark-mode .report-card:hover { border-color: #e8c84a !important; box-shadow: 0 8px 32px rgba(232,200,74,0.2) !important; }
+body.dark-mode .report-body { background: #0a0818 !important; }
+body.dark-mode .portfolio-box.current {
+    background: rgba(232,200,74,0.05) !important;
+    border: 1px solid rgba(232,200,74,0.15) !important;
+    border-left: 1px solid rgba(232,200,74,0.15) !important;
+}
+body.dark-mode .portfolio-box.revised {
+    background: rgba(52,211,153,0.05) !important;
+    border: 1px solid rgba(52,211,153,0.18) !important;
+    border-left: 1px solid rgba(52,211,153,0.18) !important;
+}
+body.dark-mode .portfolio-box .box-title { color: #cbd5e1 !important; }
+body.dark-mode .btn-pdf { background: #1a1550 !important; color: #f5d96b !important; border-color: rgba(232,200,74,0.35) !important; }
+body.dark-mode .btn-pdf:hover { background: #e8c84a !important; color: #0f0c29 !important; }
+body.dark-mode .btn-edit { color: #0f0c29 !important; }
+body.dark-mode .portfolio-box .box-amount { color: #e2e8f0 !important; }
+body.dark-mode .portfolio-box .box-return { color: #94a3b8 !important; }
+body.dark-mode .fv-title { color: #64748b !important; }
+body.dark-mode .fv-table th { background: #07060f !important; color: #64748b !important; }
+body.dark-mode .fv-table td { border-bottom-color: #07060f !important; color: #cbd5e1 !important; }
+body.dark-mode .fv-table tr:hover td { background: #0f0c29 !important; }
+body.dark-mode .report-footer {
+    background: #07060f !important;
+    border-top-color: #1a1550 !important;
+    color: #64748b !important;
+}
+body.dark-mode ::-webkit-scrollbar { width: 5px; height: 5px; }
+body.dark-mode ::-webkit-scrollbar-track { background: #07060f; }
+body.dark-mode ::-webkit-scrollbar-thumb { background: #252d4a; border-radius: 4px; }
+body.dark-mode ::-webkit-scrollbar-thumb:hover { background: #e8c84a; }
+
+</style>
+</head>
+
+<body>
+    <script></script>
+    <script>
+        // Currency setting — localStorage is the single source of truth; fall back to server session
+        var CURRENCY_FORMAT = (function () {
+            try {
+                var v = localStorage.getItem('m3-currency');
+                if (v === 'indian' || v === 'western') return v;
+            } catch (e) {}
+            return "{{ session.get('currency_format', 'indian') }}";
+        })();
+        var CURRENCY_SYMBOL = CURRENCY_FORMAT === 'western' ? '$' : 'Rs.';
+        window.addEventListener('m3-currency-change', function (e) {
+            CURRENCY_FORMAT = (e && e.detail) || CURRENCY_FORMAT;
+            CURRENCY_SYMBOL = CURRENCY_FORMAT === 'western' ? '$' : 'Rs.';
+            var sym = CURRENCY_FORMAT === 'western' ? '$' : '\u20B9';
+            document.querySelectorAll('.m3-cursym').forEach(function (n) { n.textContent = sym; });
+        });
+        function formatCurrency(num) {
+            num = Math.round(num);
+            if (CURRENCY_FORMAT === 'western') {
+                return '$' + num.toLocaleString('en-US');
+            }
+            // Indian format
+            var s = num.toString();
+            if (s.length <= 3) return 'Rs.' + s;
+            var last3 = s.slice(-3), rest = s.slice(0, -3), result = '';
+            while (rest.length > 2) { result = ',' + rest.slice(-2) + result; rest = rest.slice(0, -2); }
+            return 'Rs.' + rest + result + ',' + last3;
+        }
+    </script>
+
+<div class="container">
+
+    <!-- Page Header -->
+    <div class="page-header">
+        <div>
+            <h1>📊 My Portfolio Reports</h1>
+            <p>History of all your portfolio analyses</p>
+        </div>
+        <div class="header-actions">
+            <a href="/dashboard" class="btn-back">← Dashboard</a>
+            <a href="/portfolio" class="btn-new">+ New Analysis</a>
+        </div>
+    </div>
+
+    {% if total_count > 0 %}
+
+    <!-- Search & Filter Bar -->
+    <div class="filter-bar">
+        <form method="GET" action="/reports">
+            <div class="filter-group">
+                <label>🔍 Search by Client Name</label>
+                <input type="text" name="search" placeholder="e.g. Rahul Sharma"
+                       value="{{ search }}">
+            </div>
+            <div class="filter-group">
+                <label>📅 From Date</label>
+                <input type="date" name="date_from" value="{{ date_from }}">
+            </div>
+            <div class="filter-group">
+                <label>📅 To Date</label>
+                <input type="date" name="date_to" value="{{ date_to }}">
+            </div>
+            <button type="submit" class="btn-search">Search</button>
+            {% if search or date_from or date_to %}
+            <a href="/reports" class="btn-clear">✕ Clear</a>
+            {% endif %}
+        </form>
+
+        {% if search or date_from or date_to %}
+        <div class="filter-results">
+            Showing <strong>{{ analyses | length }}</strong> of <strong>{{ total_count }}</strong> reports
+            {% if search %} matching "<strong>{{ search }}</strong>"{% endif %}
+            {% if date_from %} from <strong>{{ date_from }}</strong>{% endif %}
+            {% if date_to %} to <strong>{{ date_to }}</strong>{% endif %}
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Stats Bar (always from total, not filtered) -->
+    <div class="stats-bar">
+        <div class="stat-card">
+            <div class="stat-icon">📊</div>
+            <div class="stat-value">{{ total_count }}</div>
+            <div class="stat-label">Total Analyses</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon">✅</div>
+            <div class="stat-value">
+                {% set good_count = analyses | selectattr('overall_rating', 'in', ['Good','Excellent']) | list | length %}
+                {{ good_count }}
+            </div>
+            <div class="stat-label">Good / Excellent</div>
+        </div>
+        {% if analyses %}
+        <div class="stat-card">
+            <div class="stat-icon">💰</div>
+            <div class="stat-value">
+                {%- set rt = analyses[0].revised_total -%}
+                {%- set is_western = session.get('currency_format','indian') == 'western' -%}
+                {%- set sym = '$' if is_western else '\u20B9' -%}
+                {%- if is_western -%}
+                    {%- if rt >= 1000000000 -%}
+                        {{ sym }}{{ "%.1f" | format(rt / 1000000000) }}B
+                    {%- elif rt >= 1000000 -%}
+                        {{ sym }}{{ "%.1f" | format(rt / 1000000) }}M
+                    {%- elif rt >= 1000 -%}
+                        {{ sym }}{{ "%.1f" | format(rt / 1000) }}K
+                    {%- else -%}
+                        {{ sym }}{{ rt | int }}
+                    {%- endif -%}
+                {%- else -%}
+                    {%- if rt >= 10000000 -%}
+                        {{ sym }}{{ "%.1f" | format(rt / 10000000) }}Cr
+                    {%- elif rt >= 100000 -%}
+                        {{ sym }}{{ "%.1f" | format(rt / 100000) }}L
+                    {%- else -%}
+                        {{ sym }}{{ rt | int }}
+                    {%- endif -%}
+                {%- endif -%}
+            </div>
+            <div class="stat-label">Latest Portfolio</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon">📈</div>
+            <div class="stat-value">{{ "%.1f" | format(analyses[0].revised_return) }}%</div>
+            <div class="stat-label">Latest Return</div>
+        </div>
+        {% endif %}
+    </div>
+
+    {% endif %}
+
+    {% if analyses %}
+
+    <!-- Report Cards -->
+    <div class="reports-grid" id="reportsGrid">
+        {% for a in analyses %}
+        <div class="report-card" id="report-{{ a.id }}"
+             data-id="{{ a.id }}"
+             data-client="{{ a.client_name }}"
+             data-date="{{ (a.created_at|string)[:10] }}"
+             data-rating="{{ a.overall_rating or 'Moderate' }}"
+             data-current-total="{{ a.current_total }}"
+             data-current-return="{{ a.current_return }}"
+             data-revised-total="{{ a.revised_total }}"
+             data-revised-return="{{ a.revised_return }}"
+             data-fv5c="{{ a.fv_5yr_current }}" data-fv5r="{{ a.fv_5yr_revised }}"
+             data-fv10c="{{ a.fv_10yr_current }}" data-fv10r="{{ a.fv_10yr_revised }}"
+             data-fv20c="{{ a.fv_20yr_current }}" data-fv20r="{{ a.fv_20yr_revised }}"
+             data-r1-equity="{{ a.r1_equity_pct or 0 }}" data-r1-debt="{{ a.r1_debt_pct or 0 }}" data-r1-real="{{ a.r1_real_pct or 0 }}" data-r1-alternate="{{ a.r1_alternate_pct or 0 }}" data-r1-liq="{{ a.r1_liq_score or 0 }}"
+             data-r2-equity="{{ a.r2_equity_pct or 0 }}" data-r2-debt="{{ a.r2_debt_pct or 0 }}" data-r2-real="{{ a.r2_real_pct or 0 }}" data-r2-alternate="{{ a.r2_alternate_pct or 0 }}" data-r2-liq="{{ a.r2_liq_score or 0 }}">
+
+            <div class="report-header">
+                <div>
+                    <div class="client-name">👤 {{ a.client_name }}</div>
+                    <div class="report-date">📅 {{ (a.created_at|string)[:16] | replace('T', ' ') }}</div>
+                </div>
+                <div class="header-right">
+                    <span class="rating-badge rating-{{ a.overall_rating or 'Moderate' }}">
+                        {{ a.overall_rating or 'Moderate' }}
+                    </span>
+                    <a href="{{ url_for('present_analysis', analysis_id=a.id) }}" class="btn-edit" target="_blank" style="background:linear-gradient(135deg,#e8c84a,#d4a843);color:#1a0f3c;border:none;">🎤 Present</a>
+                    <a href="{{ url_for('edit_analysis', analysis_id=a.id) }}" class="btn-edit">✏️ Edit</a>
+                    <button class="btn-pdf" data-action="pdf" data-id="{{ a.id }}">⬇ PDF</button>
+                    <button class="btn-delete" data-action="delete" data-id="{{ a.id }}" data-client="{{ a.client_name }}">🗑 Delete</button>
+                </div>
+            </div>
+
+            <div class="report-body">
+                <div class="portfolio-grid">
+                    <div class="portfolio-box current">
+                        <div class="box-title">📁 Current Portfolio</div>
+                        <div class="box-amount">{{ '\u20b9' if session.get('currency_format','indian')=='indian' else '$' }}{{ (a.current_total | int) | string | indian_currency }}</div>
+                        <div class="box-return">Return: {{ "%.1f" | format(a.current_return) }}% p.a.</div>
+                    </div>
+                    <div class="portfolio-box revised">
+                        <div class="box-title">✅ Revised Portfolio</div>
+                        <div class="box-amount">{{ '\u20b9' if session.get('currency_format','indian')=='indian' else '$' }}{{ (a.revised_total | int) | string | indian_currency }}</div>
+                        <div class="box-return">Return: {{ "%.1f" | format(a.revised_return) }}% p.a.</div>
+                    </div>
+                </div>
+
+                <!-- Allocation mini bars -->
+                <div style="display:flex; gap:8px; margin-bottom:16px; flex-wrap:wrap; align-items:center;">
+                    <span style="font-size:0.75em; font-weight:700; color:#888; text-transform:uppercase; letter-spacing:0.04em;">M2 Allocation:</span>
+                    {% if a.r2_equity_pct %}
+                    <span style="background:#fdf9ee;color:#b89a2a;padding:3px 10px;border-radius:20px;font-size:0.75em;font-weight:700;">📈 Eq {{ "%.0f"|format(a.r2_equity_pct) }}%</span>
+                    {% endif %}
+                    {% if a.r2_debt_pct %}
+                    <span style="background:#dbeafe;color:#1e40af;padding:3px 10px;border-radius:20px;font-size:0.75em;font-weight:700;">🏦 Debt {{ "%.0f"|format(a.r2_debt_pct) }}%</span>
+                    {% endif %}
+                    {% if a.r2_real_pct %}
+                    <span style="background:#d1fae5;color:#065f46;padding:3px 10px;border-radius:20px;font-size:0.75em;font-weight:700;">🏘️ Real {{ "%.0f"|format(a.r2_real_pct) }}%</span>
+                    {% endif %}
+                    {% if a.r2_alternate_pct %}
+                    <span style="background:#fef3c7;color:#92400e;padding:3px 10px;border-radius:20px;font-size:0.75em;font-weight:700;">🥇 Alt {{ "%.0f"|format(a.r2_alternate_pct) }}%</span>
+                    {% endif %}
+                    {% if a.r2_liq_score is not none %}
+                    <span class="liq-chip {% if a.r2_liq_score >= 60 %}liq-high{% elif a.r2_liq_score >= 35 %}liq-med{% else %}liq-low{% endif %}">
+                    💧 Liq {{ "%.0f"|format(a.r2_liq_score) }}%</span>
+                    {% endif %}
+                </div>
+
+                <div class="fv-section">
+                    <div class="fv-title">📈 Future Value Comparison</div>
+                    <table class="fv-table">
+                        <thead>
+                            <tr>
+                                <th>Horizon</th>
+                                <th>Current Portfolio</th>
+                                <th>Revised Portfolio</th>
+                                <th>Gain</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for horizon, curr, rev in [
+                                ('5 Years',  a.fv_5yr_current,  a.fv_5yr_revised),
+                                ('10 Years', a.fv_10yr_current, a.fv_10yr_revised),
+                                ('20 Years', a.fv_20yr_current, a.fv_20yr_revised)
+                            ] %}
+                            <tr>
+                                <td>{{ horizon }}</td>
+                                <td>{{ '\u20b9' if session.get('currency_format','indian')=='indian' else '$' }}{{ (curr | int) | string | indian_currency }}</td>
+                                <td>{{ '\u20b9' if session.get('currency_format','indian')=='indian' else '$' }}{{ (rev | int) | string | indian_currency }}</td>
+                                <td class="{{ 'gain' if rev >= curr else 'loss' }}">
+                                    {{ "+" if rev >= curr else "-" }}{{ '\u20b9' if session.get('currency_format','indian')=='indian' else '$' }}{{ ((rev - curr) | int | abs) | string | indian_currency }}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="report-footer">
+                <span>Analysis #{{ a.id }}</span>
+                <span class="report-number">M3 Portfolio Investment Analysis</span>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    {% elif total_count > 0 %}
+    <!-- Has reports but none match filter -->
+    <div class="no-results">
+        <p>😕 No reports found matching your search. <a href="/reports">Clear filters</a> to see all reports.</p>
+    </div>
+
+    {% else %}
+    <!-- Truly empty -->
+    <div class="empty-state">
+        <div class="icon">📭</div>
+        <h2>No Reports Yet</h2>
+        <p>You haven't run any portfolio analyses yet.<br>Start your first analysis to see your reports here.</p>
+        <a href="/portfolio" class="btn-new">+ Start New Analysis</a>
+    </div>
+    {% endif %}
+
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal-overlay" id="deleteModal">
+    <div class="modal">
+        <div class="modal-icon">🗑️</div>
+        <h3>Delete Report?</h3>
+        <p id="deleteModalText">This action cannot be undone.</p>
+        <div class="modal-actions">
+            <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+            <button class="btn-confirm-delete" id="confirmDeleteBtn">Yes, Delete</button>
+        </div>
+    </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+    // ========== BUTTON EVENT DELEGATION ==========
+    document.addEventListener('click', function(e) {
+        if (e.target.dataset.action === 'delete') {
+            confirmDelete(e.target.dataset.id, e.target.dataset.client);
+        }
+        if (e.target.dataset.action === 'pdf') {
+            exportPDF(e.target.dataset.id);
+        }
+    });
+
+    // ========== DELETE ==========
+    let pendingDeleteId = null;
+
+    function confirmDelete(id, clientName) {
+        pendingDeleteId = id;
+        document.getElementById('deleteModalText').textContent =
+            `Are you sure you want to delete the report for "${clientName}"? This cannot be undone.`;
+        document.getElementById('deleteModal').classList.add('active');
+    }
+
+    function closeModal() {
+        document.getElementById('deleteModal').classList.remove('active');
+        pendingDeleteId = null;
+    }
+
+    document.getElementById('confirmDeleteBtn').addEventListener('click', async function () {
+        if (!pendingDeleteId) return;
+        try {
+            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '{{ csrf_token() }}';
+            const res = await fetch(`/reports/delete/${pendingDeleteId}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-CSRFToken': csrfToken },
+                body: 'csrf_token=' + csrfToken
+            });
+            const data = await res.json();
+            closeModal();
+            if (data.success) {
+                // Remove card from DOM smoothly
+                const card = document.getElementById('report-' + pendingDeleteId);
+                if (card) {
+                    card.style.transition = 'opacity 0.3s, transform 0.3s';
+                    card.style.opacity = '0';
+                    card.style.transform = 'scale(0.95)';
+                    setTimeout(() => card.remove(), 300);
+                }
+                showToast('✅ Report deleted successfully', 'success');
+            } else {
+                showToast('❌ ' + data.message, 'error');
+            }
+        } catch (e) {
+            showToast('❌ Could not delete report', 'error');
+            closeModal();
+        }
+    });
+
+    // Close modal on overlay click
+    document.getElementById('deleteModal').addEventListener('click', function(e) {
+        if (e.target === this) closeModal();
+    });
+
+    // ── SEARCH HIGHLIGHT ──
+    (function() {
+        var searchParam = new URLSearchParams(window.location.search).get('search');
+        if (!searchParam || !searchParam.trim()) return;
+        var term = searchParam.trim();
+        document.querySelectorAll('.client-name').forEach(function(el) {
+            var text = el.textContent;
+            var idx  = text.toLowerCase().indexOf(term.toLowerCase());
+            if (idx >= 0) {
+                el.innerHTML = text.substring(0,idx) +
+                    '<mark class="search-highlight">' + text.substring(idx, idx+term.length) + '</mark>' +
+                    text.substring(idx+term.length);
+            }
+        });
+    })();
+
+    // ========== TOAST ==========
+    function showToast(msg, type) {
+        const toast = document.getElementById('toast');
+        toast.textContent = msg;
+        toast.className = `toast ${type} show`;
+        setTimeout(() => toast.classList.remove('show'), 3000);
+    }
+
+    // ========== PDF EXPORT ==========
+    // formatINR for HTML display (currency-aware)
+    function formatINR(num) {
+        num = Math.round(num);
+        if (CURRENCY_FORMAT === 'western') return '$' + num.toLocaleString('en-US');
+        let s = num.toString();
+        if (s.length <= 3) return '\u20B9' + s;
+        let last3 = s.slice(-3);
+        let rest = s.slice(0, -3);
+        let result = '';
+        while (rest.length > 2) {
+            result = ',' + rest.slice(-2) + result;
+            rest = rest.slice(0, -2);
+        }
+        return '\u20B9' + rest + result + ',' + last3;
+    }
+
+    // formatINRpdf for PDF (uses Rs. / $ — jsPDF default font does not support ₹)
+    function formatINRpdf(num) {
+        num = Math.round(num);
+        if (CURRENCY_FORMAT === 'western') return '$' + num.toLocaleString('en-US');
+        let s = num.toString();
+        if (s.length <= 3) return 'Rs.' + s;
+        let last3 = s.slice(-3);
+        let rest = s.slice(0, -3);
+        let result = '';
+        while (rest.length > 2) {
+            result = ',' + rest.slice(-2) + result;
+            rest = rest.slice(0, -2);
+        }
+        return 'Rs.' + rest + result + ',' + last3;
+    }
+
+    function exportPDF(id) {
+        try {
+        const card          = document.getElementById('report-' + id);
+        const clientName    = card.dataset.client;
+        const date          = card.dataset.date;
+        const rating        = card.dataset.rating;
+        const currentTotal  = parseFloat(card.dataset.currentTotal)  || 0;
+        const currentReturn = parseFloat(card.dataset.currentReturn) || 0;
+        const revisedTotal  = parseFloat(card.dataset.revisedTotal)  || 0;
+        const revisedReturn = parseFloat(card.dataset.revisedReturn) || 0;
+        const improvement   = revisedReturn - currentReturn;
+
+        const dbFV = {
+            5:  { c: parseFloat(card.dataset.fv5c),  r: parseFloat(card.dataset.fv5r)  },
+            10: { c: parseFloat(card.dataset.fv10c), r: parseFloat(card.dataset.fv10r) },
+            20: { c: parseFloat(card.dataset.fv20c), r: parseFloat(card.dataset.fv20r) },
+        };
+        const fvRows = [5,10,15,20,25].map(y => {
+            const db = dbFV[y];
+            return {
+                y, label: y + ' Years',
+                c: (db && db.c > 0) ? db.c : currentTotal * Math.pow(1 + currentReturn/100, y),
+                r: (db && db.r > 0) ? db.r : revisedTotal * Math.pow(1 + revisedReturn/100, y),
+            };
+        });
+
+        // Read REAL allocation data — fallback to estimate only for legacy reports with no stored data
+        function estimateAlloc(ret) {
+            if (ret >= 13) return { equity:70, debt:20, real:10 };
+            if (ret >= 10) return { equity:55, debt:30, real:15 };
+            if (ret >= 7)  return { equity:35, debt:45, real:20 };
+            if (ret >= 5)  return { equity:20, debt:60, real:20 };
+            return { equity:10, debt:70, real:20 };
+        }
+
+        // ── FIX: Correct estimateLiq matches Python backend formula ──────────
+        // Python: (liq_high + liq_medium*0.5) / total * 100
+        // Instrument → liquidity mapping:
+        //   Equity category: MF=high, Equity=high  → 100% of equity% is high
+        //   Debt category:   FD=high, Govt=medium, Insurance/PPF/EPF/Others=low
+        //                    Approximate: ~30% high, ~15% medium, ~55% low
+        //   Real category:   Gold=medium, RealEstate=low
+        //                    Approximate: ~40% medium, ~60% low
+        // liq_score ≈ (equity*1.0 + debt*0.30 + debt*0.15*0.5 + real*0.40*0.5) / 1.0
+        function estimateLiq(a) {
+            const highPct   = a.equity * 1.0  + a.debt * 0.30;
+            const medPct    = a.debt   * 0.15 + a.real * 0.40;
+            return Math.round(highPct + medPct * 0.5);
+        }
+
+        const r1EquityRaw = parseFloat(card.dataset.r1Equity) || 0;
+        const r1DebtRaw   = parseFloat(card.dataset.r1Debt)   || 0;
+        const r1RealRaw   = parseFloat(card.dataset.r1Real)   || 0;
+        const r1AltRaw    = parseFloat(card.dataset.r1Alternate) || 0;
+
+        const r1Sum = r1EquityRaw + r1DebtRaw + r1RealRaw + r1AltRaw;
+        const hasRealData = r1Sum > 10;
+
+        const r1A = hasRealData ? {
+            equity:    r1EquityRaw,
+            debt:      r1DebtRaw,
+            real:      r1RealRaw,
+            alternate: r1AltRaw,
+        } : { ...estimateAlloc(currentReturn), alternate: 0 };
+
+        const r2A = hasRealData ? {
+            equity:    parseFloat(card.dataset.r2Equity) || 0,
+            debt:      parseFloat(card.dataset.r2Debt)   || 0,
+            real:      parseFloat(card.dataset.r2Real)   || 0,
+            alternate: parseFloat(card.dataset.r2Alternate) || 0,
+        } : { ...estimateAlloc(revisedReturn), alternate: 0 };
+
+        // ── FIX Bug 2: Don't gate on > 0 — score of 0 is valid (fully illiquid) ──
+        // Old: (hasRealData && r1LiqRaw > 0) ? Math.round(r1LiqRaw) : estimateLiq(r1A)
+        // Fixed: use real score whenever hasRealData, regardless of whether score is 0
+        const r1Liq = hasRealData ? Math.round(parseFloat(card.dataset.r1Liq) || 0) : estimateLiq(r1A);
+        const r2Liq = hasRealData ? Math.round(parseFloat(card.dataset.r2Liq) || 0) : estimateLiq(r2A);
+        function liqLabel(s) { return s>=60?'High Liquidity':s>=35?'Moderate Liquidity':'Low Liquidity'; }
+        function liqDesc(s)  { return s>=60?'Most funds accessible quickly.':s>=35?'Moderate access to funds.':'Most funds locked in illiquid assets.'; }
+
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF({ unit:'mm', format:'a4' });
+        const PW=210, PH=297;
+
+        const PURPLE=[108,60,225], GREEN=[5,150,105], GRAY=[100,116,139];
+        const INK=[26,26,46], WHITE=[255,255,255], LIGHT=[241,245,251];
+        const AMBER=[217,119,6], BLUE=[37,99,235], RED=[220,38,38];
+        const ratingColor = rating==='Excellent'?GREEN:rating==='Good'?BLUE:rating==='Moderate'?AMBER:RED;
+
+        function fmt(num) {
+            num = Math.round(num);
+            if (CURRENCY_FORMAT === 'western') return '$' + num.toLocaleString('en-US');
+            let s = num.toString();
+            if (s.length <= 3) return 'Rs.' + s;
+            let last3 = s.slice(-3), rest = s.slice(0,-3), result = '';
+            while (rest.length > 2) { result = ',' + rest.slice(-2) + result; rest = rest.slice(0,-2); }
+            return 'Rs.' + rest + result + ',' + last3;
+        }
+
+        function pageHeader(doc, pageNum) {
+            doc.setFillColor(...INK);
+            doc.rect(0, 0, PW, 22, 'F');
+            doc.setFillColor(...PURPLE);
+            doc.rect(0, 0, 4, 22, 'F');
+            doc.setTextColor(...WHITE);
+            doc.setFont('helvetica','bold');
+            doc.setFontSize(11);
+            doc.text('M3 Portfolio Investment Analysis', 9, 9);
+            doc.setFont('helvetica','normal');
+            doc.setFontSize(7.5);
+            doc.setTextColor(148,163,184);
+            doc.text('Portfolio Analysis Report  |  ' + clientName + '  |  ' + date, 9, 17);
+            doc.text('Page ' + pageNum + ' of 2', PW-10, 13, {align:'right'});
+        }
+
+        function pageFooter(doc) {
+            doc.setFillColor(...INK);
+            doc.rect(0, PH-12, PW, 12, 'F');
+            doc.setFillColor(...PURPLE);
+            doc.rect(0, PH-12, 4, 12, 'F');
+            doc.setFont('helvetica','normal');
+            doc.setFontSize(7);
+            doc.setTextColor(148,163,184);
+            doc.text('M3 Portfolio Investment Analysis  |  For informational purposes only.', 9, PH-5);
+            doc.text('Confidential: ' + clientName, PW-10, PH-5, {align:'right'});
+        }
+
+        function sectionHead(doc, text, y) {
+            doc.setFillColor(...PURPLE);
+            doc.roundedRect(10, y, 3, 6, 1, 1, 'F');
+            doc.setFont('helvetica','bold');
+            doc.setFontSize(10);
+            doc.setTextColor(...PURPLE);
+            doc.text(text, 16, y+5);
+            return y + 10;
+        }
+
+        // PAGE 1
+        pageHeader(doc, 1);
+        let cy = 30;
+
+        // Client strip
+        doc.setFillColor(...LIGHT);
+        doc.rect(0, cy, PW, 20, 'F');
+        doc.setFillColor(...PURPLE);
+        doc.rect(0, cy, 4, 20, 'F');
+        doc.setTextColor(...INK);
+        doc.setFont('helvetica','bold');
+        doc.setFontSize(14);
+        doc.text(clientName, 10, cy+9);
+        doc.setFont('helvetica','normal');
+        doc.setFontSize(8);
+        doc.setTextColor(...GRAY);
+        doc.text('Analysis Date: ' + date + '   |   Generated: ' + new Date().toLocaleDateString('en-IN'), 10, cy+17);
+        doc.setFillColor(...ratingColor);
+        doc.roundedRect(PW-50, cy+4, 40, 12, 3, 3, 'F');
+        doc.setTextColor(...WHITE);
+        doc.setFont('helvetica','bold');
+        doc.setFontSize(9);
+        doc.text(rating, PW-30, cy+12, {align:'center'});
+        cy += 26;
+
+        // 3 stat boxes
+        const sbW=62, sbH=24, sbGap=4;
+        const stats = [
+            { label:'CURRENT PORTFOLIO (M1)', val:fmt(currentTotal),  sub:currentReturn.toFixed(2)+'% p.a.',  col:PURPLE, bg:[240,235,255] },
+            { label:'REVISED PORTFOLIO (M2)', val:fmt(revisedTotal),  sub:revisedReturn.toFixed(2)+'% p.a.',  col:GREEN,  bg:[230,252,242] },
+            { label:'RETURN IMPROVEMENT',     val:(improvement>=0?'+':'')+improvement.toFixed(2)+'%', sub:improvement>0?'Optimized':'Review Needed', col:improvement>=0?GREEN:RED, bg:improvement>=0?[230,252,242]:[255,235,235] },
+        ];
+        stats.forEach((s, i) => {
+            const x = 10 + i*(sbW+sbGap);
+            doc.setFillColor(...s.bg);
+            doc.roundedRect(x, cy, sbW, sbH, 2, 2, 'F');
+            doc.setFillColor(...s.col);
+            doc.roundedRect(x, cy, sbW, 1.5, 0.5, 0.5, 'F');
+            doc.setFont('helvetica','normal');
+            doc.setFontSize(6);
+            doc.setTextColor(...GRAY);
+            doc.text(s.label, x+4, cy+7);
+            doc.setFont('helvetica','bold');
+            doc.setFontSize(12);
+            doc.setTextColor(...s.col);
+            doc.text(s.val, x+4, cy+16);
+            doc.setFont('helvetica','normal');
+            doc.setFontSize(6.5);
+            doc.setTextColor(...GRAY);
+            doc.text(s.sub, x+4, cy+22);
+        });
+        cy += sbH + 10;
+
+        // Comparison table
+        cy = sectionHead(doc, 'Portfolio Comparison - M1 vs M2', cy);
+        doc.autoTable({
+            startY: cy,
+            head: [['', 'Current Portfolio (M1)', 'Revised Portfolio (M2)', 'Change']],
+            body: [
+                ['Total Investment', fmt(currentTotal), fmt(revisedTotal),
+                    (revisedTotal-currentTotal>=0?'+':'')+fmt(Math.abs(revisedTotal-currentTotal))],
+                ['Portfolio Return', currentReturn.toFixed(2)+'% p.a.', revisedReturn.toFixed(2)+'% p.a.',
+                    (improvement>=0?'+':'')+improvement.toFixed(2)+'%'],
+            ],
+            headStyles: { fillColor:PURPLE, textColor:WHITE, fontStyle:'bold', fontSize:8.5 },
+            bodyStyles: { fontSize:9, textColor:INK },
+            alternateRowStyles: { fillColor:[248,246,255] },
+            columnStyles: {
+                0: { fontStyle:'bold', cellWidth:50 },
+                3: { textColor:improvement>=0?GREEN:RED, fontStyle:'bold' }
+            },
+            margin: { left:10, right:10 },
+        });
+        cy = doc.lastAutoTable.finalY + 10;
+
+        // Future growth table
+        cy = sectionHead(doc, 'Future Growth Projections', cy);
+        doc.autoTable({
+            startY: cy,
+            head: [['Timeline','Current (M1)','Revised (M2)','Extra Wealth','Gain %']],
+            body: fvRows.map(row => {
+                const gain = row.r - row.c;
+                const pct  = row.c > 0 ? gain/row.c*100 : 0;
+                return [
+                    row.label, fmt(row.c), fmt(row.r),
+                    (gain>=0?'+':'-')+fmt(Math.abs(gain)),
+                    (pct>=0?'+':'')+pct.toFixed(1)+'%'
+                ];
+            }),
+            headStyles: { fillColor:PURPLE, textColor:WHITE, fontStyle:'bold', fontSize:8.5 },
+            bodyStyles: { fontSize:8.5, textColor:INK },
+            alternateRowStyles: { fillColor:[248,246,255] },
+            columnStyles: {
+                0:{ fontStyle:'bold', cellWidth:28 },
+                3:{ textColor:GREEN, fontStyle:'bold' },
+                4:{ textColor:GREEN, fontStyle:'bold' }
+            },
+            margin: { left:10, right:10 },
+        });
+
+        pageFooter(doc);
+
+        // PAGE 2
+        doc.addPage();
+        pageHeader(doc, 2);
+        cy = 30;
+
+        // Asset Allocation
+        cy = sectionHead(doc, 'Asset Allocation - M1 vs M2', cy);
+
+        const allocCats = [
+            { label:'Equity',      col:PURPLE,            r1:r1A.equity,    r2:r2A.equity    },
+            { label:'Debt',        col:BLUE,              r1:r1A.debt,      r2:r2A.debt      },
+            { label:'Real Estate', col:GREEN,             r1:r1A.real,      r2:r2A.real      },
+            { label:'Commodities', col:AMBER,             r1:r1A.alternate, r2:r2A.alternate },
+        ];
+
+        // Layout: each column is ~95mm wide, label=22mm, bar=60mm, pct=10mm
+        const colL=10, colR=108;
+        const labelW=24, barTW=62, pctX=8;
+        const barH=7, barRowGap=7;
+
+        // Column headers
+        doc.setFont('helvetica','bold');
+        doc.setFontSize(8.5);
+        doc.setTextColor(...INK);
+        doc.text('Current Portfolio (M1)', colL, cy);
+        doc.text('Revised Portfolio (M2)', colR, cy);
+        cy += 6;
+
+        allocCats.forEach((cat, i) => {
+            const y = cy + i*(barH+barRowGap);
+
+            // R1 label
+            doc.setFont('helvetica','normal');
+            doc.setFontSize(7.5);
+            doc.setTextColor(...GRAY);
+            doc.text(cat.label, colL, y+5.5);
+            // R1 track
+            doc.setFillColor(220,215,240);
+            doc.roundedRect(colL+labelW, y, barTW, barH, 2, 2, 'F');
+            // R1 fill
+            const r1fill = Math.max(barTW*cat.r1/100, cat.r1>0?2:0);
+            doc.setFillColor(...cat.col);
+            doc.roundedRect(colL+labelW, y, r1fill, barH, 2, 2, 'F');
+            // R1 pct
+            doc.setFont('helvetica','bold');
+            doc.setFontSize(8);
+            doc.setTextColor(...cat.col);
+            doc.text(cat.r1.toFixed(1)+'%', colL+labelW+barTW+pctX, y+5.5, {align:'right'});
+
+            // R2 label
+            doc.setFont('helvetica','normal');
+            doc.setFontSize(7.5);
+            doc.setTextColor(...GRAY);
+            doc.text(cat.label, colR, y+5.5);
+            // R2 track
+            doc.setFillColor(220,215,240);
+            doc.roundedRect(colR+labelW, y, barTW, barH, 2, 2, 'F');
+            // R2 fill
+            const r2fill = Math.max(barTW*cat.r2/100, cat.r2>0?2:0);
+            doc.setFillColor(...cat.col);
+            doc.roundedRect(colR+labelW, y, r2fill, barH, 2, 2, 'F');
+            // R2 pct
+            doc.setFont('helvetica','bold');
+            doc.setFontSize(8);
+            doc.setTextColor(...cat.col);
+            doc.text(cat.r2.toFixed(1)+'%', colR+labelW+barTW+pctX, y+5.5, {align:'right'});
+        });
+        cy += allocCats.length*(barH+barRowGap) + 10;
+
+        // Liquidity Score
+        cy = sectionHead(doc, 'Liquidity Score', cy);
+
+        function drawLiqCard(x, y, w, score, label, desc) {
+            const col = score>=60?GREEN:score>=35?AMBER:RED;
+            const bg  = score>=60?[230,252,242]:score>=35?[255,247,230]:[255,235,235];
+            doc.setFillColor(...bg);
+            doc.roundedRect(x, y, w, 30, 3, 3, 'F');
+            doc.setDrawColor(...col);
+            doc.setLineWidth(0.5);
+            doc.roundedRect(x, y, w, 30, 3, 3, 'S');
+            doc.setLineWidth(0.2);
+            // Circle
+            doc.setFillColor(...col);
+            doc.circle(x+18, y+15, 11, 'F');
+            doc.setFillColor(...bg);
+            doc.circle(x+18, y+15, 9, 'F');
+            doc.setFont('helvetica','bold');
+            doc.setFontSize(12);
+            doc.setTextColor(...col);
+            doc.text(score+'', x+18, y+16.5, {align:'center'});
+            doc.setFontSize(6);
+            doc.setTextColor(...GRAY);
+            doc.text('/100', x+18, y+22, {align:'center'});
+            // Text
+            doc.setFont('helvetica','bold');
+            doc.setFontSize(8.5);
+            doc.setTextColor(...INK);
+            doc.text(label, x+33, y+11);
+            doc.setFont('helvetica','normal');
+            doc.setFontSize(7.5);
+            doc.setTextColor(...GRAY);
+            const lines = doc.splitTextToSize(desc, w-36);
+            doc.text(lines, x+33, y+19);
+        }
+
+        const cW2 = 92;
+        drawLiqCard(10,     cy, cW2, r1Liq, 'M1 - ' + liqLabel(r1Liq), liqDesc(r1Liq));
+        drawLiqCard(PW-10-cW2, cy, cW2, r2Liq, 'M2 - ' + liqLabel(r2Liq), liqDesc(r2Liq));
+        cy += 36;
+
+        // Liq legend
+        doc.setFillColor(245,245,250);
+        doc.roundedRect(10, cy, PW-20, 10, 2, 2, 'F');
+        doc.setFont('helvetica','normal');
+        doc.setFontSize(6.5);
+        doc.setTextColor(...GRAY);
+        doc.text('High Liquidity (60+): FD, MF, Equity  |  Medium (35-60): Gold, Bonds  |  Low (<35): PPF, EPF, Real Estate', PW/2, cy+6.5, {align:'center'});
+        cy += 16;
+
+        // Grouped Bar Chart
+        cy = sectionHead(doc, 'Portfolio Growth Chart - Current vs Revised', cy);
+
+        // Legend
+        doc.setFillColor(...PURPLE);
+        doc.roundedRect(10, cy, 5, 4, 1, 1, 'F');
+        doc.setFont('helvetica','normal');
+        doc.setFontSize(7.5);
+        doc.setTextColor(...INK);
+        doc.text('Current Portfolio (M1)', 17, cy+3.5);
+        doc.setFillColor(...GREEN);
+        doc.roundedRect(88, cy, 5, 4, 1, 1, 'F');
+        doc.text('Revised Portfolio (M2)', 95, cy+3.5);
+        cy += 9;
+
+        const cX=30, cWc=170, cHc=75, cBot=cy+cHc;
+        const allVals = fvRows.flatMap(r => [r.c, r.r]);
+        const maxV = Math.max(...allVals) * 1.1;
+
+        // Chart background
+        doc.setFillColor(249,250,251);
+        doc.roundedRect(cX-2, cy-2, cWc+4, cHc+10, 2, 2, 'F');
+        doc.setDrawColor(226,232,240);
+        doc.setLineWidth(0.15);
+        doc.roundedRect(cX-2, cy-2, cWc+4, cHc+10, 2, 2, 'S');
+
+        // Grid lines + Y labels
+        for (let i=0; i<=4; i++) {
+            const gy = cBot-(cHc*i/4);
+            if (i > 0) {
+                doc.setDrawColor(226,232,240);
+                doc.setLineWidth(0.15);
+                doc.line(cX, gy, cX+cWc, gy);
+            }
+            const v = maxV*i/4;
+            let lbl, pfx;
+            if (CURRENCY_FORMAT === 'western') {
+                pfx = '$';
+                lbl = v >= 1e9 ? (v/1e9).toFixed(1)+'B' : v >= 1e6 ? (v/1e6).toFixed(1)+'M' : (v/1e3).toFixed(1)+'K';
+            } else {
+                pfx = 'Rs.';
+                lbl = v>=10000000?(v/10000000).toFixed(1)+'Cr':(v/100000).toFixed(1)+'L';
+            }
+            doc.setFontSize(5.5);
+            doc.setTextColor(...GRAY);
+            doc.text(pfx+lbl, cX-2, gy+1.5, {align:'right'});
+        }
+
+        // Axes
+        doc.setDrawColor(...GRAY);
+        doc.setLineWidth(0.35);
+        doc.line(cX, cy, cX, cBot);
+        doc.line(cX, cBot, cX+cWc, cBot);
+
+        // Bars
+        const cbGrpW=cWc/fvRows.length, cbW=cbGrpW*0.28, cbGap=cbGrpW*0.05;
+        fvRows.forEach((row, i) => {
+            const gx = cX + i*cbGrpW + cbGrpW*0.18;
+            const ch = Math.max((row.c/maxV)*cHc, 1);
+            const rh = Math.max((row.r/maxV)*cHc, 1);
+
+            // Purple bar
+            doc.setFillColor(80,40,180);
+            doc.roundedRect(gx+0.6, cBot-ch+0.6, cbW, ch, 1.5, 1.5, 'F');
+            doc.setFillColor(...PURPLE);
+            doc.roundedRect(gx, cBot-ch, cbW, ch, 1.5, 1.5, 'F');
+
+            // Green bar
+            doc.setFillColor(3,110,70);
+            doc.roundedRect(gx+cbW+cbGap+0.6, cBot-rh+0.6, cbW, rh, 1.5, 1.5, 'F');
+            doc.setFillColor(...GREEN);
+            doc.roundedRect(gx+cbW+cbGap, cBot-rh, cbW, rh, 1.5, 1.5, 'F');
+
+            // Value labels
+            doc.setFontSize(5.2);
+            doc.setFont('helvetica','bold');
+            doc.setTextColor(...INK);
+            const cL = row.c>=10000000?(row.c/10000000).toFixed(1)+'Cr':(row.c/100000).toFixed(1)+'L';
+            const rL = row.r>=10000000?(row.r/10000000).toFixed(1)+'Cr':(row.r/100000).toFixed(1)+'L';
+            doc.text(cL, gx+cbW/2, cBot-ch-1.8, {align:'center'});
+            doc.text(rL, gx+cbW+cbGap+cbW/2, cBot-rh-1.8, {align:'center'});
+
+            // X label
+            doc.setFont('helvetica','normal');
+            doc.setFontSize(7);
+            doc.setTextColor(...GRAY);
+            doc.text(row.label, gx+cbW+cbGap/2, cBot+6, {align:'center'});
+        });
+
+        pageFooter(doc);
+
+        doc.save('M3_Report_' + clientName.replace(/\s+/g, '_') + '_' + date + '.pdf');
+        showToast('PDF downloaded successfully!', 'success');
+
+        } catch(err) {
+            console.error('PDF Error:', err);
+            showToast('PDF Error: ' + err.message, 'error');
+        }
+    }
+</script>
+
+</body>
+</html>

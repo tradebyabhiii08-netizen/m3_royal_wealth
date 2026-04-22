@@ -1,0 +1,1584 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wealth Optimizer | M3 Portfolio Investment Analysis</title>
+    <link rel="stylesheet" href="/static/design-tokens.css">
+    <link rel="stylesheet" href="/static/style.css">
+    <script>
+      // FOUC-free theme bootstrap — runs before first paint.
+      (function () {
+        try {
+          var saved = localStorage.getItem('m3-theme');
+          var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+          var theme = saved || (prefersDark ? 'dark' : 'light');
+          document.documentElement.setAttribute('data-theme', theme);
+        } catch (e) {
+          document.documentElement.setAttribute('data-theme', 'light');
+        }
+      })();
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+
+    <style>
+        :root {
+            --navy:#0f0c29; --navy-m:#1a1550; --gold:#e8c84a; --gold-d:#d4a843;
+            --gold-l:#f5d96b; --gold-xl:#fdf3cc; --cream:#fdf9ee; --muted:#6b6080; --ink:#1a0f3c;
+            --card-shd:0 4px 20px rgba(15,12,41,0.11),0 1px 5px rgba(15,12,41,0.06);
+            --card-brd:1px solid rgba(232,200,74,0.2);
+        }
+        body {
+            min-height: 100vh;
+            padding: 20px;
+            background: linear-gradient(145deg, #f5edcc 0%, #fdf9ee 40%, #fffdf5 70%, #f5edcc 100%);
+            color: #141124;
+        }
+        html[data-theme="dark"] body,
+        body.dark-mode {
+            background: linear-gradient(145deg, #07060f 0%, #0f0c29 45%, #1a1550 80%, #07060f 100%) !important;
+            color: #f4eed2;
+        }
+        .calc-container { max-width: 1400px; margin: 0 auto; }
+        .calc-header {
+            background: #fdf9ee; padding: 30px; border-radius: 15px;
+            margin-bottom: 30px; box-shadow: 0 8px 28px rgba(15,12,41,0.14), 0 2px 8px rgba(15,12,41,0.07);
+            text-align: center;
+        }
+        .calc-card {
+            background: #fdf9ee; padding: 40px; border-radius: 20px;
+            box-shadow: 0 8px 28px rgba(15,12,41,0.14), 0 2px 8px rgba(15,12,41,0.07); margin-bottom: 30px;
+        }
+        .form-grid {
+            display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;
+            margin-bottom: 25px;
+        }
+        .form-group { margin-bottom: 0; }
+        .form-group label { display: block; margin-bottom: 8px; font-weight: 600; }
+        .form-group input {
+            width: 100%; padding: 12px 15px;
+            border: 1.5px solid #d4a84340; border-radius: 8px;
+            font-size: 1em; transition: border 0.2s;
+        }
+        .form-group input:focus { outline: none; border-color: #e8c84a; }
+        .form-group .hint { font-size: 0.78em; color: #6b6080; margin-top: 4px; }
+        .btn-calculate {
+            width: 100%; padding: 15px;
+            background: linear-gradient(135deg, #e8c84a 0%, #d4a843 100%);
+            color: #0f0c29; border: none; border-radius: 10px; font-weight: 700;
+            font-size: 1.1em; cursor: pointer;
+            transition: all 0.2s; box-shadow: 0 4px 14px rgba(232,200,74,0.35);
+        }
+        .btn-calculate:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(232,200,74,0.4); }
+        .btn-back {
+            display: inline-block; padding: 10px 20px;
+            background: #0f0c29; color: #e8c84a;
+            text-decoration: none; border-radius: 8px; margin-bottom: 20px;
+        }
+
+        /* VERDICT */
+        .verdict-card {
+            border-radius: 15px; padding: 28px 32px; margin-bottom: 30px;
+            display: flex; align-items: center; gap: 20px;
+            box-shadow: 0 8px 28px rgba(15,12,41,0.14), 0 2px 8px rgba(15,12,41,0.07);
+        }
+        .verdict-card.invest { background: linear-gradient(135deg, #1b5e20, #2e7d32); }
+        .verdict-card.buy    { background: linear-gradient(135deg, #1565c0, #0d47a1); }
+        .verdict-icon { font-size: 3em; flex-shrink: 0; }
+        .verdict-text h2 { color: #e8c84a; font-size: 1.5em; font-weight: 700; margin-bottom: 6px; }
+        .verdict-text p  { color: rgba(255,255,255,0.85); font-size: 0.95em; line-height: 1.6; }
+
+        /* RESULT SUMMARY */
+        .result-card {
+            background: linear-gradient(135deg, #1a1550 0%, #0f0c29 100%);
+            color: #e8c84a; padding: 30px; border-radius: 15px; margin-bottom: 30px;
+        }
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 15px; margin: 20px 0;
+        }
+        .info-card {
+            background: #fdf3cc;
+            padding: 15px; border-radius: 10px; text-align: center;
+            border: 1px solid rgba(232,200,74,0.25);
+        }
+        .info-card .label { font-size: 0.85em; color: #6b6080; }
+        .info-card .value { font-size: 1.4em; font-weight: 700; color: #0f0c29; margin-top: 5px; font-family: 'Cormorant Garamond', serif; }
+
+        /* COMPARISON */
+        .comparison-grid {
+            display: grid; grid-template-columns: 1fr 1fr;
+            gap: 25px; margin-bottom: 30px;
+        }
+        .scenario-card {
+            background: #fdf9ee; border-radius: 20px; padding: 28px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.12);
+        }
+        .scenario-card.direct { border-top: 5px solid #f44336; }
+        .scenario-card.invest { border-top: 5px solid #4CAF50; }
+        .scenario-title { font-size: 1.05em; font-weight: 700; margin-bottom: 18px; }
+        .scenario-card.direct .scenario-title { color: #c62828; }
+        .scenario-card.invest .scenario-title { color: #0f0c29; }
+        .metric-row {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 10px 0; border-bottom: 1px solid #f5f5f5;
+        }
+        .metric-row:last-child { border-bottom: none; }
+        .metric-label { font-size: 0.85em; color: #6b6080; }
+        .metric-value { font-size: 0.95em; font-weight: 700; color: #333; }
+        .metric-value.green  { color: #0f0c29; }
+        .metric-value.red    { color: #c62828; }
+        .net-wealth {
+            background: #fdf9ee; border-radius: 10px;
+            padding: 14px; text-align: center; margin-top: 14px;
+        }
+        .net-wealth .nw-label { font-size: 0.8em; color: #6b6080; font-weight: 600; text-transform: uppercase; }
+        .net-wealth .nw-value { font-size: 1.8em; font-weight: 800; margin-top: 4px; }
+        .scenario-card.direct .nw-value { color: #c62828; }
+        .scenario-card.invest .nw-value { color: #0f0c29; }
+
+        .success-box {
+            background: #d4edda; border-left: 4px solid #28a745;
+            padding: 15px; border-radius: 8px; margin: 20px 0; color: #155724;
+        }
+
+        /* CHARTS */
+        .charts-grid {
+            display: grid; grid-template-columns: 1fr 1fr;
+            gap: 30px; margin-top: 30px;
+        }
+        .chart-card {
+            background: #fdf9ee; padding: 30px; border-radius: 20px;
+            box-shadow: 0 8px 28px rgba(15,12,41,0.14), 0 2px 8px rgba(15,12,41,0.07);
+        }
+        .chart-card.full-width { grid-column: 1 / -1; }
+        .chart-card h3 { color: var(--navy); margin-bottom: 15px; font-size: 1.05em; }
+
+        /* TABLE */
+        .table-card {
+            background: #fdf9ee; padding: 30px; border-radius: 20px;
+            box-shadow: 0 8px 28px rgba(15,12,41,0.14), 0 2px 8px rgba(15,12,41,0.07); margin-top: 30px;
+        }
+        .data-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        .data-table th {
+            background: #e8c84a; color: #0f0c29; padding: 12px; font-weight: 700;
+            text-align: left; font-weight: 600;
+        }
+        .data-table td { padding: 10px 12px; border-bottom: 1px solid rgba(232,200,74,0.15); }
+        .data-table tr:hover { background: #fdf3cc; }
+
+        .btn-pdf-download {
+            display: inline-flex; align-items: center; gap: 8px;
+            padding: 12px 28px;
+            background: linear-gradient(135deg, #e8c84a 0%, #4B2AA0 100%);
+            color: #0f0c29; border: none; border-radius: 10px; font-size: 1em; font-weight: 700;
+            font-weight: 700; cursor: pointer; margin-top: 20px;
+            box-shadow: 0 4px 15px rgba(15,12,41,0.4); transition: all 0.2s;
+            width: 100%;
+        }
+        .btn-pdf-download:hover { transform: translateY(-2px); }
+
+        /* DARK MODE - same as SIP calculator */
+        body.dark-mode .calc-header,
+        body.dark-mode .calc-card,
+        body.dark-mode .chart-card,
+        body.dark-mode .table-card,
+        body.dark-mode .scenario-card {
+            background: #0a0818 !important;
+            border-color: #1a1550 !important;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.4) !important;
+            color: #e2e8f0 !important;
+        }
+        body.dark-mode .calc-header h1 { color: #a5b4fc !important; }
+        body.dark-mode .calc-header p { color: #64748b !important; }
+        body.dark-mode .form-group label { color: #94a3b8 !important; }
+        body.dark-mode .form-group input {
+            background: #07060f !important; border-color: #252d4a !important;
+            color: #e2e8f0 !important;
+        }
+        body.dark-mode .metric-label { color: #64748b !important; }
+        body.dark-mode .metric-value { color: #e2e8f0 !important; }
+        body.dark-mode .net-wealth { background: #0f172a !important; }
+        body.dark-mode .chart-card h3 { color: #c7d2fe !important; }
+        body.dark-mode .data-table th { background: #1a1f36 !important; color: #94a3b8 !important; }
+        body.dark-mode .data-table td { background: #0a0818 !important; border-bottom-color: #07060f !important; color: #cbd5e1 !important; }
+        body.dark-mode .data-table tr:hover td { background: #0f0c29 !important; }
+        body.dark-mode .scenario-title { color: #e2e8f0 !important; }
+        body.dark-mode .btn-back { background: rgba(232,200,74,0.12) !important; color: #f5d96b !important; }
+
+        /* ── ENHANCED INPUT STYLES ── */
+        .scenario-tab {
+            padding: 10px 22px; border: 1.5px solid #d4a84340; border-radius: 50px;
+            background: white; color: #6b6080; font-weight: 600; font-size: 0.9em;
+            cursor: pointer; transition: all 0.2s;
+        }
+        .scenario-tab.active {
+            border-color: #e8c84a; background: #e8c84a; color: white;
+        }
+        .scenario-tab:hover:not(.active) { border-color: #e8c84a; color: #e8c84a; }
+
+        .input-section {
+            background: #fdf9ee; border-radius: 14px; padding: 20px 24px;
+            margin-bottom: 20px; border: 1.5px solid #ebebff;
+        }
+        .input-section-title {
+            font-size: 0.82em; font-weight: 700; color: #e8c84a;
+            text-transform: uppercase; letter-spacing: 0.06em;
+            margin-bottom: 16px;
+        }
+        .form-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+        .form-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 18px; }
+
+        .form-group-enhanced { display: flex; flex-direction: column; gap: 6px; }
+        .form-group-enhanced label {
+            font-size: 0.83em; font-weight: 700; color: #3d3050;
+            display: flex; align-items: center; gap: 8px;
+        }
+        .optional-tag {
+            font-size: 0.78em; background: #f0f0f0; color: #6b6080;
+            padding: 1px 8px; border-radius: 10px; font-weight: 500;
+        }
+        .input-with-icon {
+            display: flex; align-items: center;
+            border: 1.5px solid #d4a84340; border-radius: 10px;
+            overflow: hidden; background: white; transition: border 0.2s;
+        }
+        .input-with-icon:focus-within { border-color: #e8c84a; }
+        .input-icon {
+            padding: 0 12px; font-size: 1.1em;
+            border-right: 1.5px solid #f0f0f0; background: #fdf6e3;
+            height: 44px; display: flex; align-items: center;
+        }
+        .input-with-suffix {
+            display: flex; align-items: center;
+            border: 1.5px solid #d4a84340; border-radius: 10px;
+            overflow: hidden; background: white; transition: border 0.2s;
+        }
+        .input-with-suffix:focus-within { border-color: #e8c84a; }
+        .input-suffix {
+            padding: 0 12px; font-size: 0.85em; color: #6b6080; font-weight: 600;
+            border-left: 1.5px solid #f0f0f0; background: #fdf6e3;
+            height: 44px; display: flex; align-items: center; white-space: nowrap;
+        }
+        .enhanced-input {
+            flex: 1; padding: 11px 14px; border: none !important;
+            font-size: 0.95em; color: #333; outline: none; background: transparent;
+            width: 100%;
+        }
+        .hint { font-size: 0.75em; color: #6b6080; }
+
+        .return-benchmarks {
+            display: flex; gap: 8px; margin-top: 6px; flex-wrap: wrap;
+        }
+        .return-benchmarks span {
+            font-size: 0.75em; padding: 3px 10px; border-radius: 20px;
+            background: #f0f0ff; color: #e8c84a; cursor: pointer;
+            border: 1.5px solid #e0e4ff; transition: all 0.2s; font-weight: 600;
+        }
+        .return-benchmarks span:hover,
+        .return-benchmarks span.active { background: #e8c84a; color: white; border-color: #e8c84a; }
+
+        .quick-calc-info {
+            background: #fdf9ee; border-radius: 12px; padding: 16px 18px;
+            border: 1.5px solid #e8ebff; height: 100%;
+            display: flex; flex-direction: column; justify-content: center; gap: 10px;
+        }
+        .qci-row {
+            display: flex; justify-content: space-between; align-items: center;
+            font-size: 0.88em;
+        }
+        .qci-row span { color: #6b6080; }
+        .qci-row strong { color: #e8c84a; font-size: 1em; }
+
+        /* dark mode for enhanced inputs */
+        body.dark-mode .input-section { background: #0f172a !important; border-color: #1a1550 !important; }
+        body.dark-mode .input-with-icon,
+        body.dark-mode .input-with-suffix { background: #07060f !important; border-color: #252d4a !important; }
+        body.dark-mode .input-icon,
+        body.dark-mode .input-suffix { background: #07060f !important; border-color: #252d4a !important; color: #64748b !important; }
+        body.dark-mode .enhanced-input { color: #e2e8f0 !important; background: transparent !important; }
+        body.dark-mode .form-group-enhanced label { color: #94a3b8 !important; }
+        body.dark-mode .scenario-tab { background: #0f0c29 !important; border-color: #334155 !important; color: #64748b !important; }
+        body.dark-mode .scenario-tab.active { background: #e8c84a !important; color: white !important; }
+        body.dark-mode .quick-calc-info { background: #0f172a !important; border-color: #1a1550 !important; }
+        body.dark-mode .return-benchmarks span { background: #0f0c29 !important; color: #e8c84a !important; border-color: #334155 !important; }
+        body.dark-mode .return-benchmarks span:hover { background: #e8c84a !important; color: white !important; }
+
+        /* ── BREAK-EVEN & WHAT-IF ── */
+        .breakeven-card {
+            background: #fdf9ee; border-radius: 20px; padding: 28px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.12); margin-top: 30px;
+        }
+        .breakeven-badge {
+            display: inline-flex; align-items: center; gap: 10px;
+            background: linear-gradient(135deg, #1a1550, #0f0c29);
+            color: white; padding: 12px 24px; border-radius: 50px;
+            font-size: 1.1em; font-weight: 700; margin: 16px 0;
+        }
+        .breakeven-timeline {
+            position: relative; margin: 24px 0 8px;
+            height: 8px; background: #f0f0f0; border-radius: 10px;
+        }
+        .breakeven-fill {
+            height: 8px; border-radius: 10px;
+            background: linear-gradient(90deg, #f44336, #FF9800, #4CAF50);
+            transition: width 0.8s ease;
+        }
+        .breakeven-marker {
+            position: absolute; top: -6px;
+            width: 20px; height: 20px; border-radius: 50%;
+            background: #e8c84a; border: 3px solid white;
+            box-shadow: 0 2px 8px rgba(232,200,74,0.5);
+            transform: translateX(-50%);
+        }
+        .breakeven-labels {
+            display: flex; justify-content: space-between;
+            font-size: 0.75em; color: #6b6080; margin-top: 8px;
+        }
+        .whatif-grid {
+            display: grid; grid-template-columns: repeat(3,1fr);
+            gap: 12px; margin-top: 20px;
+        }
+        .whatif-card {
+            border-radius: 12px; padding: 16px; text-align: center;
+            border: 2px solid transparent; transition: all 0.2s;
+        }
+        .whatif-card.better  { background: #fdf9ee; border-color: #e8c84a; }
+        .whatif-card.worse   { background: #fff0f0; border-color: #f44336; }
+        .whatif-card.neutral { background: #fdf9ee; border-color: #e8c84a; }
+        .whatif-card .wf-label  { font-size: 0.78em; color: #4a3f5c; font-weight: 600; }
+        .whatif-card .wf-rate   { font-size: 1.1em; font-weight: 800; margin: 6px 0 2px; }
+        .whatif-card .wf-gain   { font-size: 0.82em; font-weight: 700; }
+        .whatif-card.better  .wf-gain { color: #0f0c29; }
+        .whatif-card.worse   .wf-gain { color: #c62828; }
+        .whatif-card.neutral .wf-gain { color: #e8c84a; }
+        .whatif-slider-row {
+            display: flex; align-items: center; gap: 16px; margin: 16px 0 8px;
+        }
+        .whatif-slider-row label { font-size: 0.85em; color: #4a3f5c; font-weight: 600; white-space: nowrap; }
+        .whatif-slider-row input[type=range] { flex: 1; accent-color: #e8c84a; }
+        .whatif-slider-val {
+            min-width: 52px; text-align: center;
+            background: #e8c84a; color: white;
+            padding: 4px 10px; border-radius: 20px;
+            font-size: 0.85em; font-weight: 700;
+        }
+        body.dark-mode .breakeven-card { background: #0a0818 !important; }
+        body.dark-mode [style*="border-top:4px"] { background: #0f0c29 !important; color: #e2e8f0 !important; }
+        body.dark-mode .breakeven-timeline { background: #1a1550 !important; }
+        body.dark-mode .whatif-card.better  { background: #0f2a1a !important; }
+        body.dark-mode .whatif-card.worse   { background: #2a0f0f !important; }
+        body.dark-mode .whatif-card.neutral { background: #0f172a !important; }
+        body.dark-mode .whatif-card .wf-label { color: #94a3b8 !important; }
+
+        @media (max-width: 768px) {
+            .form-grid { grid-template-columns: 1fr; }
+            .form-grid-2 { grid-template-columns: 1fr; }
+            .form-grid-3 { grid-template-columns: 1fr; }
+            .comparison-grid { grid-template-columns: 1fr; }
+            .charts-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+    <script src="/static/calc-core.js"></script>
+</head>
+
+<body>
+    <script>
+        var CURRENCY_FORMAT = (function () {
+            try {
+                var v = localStorage.getItem('m3-currency');
+                if (v === 'indian' || v === 'western') return v;
+            } catch (e) {}
+            return "{{ session.get('currency_format', 'indian') }}";
+        })();
+        window.addEventListener('m3-currency-change', function (e) {
+            CURRENCY_FORMAT = (e && e.detail) || CURRENCY_FORMAT;
+        });
+        function formatCurrency(num) {
+            num = Math.round(num);
+            if (CURRENCY_FORMAT === 'western') return '$' + num.toLocaleString('en-US');
+            var s = num.toString();
+            if (s.length <= 3) return 'Rs.' + s;
+            var last3 = s.slice(-3), rest = s.slice(0,-3), result = '';
+            while (rest.length > 2) { result = ',' + rest.slice(-2) + result; rest = rest.slice(0,-2); }
+            return 'Rs.' + rest + result + ',' + last3;
+        }
+    </script>
+
+<div class="calc-container">
+
+    <a href="/dashboard" class="btn-back">← Back to Dashboard</a>
+
+    <div class="calc-header">
+        <h1>💎 Wealth Optimizer Calculator</h1>
+        <p>Should you buy outright or invest the money & take a loan? Find which makes you richer!</p>
+    </div>
+
+    <div class="calc-card">
+        <!-- SCENARIO SELECTOR -->
+        <div style="display:flex; gap:12px; margin-bottom:28px;">
+            <button type="button" class="scenario-tab active" id="tab-home" onclick="setScenario('home')">
+                🏠 Home Loan
+            </button>
+            <button type="button" class="scenario-tab" id="tab-car" onclick="setScenario('car')">
+                🚗 Car Loan
+            </button>
+            <button type="button" class="scenario-tab" id="tab-custom" onclick="setScenario('custom')">
+                ⚙️ Custom
+            </button>
+        </div>
+
+        <!-- SECTION: Asset Details -->
+        <div class="input-section">
+            <div class="input-section-title">🏷️ Asset Details</div>
+            <div class="form-grid-2">
+                <div class="form-group-enhanced">
+                    <label>What are you buying?</label>
+                    <div class="input-with-icon">
+                        <span class="input-icon">🏠</span>
+                        <input type="text" inputmode="numeric" class="amt-input enhanced-input"
+                               id="assetValue" placeholder="e.g. 50,00,000" value=""
+                               oninput="onAmtKeyup(this); updateQuickInfo();">
+                    </div>
+                    <span class="hint">Total cost of the asset (<span class="m3-cursym">₹</span>)</span>
+                </div>
+                <div class="form-group-enhanced">
+                    <label>Down Payment <span class="optional-tag">Optional</span></label>
+                    <div class="input-with-icon">
+                        <span class="input-icon">💳</span>
+                        <input type="text" inputmode="numeric" class="amt-input enhanced-input"
+                               id="downPayment" placeholder="0 or leave blank" value=""
+                               oninput="onAmtKeyup(this); updateQuickInfo();">
+                    </div>
+                    <span class="hint">Amount you pay upfront (0 = full loan)</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- SECTION: Loan Details -->
+        <div class="input-section">
+            <div class="input-section-title">🏦 Loan Details</div>
+            <div class="form-grid-3">
+                <div class="form-group-enhanced">
+                    <label>Loan Interest Rate</label>
+                    <div class="input-with-suffix">
+                        <input type="number" class="enhanced-input" id="loanRate"
+                               placeholder="8.5" step="0.1" value="8.5">
+                        <span class="input-suffix">% p.a.</span>
+                    </div>
+                    <span class="hint">Current home/car loan rate</span>
+                </div>
+                <div class="form-group-enhanced">
+                    <label>Loan Tenure</label>
+                    <div class="input-with-suffix">
+                        <input type="number" class="enhanced-input" id="loanTenure"
+                               placeholder="20" value="20">
+                        <span class="input-suffix">Years</span>
+                    </div>
+                    <span class="hint">Repayment period</span>
+                </div>
+                <div class="form-group-enhanced">
+                    <label>Analysis Period</label>
+                    <div class="input-with-suffix">
+                        <input type="number" class="enhanced-input" id="analysisPeriod"
+                               placeholder="20" value="20">
+                        <span class="input-suffix">Years</span>
+                    </div>
+                    <span class="hint">How many years to compare</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- SECTION: Investment Details -->
+        <div class="input-section">
+            <div class="input-section-title">📈 Investment Details</div>
+            <div class="form-grid-2">
+                <div class="form-group-enhanced">
+                    <label>MF Expected Return</label>
+                    <div class="input-with-suffix">
+                        <input type="number" class="enhanced-input" id="mfReturn"
+                               placeholder="12" step="0.1" value="12">
+                        <span class="input-suffix">% p.a.</span>
+                    </div>
+                    <span class="hint">Expected annual Mutual Fund return</span>
+                    <div class="return-benchmarks">
+                        <span onclick="setBenchmark(this,10)">Conservative 10%</span>
+                        <span onclick="setBenchmark(this,12)" class="active">Moderate 12%</span>
+                        <span onclick="setBenchmark(this,15)">Aggressive 15%</span>
+                    </div>
+                </div>
+                <div class="form-group-enhanced" style="display:flex; flex-direction:column; justify-content:center;">
+                    <div class="quick-calc-info" id="quickInfo">
+                        <div class="qci-row"><span>Loan Amount</span><strong id="qciLoan">—</strong></div>
+                        <div class="qci-row"><span>Est. Monthly EMI</span><strong id="qciEmi">—</strong></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <button class="btn-calculate" onclick="calculate()">💎 Calculate Wealth Optimizer</button>
+
+        <!-- RESULTS -->
+        <div id="resultArea" style="display:none; margin-top:30px;">
+
+            <!-- VERDICT -->
+            <div class="verdict-card" id="verdictCard">
+                <div class="verdict-icon" id="verdictIcon"></div>
+                <div class="verdict-text">
+                    <h2 id="verdictTitle"></h2>
+                    <p id="verdictDesc"></p>
+                </div>
+            </div>
+
+            <!-- SUMMARY -->
+            <div style="display:grid; grid-template-columns: repeat(4,1fr) 1.3fr; gap:14px; margin-bottom:25px;">
+                <!-- Card 1 -->
+                <div style="background:white; border-radius:14px; padding:18px 20px; box-shadow:0 4px 16px rgba(0,0,0,0.08); border-top:4px solid #e8c84a;">
+                    <div style="font-size:0.75em; color:#888; font-weight:700; text-transform:uppercase; letter-spacing:0.05em;">Asset Value</div>
+                    <div style="font-size:1.5em; font-weight:800; color:#07060f; margin-top:8px;" id="sumAsset">—</div>
+                    <div style="font-size:0.75em; color:#aaa; margin-top:4px;">Total cost of purchase</div>
+                </div>
+                <!-- Card 2 -->
+                <div style="background:white; border-radius:14px; padding:18px 20px; box-shadow:0 4px 16px rgba(0,0,0,0.08); border-top:4px solid #2196F3;">
+                    <div style="font-size:0.75em; color:#888; font-weight:700; text-transform:uppercase; letter-spacing:0.05em;">Monthly EMI</div>
+                    <div style="font-size:1.5em; font-weight:800; color:#07060f; margin-top:8px;" id="sumEmi">—</div>
+                    <div style="font-size:0.75em; color:#aaa; margin-top:4px;">Loan repayment</div>
+                </div>
+                <!-- Card 3 -->
+                <div style="background:white; border-radius:14px; padding:18px 20px; box-shadow:0 4px 16px rgba(0,0,0,0.08); border-top:4px solid #f44336;">
+                    <div style="font-size:0.75em; color:#888; font-weight:700; text-transform:uppercase; letter-spacing:0.05em;">Total Interest</div>
+                    <div style="font-size:1.5em; font-weight:800; color:#c62828; margin-top:8px;" id="sumInterest">—</div>
+                    <div style="font-size:0.75em; color:#aaa; margin-top:4px;">Loan cost over tenure</div>
+                </div>
+                <!-- Card 4 -->
+                <div style="background:white; border-radius:14px; padding:18px 20px; box-shadow:0 4px 16px rgba(0,0,0,0.08); border-top:4px solid #4CAF50;">
+                    <div style="font-size:0.75em; color:#888; font-weight:700; text-transform:uppercase; letter-spacing:0.05em;">MF Value (<span id="sumYears">—</span> Yrs)</div>
+                    <div style="font-size:1.5em; font-weight:800; color:#2e7d32; margin-top:8px;" id="sumMf">—</div>
+                    <div style="font-size:0.75em; color:#aaa; margin-top:4px;">Investment grows to</div>
+                </div>
+                <!-- Card 5 - Highlighted -->
+                <div style="background:linear-gradient(135deg,#e8c84a,#0f0c29); border-radius:14px; padding:18px 20px; box-shadow:0 6px 24px rgba(232,200,74,0.35);">
+                    <div style="font-size:0.75em; color:rgba(255,255,255,0.75); font-weight:700; text-transform:uppercase; letter-spacing:0.05em;">🏆 Net Extra Wealth</div>
+                    <div style="font-size:1.7em; font-weight:800; color:white; margin-top:8px;" id="sumGain">—</div>
+                    <div style="font-size:0.75em; color:rgba(255,255,255,0.65); margin-top:4px;">vs Direct Purchase</div>
+                </div>
+            </div>
+
+            <!-- SUCCESS BOX -->
+            <div class="success-box" id="successBox"></div>
+
+            <!-- COMPARISON -->
+            <div class="comparison-grid">
+                <div class="scenario-card direct">
+                    <div class="scenario-title">❌ Scenario A — Direct Purchase</div>
+                    <div class="metric-row">
+                        <span class="metric-label">Upfront Amount Paid</span>
+                        <span class="metric-value red" id="saUpfront"></span>
+                    </div>
+                    <div class="metric-row">
+                        <span class="metric-label">Monthly EMI</span>
+                        <span class="metric-value"><span class="m3-cursym">₹</span>0</span>
+                    </div>
+                    <div class="metric-row">
+                        <span class="metric-label">Investment Value</span>
+                        <span class="metric-value"><span class="m3-cursym">₹</span>0 (no investment)</span>
+                    </div>
+                    <div class="metric-row">
+                        <span class="metric-label">Asset Value</span>
+                        <span class="metric-value" id="saAsset"></span>
+                    </div>
+                    <div class="net-wealth">
+                        <div class="nw-label">Final Position after <span id="saYrs"></span> Years</div>
+                        <div class="nw-value" id="saNet"></div>
+                    </div>
+                </div>
+
+                <div class="scenario-card invest">
+                    <div class="scenario-title">✅ Scenario B — Invest + Take Loan</div>
+                    <div class="metric-row">
+                        <span class="metric-label">Down Payment Paid</span>
+                        <span class="metric-value" id="sbDown"></span>
+                    </div>
+                    <div class="metric-row">
+                        <span class="metric-label">Monthly EMI</span>
+                        <span class="metric-value red" id="sbEmi"></span>
+                    </div>
+                    <div class="metric-row">
+                        <span class="metric-label">MF Investment Value</span>
+                        <span class="metric-value green" id="sbMf"></span>
+                    </div>
+                    <div class="metric-row">
+                        <span class="metric-label">Total Interest Paid</span>
+                        <span class="metric-value red" id="sbInterest"></span>
+                    </div>
+                    <div class="net-wealth">
+                        <div class="nw-label">Final Position after <span id="sbYrs"></span> Years</div>
+                        <div class="nw-value" id="sbNet"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- BREAK-EVEN POINT -->
+            <div class="breakeven-card">
+                <h3 style="margin-bottom:4px;">🎯 Break-even Point</h3>
+                <p style="color:#888; font-size:0.9em;">Jab MF ka value = Asset Value + Total Interest — tabhi poora paisa wapas aaya!</p>
+                <div id="breakevenContent">
+                    <div class="breakeven-badge">
+                        <span>📅</span>
+                        <span id="breakevenText">—</span>
+                    </div>
+                    <div style="color:#666; font-size:0.88em; margin-bottom:16px;" id="breakevenDesc"></div>
+                    <div class="breakeven-timeline">
+                        <div class="breakeven-fill" id="breakevenFill" style="width:0%"></div>
+                        <div class="breakeven-marker" id="breakevenMarker" style="left:0%"></div>
+                    </div>
+                    <div class="breakeven-labels">
+                        <span>Year 1</span>
+                        <span id="breakevenMid"></span>
+                        <span id="breakevenEnd"></span>
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- CHARTS -->
+            <div class="charts-grid">
+                <div class="chart-card">
+                    <h3>💰 Final Wealth Comparison</h3>
+                    <canvas id="barChart"></canvas>
+                </div>
+                <div class="chart-card">
+                    <h3>📊 Cost Breakdown (Invest + Loan)</h3>
+                    <canvas id="pieChart"></canvas>
+                </div>
+                <div class="chart-card full-width">
+                    <h3>📈 Net Extra Wealth Over Time (vs Direct Buy)</h3>
+                    <canvas id="lineChart"></canvas>
+                </div>
+            </div>
+
+            <!-- YEAR TABLE -->
+            <div class="table-card">
+                <h3>📋 Year-wise Comparison</h3>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Year</th>
+                            <th>Direct Buy — Net Wealth</th>
+                            <th>Invest + Loan — Net Wealth</th>
+                            <th>Difference</th>
+                            <th>Better Option</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody"></tbody>
+                </table>
+            </div>
+
+            <!-- PDF -->
+            <!-- WHAT-IF SCENARIOS -->
+            <div class="breakeven-card" style="margin-top:20px;">
+                <h3 style="margin-bottom:4px;">🔀 What-If Scenarios</h3>
+                <p style="color:#888; font-size:0.9em;">See how your decision changes if loan rate or MF returns are different</p>
+
+                <div class="whatif-slider-row">
+                    <label>🏦 Loan Rate:</label>
+                    <input type="range" id="wiLoanRate" min="5" max="15" step="0.5" value="8.5"
+                           oninput="updateWhatIf()">
+                    <span class="whatif-slider-val" id="wiLoanRateVal">8.5%</span>
+                </div>
+                <div class="whatif-slider-row">
+                    <label>📈 MF Return:</label>
+                    <input type="range" id="wiMfReturn" min="6" max="20" step="0.5" value="12"
+                           oninput="updateWhatIf()">
+                    <span class="whatif-slider-val" id="wiMfReturnVal">12%</span>
+                </div>
+
+                <div class="whatif-grid" id="whatifGrid"></div>
+
+                <div style="margin-top:16px; padding:14px; background:#fdf9ee; border-radius:10px; font-size:0.88em; color:#555;" id="whatifInsight"></div>
+            </div>
+
+            <!-- LOAN REPAYMENT SCHEDULE -->
+            <div class="table-card" style="margin-top:30px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-wrap:wrap; gap:12px;">
+                    <h3 style="margin:0;">🏦 Loan Repayment Schedule (EMI Amortization)</h3>
+                    <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                        <button onclick="toggleAmort('monthly')" id="btnMonthly"
+                            style="padding:7px 16px; border-radius:20px; border:2px solid #e8c84a;
+                            background:#e8c84a; color:white; font-weight:600; font-size:0.85em; cursor:pointer;">
+                            Monthly
+                        </button>
+                        <button onclick="toggleAmort('yearly')" id="btnYearly"
+                            style="padding:7px 16px; border-radius:20px; border:2px solid #e8c84a;
+                            background:white; color:#e8c84a; font-weight:600; font-size:0.85em; cursor:pointer;">
+                            Yearly Summary
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Summary stats row -->
+                <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:20px;" id="amortStats">
+                    <div style="background:#fdf9ee; border-radius:10px; padding:14px; text-align:center;">
+                        <div style="font-size:0.75em; color:#888; font-weight:600; text-transform:uppercase;">Loan Amount</div>
+                        <div style="font-size:1.3em; font-weight:800; color:#e8c84a; margin-top:4px;" id="amLoan">—</div>
+                    </div>
+                    <div style="background:#fff0f0; border-radius:10px; padding:14px; text-align:center;">
+                        <div style="font-size:0.75em; color:#888; font-weight:600; text-transform:uppercase;">Total Interest</div>
+                        <div style="font-size:1.3em; font-weight:800; color:#c62828; margin-top:4px;" id="amInterest">—</div>
+                    </div>
+                    <div style="background:#fdf9ee; border-radius:10px; padding:14px; text-align:center;">
+                        <div style="font-size:0.75em; color:#888; font-weight:600; text-transform:uppercase;">Monthly EMI</div>
+                        <div style="font-size:1.3em; font-weight:800; color:#2e7d32; margin-top:4px;" id="amEmi">—</div>
+                    </div>
+                    <div style="background:#fffbf0; border-radius:10px; padding:14px; text-align:center;">
+                        <div style="font-size:0.75em; color:#888; font-weight:600; text-transform:uppercase;">Total Payment</div>
+                        <div style="font-size:1.3em; font-weight:800; color:#e65100; margin-top:4px;" id="amTotal">—</div>
+                    </div>
+                </div>
+
+                <div style="overflow-x:auto;">
+                    <table class="data-table" id="amortTable">
+                        <thead id="amortHead"></thead>
+                        <tbody id="amortBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <button class="btn-pdf-download" onclick="downloadPDF()">⬇ Download PDF Report</button>
+
+        </div><!-- end resultArea -->
+    </div><!-- end calc-card -->
+</div><!-- end calc-container -->
+
+<script>
+let chartBar, chartPie, chartLine;
+let calcResult = {};
+
+function parseAmt(v) { return parseFloat(String(v).replace(/,/g,'')) || 0; }
+
+function fmtINR(n) {
+    n = Math.round(n);
+    if (n < 0) return '-' + fmtINR(-n);
+    if (CURRENCY_FORMAT === 'western') return '$' + n.toLocaleString('en-US');
+    var s = String(n);
+    if (s.length <= 3) return '\u20B9' + s;
+    var last3 = s.slice(-3), rest = s.slice(0,-3), result = '';
+    while (rest.length > 2) { result = ',' + rest.slice(-2) + result; rest = rest.slice(0,-2); }
+    return '\u20B9' + rest + result + ',' + last3;
+}
+
+function fmtPDF(n) {
+    // Use Rs. instead of ₹ for PDF (jsPDF helvetica font issue); $ passes through unchanged
+    return fmtINR(n).replace('\u20B9', 'Rs.');
+}
+
+function fmtCr(n) {
+    var a = Math.abs(n);
+    var sym = CURRENCY_FORMAT === 'western' ? '$' : '\u20B9';
+    if (CURRENCY_FORMAT === 'western') {
+        if (a >= 1e9) return sym + (n/1e9).toFixed(2) + ' B';
+        if (a >= 1e6) return sym + (n/1e6).toFixed(2) + ' M';
+        return fmtINR(n);
+    }
+    if (a >= 10000000) return sym + (n/10000000).toFixed(2) + ' Cr';
+    if (a >= 100000)   return sym + (n/100000).toFixed(2) + ' L';
+    return fmtINR(n);
+}
+
+function calcEMI(p, r, y) {
+    var m = r / 12 / 100, n = y * 12;
+    if (m === 0) return p / n;
+    return p * m * Math.pow(1+m,n) / (Math.pow(1+m,n)-1);
+}
+
+function remainingLoan(p, r, y, paidYears) {
+    if (paidYears >= y) return 0;
+    var m = r / 12 / 100, n = y * 12, paid = paidYears * 12;
+    if (m === 0) return p * (1 - paid/n);
+    return p * (Math.pow(1+m,n) - Math.pow(1+m,paid)) / (Math.pow(1+m,n) - 1);
+}
+
+function calculate() {
+    var assetVal  = parseAmt(document.getElementById('assetValue').value);
+    var downPay   = parseAmt(document.getElementById('downPayment').value);
+    var loanRate  = parseFloat(document.getElementById('loanRate').value)  || 8.5;
+    var loanTen   = parseInt(document.getElementById('loanTenure').value)   || 20;
+    var mfRet     = parseFloat(document.getElementById('mfReturn').value)   || 12;
+    var period    = parseInt(document.getElementById('analysisPeriod').value)|| 20;
+
+    if (!assetVal) { alert('Please fill Asset Value.'); return; }
+    if (downPay >= assetVal) { alert('Down payment cannot be more than asset value.'); return; }
+
+    var loanAmt   = assetVal - downPay;
+    var emi       = calcEMI(loanAmt, loanRate, loanTen);
+    var totalPaid = emi * loanTen * 12;
+    var interest  = totalPaid - loanAmt;
+
+    // Scenario A: Direct buy — net wealth = asset value (no investment)
+    var saNet = assetVal;
+
+    // Scenario B: Invest full asset value in MF, take loan
+    var mfValue  = assetVal * Math.pow(1 + mfRet/100, period);
+    var remLoan  = remainingLoan(loanAmt, loanRate, loanTen, period);
+    var sbNet    = mfValue + assetVal - remLoan;
+    // True extra wealth = difference AFTER accounting for interest cost paid
+    // Direct Buy: spend assetVal, get asset
+    // Invest+Loan: spend downPay + totalInterest in EMIs, get asset + MF growth
+    var extraW   = sbNet - saNet - interest;
+
+    // Year-by-year — Net extra wealth vs Direct Buy
+    var years = [], saW = [], sbW = [];
+    for (var y = 1; y <= period; y++) {
+        years.push(y);
+        // Scenario A net position: 0 extra (baseline)
+        saW.push(0);
+        // Scenario B: MF gain - cumulative interest paid so far
+        var mv       = assetVal * Math.pow(1 + mfRet/100, y);
+        var mfGain   = mv - assetVal;
+        var paidMths = Math.min(y * 12, loanTen * 12);
+        var rl       = remainingLoan(loanAmt, loanRate, loanTen, y);
+        var totalEmiPaid   = emi * paidMths;
+        var intPaidSoFar   = totalEmiPaid - (loanAmt - Math.max(0, rl));
+        var netExtra = mfGain - intPaidSoFar;
+        sbW.push(Math.round(netExtra));
+    }
+
+    // Store for PDF
+    calcResult = { assetVal, downPay, loanRate, loanTen, mfRet, period,
+                   emi, interest, mfValue, saNet, sbNet, extraW, years, saW, sbW };
+
+    // ── UI UPDATE ──
+    var isBetter = extraW > 0;
+
+    // Verdict
+    var vc = document.getElementById('verdictCard');
+    vc.className = 'verdict-card ' + (isBetter ? 'invest' : 'buy');
+    document.getElementById('verdictIcon').textContent = isBetter ? '🏆' : '🏠';
+    document.getElementById('verdictTitle').textContent = isBetter
+        ? 'Invest & Take Loan is Smarter!'
+        : 'Direct Purchase is Better!';
+    document.getElementById('verdictDesc').textContent = isBetter
+        ? 'By investing ' + fmtCr(assetVal) + ' in Mutual Funds and taking a loan, you will be ' + fmtCr(extraW) + ' richer after ' + period + ' years — even after paying all EMIs and interest!'
+        : 'In this case, direct purchase gives better net wealth after ' + period + ' years. The loan interest outweighs MF gains.';
+
+    // Summary
+    document.getElementById('sumAsset').textContent    = fmtINR(assetVal);
+    document.getElementById('sumEmi').textContent      = fmtINR(emi) + '/mo';
+    document.getElementById('sumInterest').textContent = fmtINR(interest);
+    document.getElementById('sumMf').textContent       = fmtINR(mfValue);
+    document.getElementById('sumGain').textContent     = (extraW >= 0 ? '+' : '') + fmtINR(extraW);
+    document.getElementById('sumYears').textContent    = period;
+
+    // Success box
+    document.getElementById('successBox').innerHTML = '<strong>💡 Insight:</strong> '
+        + (isBetter
+            ? 'Your ₹' + fmtCr(assetVal) + ' invested in MF @ ' + mfRet + '% grows to ' + fmtCr(mfValue) + ' in ' + period + ' years. Even after paying ₹' + fmtCr(interest) + ' interest, you gain ₹' + fmtCr(extraW) + ' extra!'
+            : 'Loan interest of ₹' + fmtCr(interest) + ' exceeds MF gains. Try a lower loan rate or higher MF return to see when investing becomes better.');
+
+    // Scenarios
+    document.getElementById('saUpfront').textContent = fmtINR(assetVal);
+    document.getElementById('saAsset').textContent   = fmtINR(assetVal);
+    document.getElementById('saNet').textContent     = fmtINR(assetVal) + ' (asset only)';
+    document.getElementById('saYrs').textContent     = period;
+    document.getElementById('sbDown').textContent    = fmtINR(downPay);
+    document.getElementById('sbEmi').textContent     = fmtINR(emi) + '/mo';
+    document.getElementById('sbMf').textContent      = fmtINR(mfValue);
+    document.getElementById('sbInterest').textContent= fmtINR(interest);
+    document.getElementById('sbNet').textContent     = fmtINR(assetVal + extraW) + ' (asset + MF gain - interest)';
+    document.getElementById('sbYrs').textContent     = period;
+
+    // Year table
+    var tbody = document.getElementById('tableBody');
+    tbody.innerHTML = '';
+    years.forEach(function(y, i) {
+        var diff = sbW[i] - saW[i];
+        var tr = document.createElement('tr');
+        tr.innerHTML = '<td><strong>Year ' + y + '</strong></td>'
+            + '<td>' + fmtINR(saW[i]) + '</td>'
+            + '<td>' + fmtINR(sbW[i]) + '</td>'
+            + '<td style="color:' + (diff >= 0 ? '#2e7d32' : '#c62828') + '; font-weight:700">'
+            + (diff >= 0 ? '+' : '') + fmtINR(diff) + '</td>'
+            + '<td style="font-weight:700; color:' + (diff >= 0 ? '#2e7d32' : '#1565c0') + '">'
+            + (diff >= 0 ? '✅ Invest + Loan' : '🏠 Direct Buy') + '</td>';
+        tbody.appendChild(tr);
+    });
+
+    // Charts
+    var isDark = document.body.classList.contains('dark-mode');
+    var gridColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
+    var tickColor = isDark ? '#64748b' : '#999';
+    var textColor = isDark ? '#e2e8f0' : '#333';
+
+    if (chartBar)  { chartBar.destroy(); }
+    if (chartPie)  { chartPie.destroy(); }
+    if (chartLine) { chartLine.destroy(); }
+
+    // Bar chart: final comparison
+    chartBar = new Chart(document.getElementById('barChart'), {
+        type: 'bar',
+        data: {
+            labels: ['Direct Buy', 'Invest + Loan'],
+            datasets: [{
+                label: 'Net Wealth',
+                data: [saNet, sbNet],
+                backgroundColor: ['rgba(244,67,54,0.8)', 'rgba(76,175,80,0.8)'],
+                borderRadius: 8, borderSkipped: false
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { display: false },
+                tooltip: { callbacks: { label: ctx => fmtINR(ctx.parsed.y) } }
+            },
+            scales: {
+                x: { ticks: { color: tickColor }, grid: { color: gridColor } },
+                y: { ticks: { color: tickColor, callback: v => (v >= 0 ? '+' : '') + fmtCr(v) }, grid: { color: gridColor } }
+            }
+        }
+    });
+
+    // Pie chart: cost breakdown of invest + loan
+    chartPie = new Chart(document.getElementById('pieChart'), {
+        type: 'doughnut',
+        data: {
+            labels: ['Principal (Loan)', 'Interest Paid', 'MF Gains'],
+            datasets: [{
+                data: [loanAmt, interest, mfValue - assetVal],
+                backgroundColor: ['#e8c84a', '#f44336', '#4CAF50'],
+                borderWidth: 2, borderColor: isDark ? '#0a0818' : '#fff'
+            }]
+        },
+        options: {
+            responsive: true,
+            cutout: '60%',
+            plugins: {
+                legend: { position: 'bottom', labels: { color: textColor, font: { size: 11 } } },
+                tooltip: { callbacks: { label: ctx => ctx.label + ': ' + fmtINR(ctx.parsed) } }
+            }
+        }
+    });
+
+    // Line chart: year by year
+    chartLine = new Chart(document.getElementById('lineChart'), {
+        type: 'line',
+        data: {
+            labels: years.map(y => 'Year ' + y),
+            datasets: [
+                {
+                    label: 'Net Extra Wealth (Invest+Loan vs Direct Buy)',
+                    data: sbW,
+                    borderColor: '#4CAF50',
+                    backgroundColor: 'rgba(76,175,80,0.1)',
+                    fill: true, tension: 0.4, pointRadius: 3
+                },
+                {
+                    label: 'Direct Buy (Baseline)',
+                    data: saW,  // all zeros - baseline
+                    borderColor: '#f44336',
+                    backgroundColor: 'rgba(244,67,54,0.08)',
+                    fill: true, tension: 0.4, pointRadius: 3,
+                    borderDash: [6,3]
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { position: 'top', labels: { color: textColor } },
+                tooltip: { callbacks: { label: ctx => ctx.dataset.label + ': ' + fmtINR(ctx.parsed.y) } }
+            },
+            scales: {
+                x: { ticks: { color: tickColor }, grid: { color: gridColor } },
+                y: { ticks: { color: tickColor, callback: v => (v >= 0 ? '+' : '') + fmtCr(v) }, grid: { color: gridColor } }
+            }
+        }
+    });
+
+    document.getElementById('resultArea').style.display = 'block';
+    document.getElementById('resultArea').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    buildAmortization();
+    buildBreakeven();
+}
+
+// ── BREAK-EVEN POINT ──
+function buildBreakeven() {
+    var d = calcResult;
+    if (!d.years) return;
+
+    var loanAmt      = d.assetVal - (d.downPay || 0);
+    var totalInterest = d.emi * d.loanTen * 12 - loanAmt;
+    // Break-even = jab MF Value >= Asset Value + Total Interest (poora paisa wapas)
+    var fullCost     = d.assetVal + totalInterest;
+    var totalYears   = d.period;
+
+    var breakYear = null;
+    var breakMfVal = null;
+    for (var y = 1; y <= totalYears; y++) {
+        var mfVal = d.assetVal * Math.pow(1 + d.mfRet/100, y);
+        if (mfVal >= fullCost) {
+            breakYear  = y;
+            breakMfVal = mfVal;
+            break;
+        }
+    }
+
+    if (breakYear) {
+        document.getElementById('breakevenText').textContent =
+            'Year ' + breakYear + ' — Investment fully recovered!';
+        document.getElementById('breakevenDesc').textContent =
+            'By Year ' + breakYear + ', your MF value (' + fmtINR(Math.round(breakMfVal)) +
+            ') covers your full investment of ' + fmtINR(Math.round(d.assetVal)) +
+            ' + total interest of ' + fmtINR(Math.round(totalInterest)) +
+            ' = ' + fmtINR(Math.round(fullCost)) + '. You are now in pure profit!';
+        var pct = Math.min((breakYear / totalYears) * 100, 96);
+        document.getElementById('breakevenFill').style.width  = pct + '%';
+        document.getElementById('breakevenMarker').style.left = pct + '%';
+    } else {
+        // Check if it breaks even beyond analysis period
+        var extYear = null;
+        for (var y2 = totalYears+1; y2 <= 40; y2++) {
+            var mv2 = d.assetVal * Math.pow(1 + d.mfRet/100, y2);
+            if (mv2 >= fullCost) { extYear = y2; break; }
+        }
+        if (extYear) {
+            document.getElementById('breakevenText').textContent =
+                'Year ' + extYear + ' (beyond analysis period)';
+            document.getElementById('breakevenDesc').textContent =
+                'With current MF return of ' + d.mfRet + '%, full recovery happens in Year ' + extYear +
+                ' which is beyond your ' + totalYears + '-year analysis period. Consider higher MF return or lower loan rate.';
+        } else {
+            document.getElementById('breakevenText').textContent = 'MF return too low to recover cost';
+            document.getElementById('breakevenDesc').textContent =
+                'At ' + d.mfRet + '% MF return, the investment may not cover the full loan cost. Consider a higher return fund.';
+        }
+        document.getElementById('breakevenFill').style.width  = '100%';
+        document.getElementById('breakevenMarker').style.left = '96%';
+    }
+    document.getElementById('breakevenMid').textContent = 'Year ' + Math.round(totalYears/2);
+    document.getElementById('breakevenEnd').textContent = 'Year ' + totalYears;
+
+    // Init what-if sliders to current values
+    document.getElementById('wiLoanRate').value   = d.loanRate;
+    document.getElementById('wiMfReturn').value   = d.mfRet;
+    document.getElementById('wiLoanRateVal').textContent = d.loanRate + '%';
+    document.getElementById('wiMfReturnVal').textContent = d.mfRet + '%';
+    updateWhatIf();
+}
+
+// ── WHAT-IF SCENARIOS ──
+function updateWhatIf() {
+    var d = calcResult;
+    if (!d.assetVal) return;
+
+    var baseLoan = parseFloat(document.getElementById('wiLoanRate').value);
+    var baseMf   = parseFloat(document.getElementById('wiMfReturn').value);
+    document.getElementById('wiLoanRateVal').textContent = baseLoan + '%';
+    document.getElementById('wiMfReturnVal').textContent = baseMf + '%';
+
+    // Generate 6 scenarios: vary loan rate and MF return
+    var scenarios = [
+        { label: 'Low Loan Rate',    loanR: Math.max(5, baseLoan - 2),  mfR: baseMf,       icon: '📉' },
+        { label: 'Current',          loanR: baseLoan,                    mfR: baseMf,       icon: '📊', current: true },
+        { label: 'High Loan Rate',   loanR: Math.min(15, baseLoan + 2), mfR: baseMf,       icon: '📈' },
+        { label: 'Low MF Return',    loanR: baseLoan,                    mfR: Math.max(6, baseMf - 3),  icon: '🐢' },
+        { label: 'High MF Return',   loanR: baseLoan,                    mfR: Math.min(20, baseMf + 3), icon: '🚀' },
+        { label: 'Best Case',        loanR: Math.max(5, baseLoan - 2),  mfR: Math.min(20, baseMf + 3), icon: '🏆' },
+    ];
+
+    var loanAmt = d.assetVal - (d.downPay || 0);
+
+    var grid = document.getElementById('whatifGrid');
+    grid.innerHTML = '';
+
+    var bestGain = -Infinity;
+    scenarios.forEach(function(sc) {
+        // MF grows on full asset value
+        var mfVal    = d.assetVal * Math.pow(1 + sc.mfR/100, d.period);
+        // Remaining loan balance after period years
+        var remLoan  = remainingLoan(loanAmt, sc.loanR, d.loanTen, d.period);
+        // Scenario B net wealth = MF value + asset - remaining loan
+        var sbNet    = mfVal + d.assetVal - remLoan;
+        // Scenario A net wealth = just the asset (direct buy)
+        var saNet    = d.assetVal;
+        // Extra wealth = how much MORE you have vs direct buy
+        // subtract total interest for that scenario
+        var scEmi      = calcEMI(loanAmt, sc.loanR, d.loanTen);
+        var scInterest = scEmi * d.loanTen * 12 - loanAmt;
+        var gain       = sbNet - saNet - scInterest;
+        sc.gain  = gain;
+        sc.sbNet = sbNet;
+        sc.mfVal = mfVal;
+        sc.remLoan = remLoan;
+        if (gain > bestGain) bestGain = gain;
+    });
+
+    scenarios.forEach(function(sc) {
+        var gain = sc.gain;
+        var cls  = gain > 0 ? 'better' : 'worse';
+        if (sc.current) cls = 'neutral';
+        var div = document.createElement('div');
+        div.className = 'whatif-card ' + cls;
+        div.innerHTML =
+            '<div class="wf-label">' + sc.icon + ' ' + sc.label + '</div>' +
+            '<div class="wf-rate" style="color:' + (cls==='better'?'#2e7d32':cls==='worse'?'#c62828':'#e8c84a') + '">' +
+            sc.loanR + '% loan / ' + sc.mfR + '% MF</div>' +
+            '<div class="wf-gain">' + (gain >= 0 ? '+' : '') + fmtINR(gain) + ' extra wealth</div>';
+        grid.appendChild(div);
+    });
+
+    // Insight
+    var baseGain = scenarios[1].gain;
+    var baseEmi = calcEMI(loanAmt, baseLoan, d.loanTen);
+    var baseTotalInt = baseEmi * d.loanTen * 12 - loanAmt;
+    var insight = baseGain > 0
+        ? '✅ At ' + baseLoan + '% loan / ' + baseMf + '% MF: You pay ₹' + (baseTotalInt/100000).toFixed(1) + 'L interest but earn ₹' + ((scenarios[1].mfVal - d.assetVal)/100000).toFixed(1) + 'L in MF gains. Net extra wealth: ' + fmtINR(baseGain) + ' after ' + d.period + ' years.'
+        : '⚠️ At ' + baseLoan + '% loan / ' + baseMf + '% MF: Loan interest exceeds MF gains. Direct buy is better by ' + fmtINR(Math.abs(baseGain)) + '. Try lower loan rate or higher MF return.';
+    document.getElementById('whatifInsight').textContent = insight;
+}
+
+// ── AMORTIZATION SCHEDULE ──
+var amortMode = 'monthly';
+
+function buildAmortization() {
+    var d = calcResult;
+    if (!d.assetVal) return;
+
+    var loanAmt = d.assetVal - (d.downPay || 0);
+    var r = d.loanRate / 12 / 100;
+    var n = d.loanTen * 12;
+    var emi = d.emi;
+    var totalInterest = emi * n - loanAmt;
+    var totalPayment  = emi * n;
+
+    // Update stats
+    document.getElementById('amLoan').textContent     = fmtINR(loanAmt);
+    document.getElementById('amInterest').textContent = fmtINR(totalInterest);
+    document.getElementById('amEmi').textContent      = fmtINR(emi) + '/mo';
+    document.getElementById('amTotal').textContent    = fmtINR(totalPayment);
+
+    if (amortMode === 'monthly') {
+        buildMonthly(loanAmt, r, n, emi);
+    } else {
+        buildYearly(loanAmt, r, n, emi);
+    }
+}
+
+function buildMonthly(loanAmt, r, n, emi) {
+    var head = document.getElementById('amortHead');
+    var tbody = document.getElementById('amortBody');
+    head.innerHTML = '<tr><th>Month</th><th>EMI</th><th>Principal</th><th>Interest</th><th>Balance</th><th>Paid %</th></tr>';
+    tbody.innerHTML = '';
+
+    var balance = loanAmt;
+    var totalPaid = 0;
+
+    for (var m = 1; m <= n; m++) {
+        var intPart  = balance * r;
+        var prinPart = emi - intPart;
+        balance -= prinPart;
+        if (balance < 0) balance = 0;
+        totalPaid += emi;
+        var paidPct = Math.round((totalPaid / (emi * n)) * 100);
+
+        var tr = document.createElement('tr');
+        tr.innerHTML =
+            '<td><strong>Month ' + m + '</strong></td>' +
+            '<td>' + fmtINR(emi) + '</td>' +
+            '<td style="color:#2e7d32; font-weight:600">' + fmtINR(prinPart) + '</td>' +
+            '<td style="color:#c62828">' + fmtINR(intPart) + '</td>' +
+            '<td style="font-weight:700">' + fmtINR(balance) + '</td>' +
+            '<td>' +
+                '<div style="background:#f0f0f0; border-radius:10px; height:6px; width:80px; display:inline-block; vertical-align:middle; margin-right:5px;">' +
+                    '<div style="background:#e8c84a; height:6px; border-radius:10px; width:' + paidPct + '%"></div>' +
+                '</div>' + paidPct + '%' +
+            '</td>';
+        tbody.appendChild(tr);
+    }
+}
+
+function buildYearly(loanAmt, r, n, emi) {
+    var head = document.getElementById('amortHead');
+    var tbody = document.getElementById('amortBody');
+    head.innerHTML = '<tr><th>Year</th><th>Annual EMI</th><th>Principal Paid</th><th>Interest Paid</th><th>Balance</th><th>Loan Paid %</th></tr>';
+    tbody.innerHTML = '';
+
+    var balance = loanAmt;
+    var years = n / 12;
+
+    for (var y = 1; y <= years; y++) {
+        var yearPrin = 0, yearInt = 0;
+        for (var m = 0; m < 12; m++) {
+            var intPart  = balance * r;
+            var prinPart = emi - intPart;
+            balance -= prinPart;
+            if (balance < 0) balance = 0;
+            yearPrin += prinPart;
+            yearInt  += intPart;
+        }
+        var paidPct = Math.round(((loanAmt - balance) / loanAmt) * 100);
+
+        var tr = document.createElement('tr');
+        tr.innerHTML =
+            '<td><strong>Year ' + y + '</strong></td>' +
+            '<td>' + fmtINR(emi * 12) + '</td>' +
+            '<td style="color:#2e7d32; font-weight:600">' + fmtINR(yearPrin) + '</td>' +
+            '<td style="color:#c62828">' + fmtINR(yearInt) + '</td>' +
+            '<td style="font-weight:700">' + fmtINR(Math.max(0, balance)) + '</td>' +
+            '<td>' +
+                '<div style="background:#f0f0f0; border-radius:10px; height:6px; width:80px; display:inline-block; vertical-align:middle; margin-right:5px;">' +
+                    '<div style="background:#4CAF50; height:6px; border-radius:10px; width:' + paidPct + '%"></div>' +
+                '</div>' + paidPct + '%' +
+            '</td>';
+        tbody.appendChild(tr);
+    }
+}
+
+function toggleAmort(mode) {
+    amortMode = mode;
+    document.getElementById('btnMonthly').style.background = mode === 'monthly' ? '#e8c84a' : 'white';
+    document.getElementById('btnMonthly').style.color      = mode === 'monthly' ? 'white' : '#e8c84a';
+    document.getElementById('btnYearly').style.background  = mode === 'yearly'  ? '#e8c84a' : 'white';
+    document.getElementById('btnYearly').style.color       = mode === 'yearly'  ? 'white' : '#e8c84a';
+    buildAmortization();
+}
+
+// ── PDF ──
+function downloadPDF() {
+    if (!calcResult.assetVal) { alert('Calculate first!'); return; }
+    var d = calcResult;
+    try {
+        var { jsPDF } = window.jspdf;
+        var doc = new jsPDF({ unit:'mm', format:'a4' });
+        var PW=210, PH=297;
+        var ACC=[102,126,234], DARK=[26,26,46], GRAY=[100,116,139], WHITE=[255,255,255], LIGHT=[241,245,251];
+
+        // Header
+        doc.setFillColor(...DARK);
+        doc.rect(0,0,PW,28,'F');
+        doc.setFillColor(...ACC);
+        doc.rect(0,0,4,28,'F');
+        doc.setTextColor(...WHITE);
+        doc.setFont('helvetica','bold');
+        doc.setFontSize(16);
+        doc.text('Wealth Optimizer Report', 10, 12);
+        doc.setFont('helvetica','normal');
+        doc.setFontSize(8);
+        doc.setTextColor(148,163,184);
+        doc.text('M3 Portfolio Investment Analysis  |  ' + new Date().toLocaleDateString('en-IN'), 10, 21);
+
+        var cy = 36;
+
+        // Inputs
+        var inputs = [
+            { label:'Asset Value', value: fmtPDF(d.assetVal) },
+            { label:'Down Payment', value: fmtPDF(d.downPay) },
+            { label:'Loan Amount', value: fmtPDF(d.assetVal - d.downPay) },
+            { label:'Loan Interest Rate', value: d.loanRate + '% p.a.' },
+            { label:'Loan Tenure', value: d.loanTen + ' Years' },
+            { label:'MF Expected Return', value: d.mfRet + '% p.a.' },
+            { label:'Analysis Period', value: d.period + ' Years' },
+        ];
+        doc.setFillColor(...LIGHT);
+        doc.roundedRect(10, cy, PW-20, 8 + inputs.length*7, 2, 2, 'F');
+        doc.setFillColor(...ACC);
+        doc.roundedRect(10, cy, 3, 8 + inputs.length*7, 1, 1, 'F');
+        doc.setFont('helvetica','bold');
+        doc.setFontSize(9);
+        doc.setTextColor(...DARK);
+        doc.text('Input Parameters', 16, cy+6);
+        inputs.forEach(function(inp, i) {
+            doc.setFont('helvetica','normal');
+            doc.setFontSize(8.5);
+            doc.setTextColor(...GRAY);
+            doc.text(inp.label + ':', 16, cy+13+i*7);
+            doc.setFont('helvetica','bold');
+            doc.setTextColor(...DARK);
+            doc.text(inp.value, 85, cy+13+i*7);
+        });
+        cy += 8 + inputs.length*7 + 8;
+
+        // Summary cards
+        var cards = [
+            { label:'Monthly EMI', value: fmtPDF(d.emi) },
+            { label:'Total Interest Paid', value: fmtPDF(d.interest) },
+            { label:'MF Value after ' + d.period + ' Yrs', value: fmtPDF(d.mfValue) },
+            { label:'Direct Buy Net Wealth', value: fmtPDF(d.saNet) },
+            { label:'Invest+Loan Net Wealth', value: fmtPDF(d.sbNet), highlight: true },
+        ];
+        var cw = (PW-20-(cards.length-1)*3) / cards.length;
+        cards.forEach(function(card, i) {
+            var x = 10 + i*(cw+3);
+            if (card.highlight) { doc.setFillColor(...ACC); } else { doc.setFillColor(...LIGHT); }
+            doc.roundedRect(x, cy, cw, 22, 2, 2, 'F');
+            doc.setFont('helvetica','normal');
+            doc.setFontSize(6);
+            if (card.highlight) { doc.setTextColor(...WHITE); } else { doc.setTextColor(...GRAY); }
+            doc.text(card.label, x+3, cy+7);
+            doc.setFont('helvetica','bold');
+            doc.setFontSize(9);
+            if (card.highlight) { doc.setTextColor(...WHITE); } else { doc.setTextColor(...ACC); }
+            doc.text(card.value, x+3, cy+17);
+        });
+        cy += 30;
+
+        // Chart
+        var canvas = document.getElementById('lineChart');
+        if (canvas) {
+            var imgData = canvas.toDataURL('image/png');
+            doc.setFillColor(...LIGHT);
+            doc.roundedRect(10, cy, PW-20, 68, 2, 2, 'F');
+            doc.setFont('helvetica','bold');
+            doc.setFontSize(9);
+            doc.setTextColor(...DARK);
+            doc.text('Wealth Growth Over Time', 14, cy+6);
+            doc.addImage(imgData, 'PNG', 12, cy+8, PW-24, 58);
+            cy += 76;
+        }
+
+        // Table
+        var tBody = d.years.map(function(y, i) {
+            var diff = d.sbW[i] - d.saW[i];
+            return ['Year ' + y, fmtPDF(d.saW[i]), fmtPDF(d.sbW[i]),
+                (diff >= 0 ? '+' : '') + fmtPDF(diff),
+                diff >= 0 ? 'Invest+Loan' : 'Direct Buy'];
+        });
+        doc.setFont('helvetica','bold');
+        doc.setFontSize(9);
+        doc.setTextColor(...DARK);
+        doc.text('Year-wise Comparison', 10, cy);
+        cy += 4;
+        doc.autoTable({
+            startY: cy,
+            head: [['Year','Direct Buy','Invest+Loan','Difference','Better']],
+            body: tBody,
+            headStyles: { fillColor: ACC, textColor: WHITE, fontStyle:'bold', fontSize:8 },
+            bodyStyles: { fontSize:8, textColor: DARK },
+            alternateRowStyles: { fillColor: [248,246,255] },
+            margin: { left:10, right:10 }
+        });
+
+        // Footer
+        doc.setFillColor(...DARK);
+        doc.rect(0, PH-12, PW, 12, 'F');
+        doc.setFillColor(...ACC);
+        doc.rect(0, PH-12, 4, 12, 'F');
+        doc.setFont('helvetica','normal');
+        doc.setFontSize(7);
+        doc.setTextColor(148,163,184);
+        doc.text('M3 Portfolio Investment Analysis  |  For informational purposes only.', 9, PH-5);
+
+        // ── PAGE 2: LOAN REPAYMENT SCHEDULE ──
+        doc.addPage();
+
+        // Page 2 header
+        doc.setFillColor(...DARK);
+        doc.rect(0, 0, PW, 28, 'F');
+        doc.setFillColor(...ACC);
+        doc.rect(0, 0, 4, 28, 'F');
+        doc.setTextColor(...WHITE);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(16);
+        doc.text('Loan Repayment Schedule', 10, 12);
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(8);
+        doc.setTextColor(148, 163, 184);
+        doc.text('EMI Amortization  |  Yearly Summary', 10, 21);
+
+        var cy2 = 36;
+
+        // Amortization summary stats
+        var loanAmt2   = d.assetVal - (d.downPay || 0);
+        var totalPay2  = d.emi * d.loanTen * 12;
+        var amStats = [
+            { label: 'Loan Amount',     value: fmtPDF(loanAmt2) },
+            { label: 'Monthly EMI',     value: fmtPDF(d.emi) + '/mo' },
+            { label: 'Total Interest',  value: fmtPDF(d.interest) },
+            { label: 'Total Payment',   value: fmtPDF(totalPay2) },
+        ];
+        var sw = (PW - 20 - 9) / 4;
+        amStats.forEach(function(stat, i) {
+            var x = 10 + i * (sw + 3);
+            doc.setFillColor(...LIGHT);
+            doc.roundedRect(x, cy2, sw, 18, 2, 2, 'F');
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(6.5);
+            doc.setTextColor(...GRAY);
+            doc.text(stat.label, x + 3, cy2 + 6);
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(9);
+            doc.setTextColor(...ACC);
+            doc.text(stat.value, x + 3, cy2 + 14);
+        });
+        cy2 += 26;
+
+        // Build yearly amortization data
+        var r2       = d.loanRate / 12 / 100;
+        var n2       = d.loanTen * 12;
+        var balance2 = loanAmt2;
+        var amortRows = [];
+
+        for (var y2 = 1; y2 <= d.loanTen; y2++) {
+            var yPrin = 0, yInt = 0;
+            for (var m2 = 0; m2 < 12; m2++) {
+                var iP = balance2 * r2;
+                var pP = d.emi - iP;
+                balance2 -= pP;
+                if (balance2 < 0) balance2 = 0;
+                yPrin += pP;
+                yInt  += iP;
+            }
+            var paidPct2 = Math.round(((loanAmt2 - balance2) / loanAmt2) * 100);
+            amortRows.push([
+                'Year ' + y2,
+                fmtPDF(d.emi * 12),
+                fmtPDF(yPrin),
+                fmtPDF(yInt),
+                fmtPDF(Math.max(0, balance2)),
+                paidPct2 + '%'
+            ]);
+        }
+
+        // Amortization table
+        doc.autoTable({
+            startY: cy2,
+            head: [['Year', 'Annual EMI', 'Principal Paid', 'Interest Paid', 'Balance', 'Loan Paid %']],
+            body: amortRows,
+            headStyles: { fillColor: ACC, textColor: WHITE, fontStyle: 'bold', fontSize: 8 },
+            bodyStyles: { fontSize: 8, textColor: DARK },
+            alternateRowStyles: { fillColor: [248, 246, 255] },
+            margin: { left: 10, right: 10 },
+            didDrawCell: function(data) {
+                // Highlight last row (loan fully paid)
+                if (data.row.index === amortRows.length - 1 && data.section === 'body') {
+                    doc.setFillColor(232, 245, 233);
+                }
+            }
+        });
+
+        // Footer page 2
+        doc.setFillColor(...DARK);
+        doc.rect(0, PH - 12, PW, 12, 'F');
+        doc.setFillColor(...ACC);
+        doc.rect(0, PH - 12, 4, 12, 'F');
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(7);
+        doc.setTextColor(148, 163, 184);
+        doc.text('M3 Portfolio Investment Analysis  |  For informational purposes only.', 9, PH - 5);
+        doc.text('Page 2', PW - 10, PH - 5, { align: 'right' });
+
+        doc.save('Wealth_Optimizer_Report.pdf');
+    } catch(e) { alert('PDF Error: ' + e.message); }
+}
+
+// ── BENCHMARK BUTTONS ──
+function setBenchmark(el, val) {
+    document.getElementById('mfReturn').value = val;
+    // Update active state
+    el.closest('.return-benchmarks').querySelectorAll('span').forEach(function(s) {
+        s.classList.remove('active');
+    });
+    el.classList.add('active');
+    updateQuickInfo();
+}
+
+// ── SCENARIO PRESETS ──
+function setScenario(type) {
+    document.querySelectorAll('.scenario-tab').forEach(t => t.classList.remove('active'));
+    document.getElementById('tab-' + type).classList.add('active');
+
+    // Update asset icon
+    var icon = document.querySelector('.input-icon');
+
+    if (type === 'home') {
+        document.getElementById('loanRate').value = '8.5';
+        document.getElementById('loanTenure').value = '20';
+        document.getElementById('analysisPeriod').value = '20';
+        document.getElementById('mfReturn').value = '12';
+        if (icon) icon.textContent = '🏠';
+    } else if (type === 'car') {
+        document.getElementById('loanRate').value = '9.5';
+        document.getElementById('loanTenure').value = '7';
+        document.getElementById('analysisPeriod').value = '7';
+        document.getElementById('mfReturn').value = '12';
+        if (icon) icon.textContent = '🚗';
+    } else {
+        if (icon) icon.textContent = '💼';
+    }
+    updateQuickInfo();
+}
+
+// ── LIVE EMI PREVIEW ──
+function updateQuickInfo() {
+    var asset   = parseAmt(document.getElementById('assetValue').value);
+    var down    = parseAmt(document.getElementById('downPayment').value) || 0;
+    var rate    = parseFloat(document.getElementById('loanRate').value)  || 0;
+    var tenure  = parseInt(document.getElementById('loanTenure').value)  || 0;
+
+    if (asset > 0 && rate > 0 && tenure > 0) {
+        var loan = asset - down;
+        var emi  = calcEMI(loan, rate, tenure);
+        document.getElementById('qciLoan').textContent = fmtINR(loan);
+        document.getElementById('qciEmi').textContent  = fmtINR(emi) + '/mo';
+    } else {
+        document.getElementById('qciLoan').textContent = '—';
+        document.getElementById('qciEmi').textContent  = '—';
+    }
+}
+
+// Listen for input changes to update live preview
+['assetValue','downPayment','loanRate','loanTenure'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) el.addEventListener('input', updateQuickInfo);
+});
+
+// Indian format input
+function formatINR_input(num) {
+    num = Math.round(parseFloat(num) || 0);
+    if (num <= 0) return '';
+    if (CURRENCY_FORMAT === 'western') return num.toLocaleString('en-US');
+    var s = num.toString();
+    if (s.length <= 3) return s;
+    var last3 = s.slice(-3), rest = s.slice(0,-3), result = '';
+    while (rest.length > 2) { result = ',' + rest.slice(-2) + result; rest = rest.slice(0,-2); }
+    return rest + result + ',' + last3;
+}
+function onAmtKeyup(el) {
+    var raw = el.value.replace(/,/g,'').replace(/[^0-9]/g,'');
+    var num = parseInt(raw, 10);
+    var pos = el.selectionStart, oldLen = el.value.length;
+    el.value = raw === '' ? '' : formatINR_input(num);
+    var newPos = pos + (el.value.length - oldLen);
+    el.setSelectionRange(newPos, newPos);
+}
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.amt-input').forEach(function(el) {
+        el.addEventListener('input', function() { onAmtKeyup(this); });
+    });
+});
+</script>
+<script>
+// Currency preference live-update: swap input-prefix symbols and re-render preview
+(function () {
+  function refreshSyms() {
+    var sym = (window.M3 && typeof window.M3.currencySymbol === 'function')
+              ? window.M3.currencySymbol()
+              : ((function(){ try { return localStorage.getItem('m3-currency') === 'western' ? '$' : '₹'; } catch(e){ return '₹'; } })());
+    var nodes = document.querySelectorAll('.m3-cursym');
+    for (var i = 0; i < nodes.length; i++) nodes[i].textContent = sym;
+  }
+  function refreshPreview() {
+    if (typeof updatePreview === 'function') { try { updatePreview(); } catch(e){} }
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', refreshSyms);
+  } else { refreshSyms(); }
+  window.addEventListener('m3-currency-change', function () { refreshSyms(); refreshPreview(); });
+})();
+</script>
+
+</body>
+</html>
