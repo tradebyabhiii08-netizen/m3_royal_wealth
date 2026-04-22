@@ -430,7 +430,7 @@ def login():
 
         conn = get_db_connection()
         user = conn.execute(
-            "SELECT * FROM users WHERE email = ?", (email,)
+            "SELECT * FROM users WHERE LOWER(email) = LOWER(?)", (email,)
         ).fetchone()
         conn.close()
 
@@ -458,7 +458,7 @@ def rate_limit_exceeded(e):
 def register():
     if request.method == "POST":
         name     = (request.form.get("name") or "").strip()
-        email    = (request.form.get("email") or "").strip()
+        email    = (request.form.get("email") or "").strip().lower()
         password = (request.form.get("password") or "").strip()
 
         if not name or not email or not password:
