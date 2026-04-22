@@ -712,22 +712,36 @@
         function extractNumbers(text) {
             var out = {};
             function parseAmount(str) {
-                var m = str.match(/([\d,]+(?:\.\d+)?)\s*crore/i); if (m) return parseFloat(m[1].replace(/,/g,'')) * 10000000;
-                m = str.match(/([\d,]+(?:\.\d+)?)\s*(?:billion|bn)/i); if (m) return parseFloat(m[1].replace(/,/g,'')) * 1000000000;
-                m = str.match(/([\d,]+(?:\.\d+)?)\s*(?:million|mn|m)(?:\s|$|,)/i); if (m) return parseFloat(m[1].replace(/,/g,'')) * 1000000;
-                m = str.match(/([\d,]+(?:\.\d+)?)\s*(?:lakh|lac)/i); if (m) return parseFloat(m[1].replace(/,/g,'')) * 100000;
-                m = str.match(/([\d,]+(?:\.\d+)?)\s*k(?:\s|$|,)/i); if (m) return parseFloat(m[1].replace(/,/g,'')) * 1000;
-                m = str.match(/[₹$]\s*([\d,]+)/); if (m) return parseFloat(m[1].replace(/,/g,''));
-                m = str.match(/(?:rs\.?|inr)\s*([\d,]+)/i); if (m) return parseFloat(m[1].replace(/,/g,''));
+                // Order matters: longest/most specific tokens first so "crore" wins over "cr"
+                var m = str.match(/([\d,]+(?:\.\d+)?)\s*(?:crores?|cr)\b/i); if (m) return parseFloat(m[1].replace(/,/g,'')) * 10000000;
+                m = str.match(/([\d,]+(?:\.\d+)?)\s*(?:billion|bn)\b/i); if (m) return parseFloat(m[1].replace(/,/g,'')) * 1000000000;
+                m = str.match(/([\d,]+(?:\.\d+)?)\s*(?:million|mn)\b/i); if (m) return parseFloat(m[1].replace(/,/g,'')) * 1000000;
+                m = str.match(/([\d,]+(?:\.\d+)?)\s*(?:lakhs?|lacs?|l)\b/i); if (m) return parseFloat(m[1].replace(/,/g,'')) * 100000;
+                m = str.match(/([\d,]+(?:\.\d+)?)\s*k\b/i); if (m) return parseFloat(m[1].replace(/,/g,'')) * 1000;
+                m = str.match(/([\d,]+(?:\.\d+)?)\s*m\b/i); if (m) return parseFloat(m[1].replace(/,/g,'')) * 1000000;
+                m = str.match(/[₹$]\s*([\d,]+(?:\.\d+)?)/); if (m) return parseFloat(m[1].replace(/,/g,''));
+                m = str.match(/(?:rs\.?|inr)\s*([\d,]+(?:\.\d+)?)/i); if (m) return parseFloat(m[1].replace(/,/g,''));
                 return null;
             }
             function extractPlainNumber(str) { var m = str.match(/([\d,]+(?:\.\d+)?)/); return m ? parseFloat(m[1].replace(/,/g,'')) : null; }
 
-            var mm = text.match(/₹\s*([\d,]+)\s*(?:\/month|per\s*month|pm|monthly)/i) || text.match(/([\d,]+)\s*(?:\/month|per\s*month|pm|monthly)/i) || text.match(/invest\s+(?:[₹$]\s*)?([\d,]+)/i) || text.match(/sip\s+(?:of\s+)?(?:[₹$]\s*)?([\d,]+)/i);
-            if (mm) out.monthly = parseFloat(mm[1].replace(/,/g,''));
+            // Monthly SIP detection — multiple phrasings including Hinglish
+            var mm = text.match(/[₹$]\s*([\d,]+(?:\.\d+)?)\s*(?:\/month|per\s*month|pm|monthly|\/mahina|per\s*mahina)/i)
+                  || text.match(/([\d,]+(?:\.\d+)?)\s*(?:\/month|per\s*month|pm|monthly|\/mahina|per\s*mahina)/i)
+                  || text.match(/invest(?:ing|ment\s+of)?\s+(?:[₹$]\s*)?([\d,]+(?:\.\d+)?)\s*(?:per\s*month|monthly|\/month|pm)?/i)
+                  || text.match(/sip\s+(?:of\s+)?(?:[₹$]\s*)?([\d,]+(?:\.\d+)?)/i);
+            if (mm) {
+                // Allow shorthand like "10k monthly"
+                var rawSeg = mm[0];
+                var amt = parseAmount(rawSeg);
+                out.monthly = amt || parseFloat(mm[1].replace(/,/g,''));
+            }
 
-            var ym = text.match(/(?:in|for|over|within)\s+(\d+)\s*years?/i) || text.match(/(\d+)\s*years?\s+(?:time|period|horizon)/i) || text.match(/(\d+)\s+yr/i);
-            if (ym) out.years = parseInt(ym[1]);
+            // Years — English + Hinglish (saal, varsh)
+            var ym = text.match(/(?:in|for|over|within|after)\s+(\d+(?:\.\d+)?)\s*(?:years?|yrs?|saal|varsh)/i)
+                  || text.match(/(\d+(?:\.\d+)?)\s*(?:years?|yrs?|saal|varsh)\s+(?:time|period|horizon|mein|me)/i)
+                  || text.match(/(\d+(?:\.\d+)?)\s*(?:years?|yrs?|saal|varsh)/i);
+            if (ym) out.years = parseFloat(ym[1]);
 
             var tp = [/(?:save|accumulate|build|create|target|goal|need)\s+(?:[₹$]\s*)?([\d,]+(?:\.\d+)?(?:\s*(?:crore|lakh|lac|k))?)/i];
             for (var i = 0; i < tp.length; i++) {
@@ -766,6 +780,25 @@
 
         function pickCalculator(text, nums) {
             var t = text.toLowerCase(), key = 'sip', params = {};
+
+            // Horizon-based return rate (SEBI-aligned): short = debt, long = equity
+            function returnForHorizon(years) {
+                if (!years || years <= 0) return 12;
+                if (years <= 2)  return 7;   // Liquid / Ultra-short debt
+                if (years <= 5)  return 10;  // Conservative hybrid
+                if (years <= 7)  return 11;  // Aggressive hybrid / Large cap
+                return 12;                   // Flexi/Multi cap (cap at 12 — SEBI disclosure norm)
+            }
+            // Goal-type inflation override (education = 10%, healthcare = 8%, real estate = 7%)
+            function inflationForGoal(s) {
+                if (/(education|college|study|studies|school|foreign\s+study|abroad\s+study|abroad\s+studies|mba|engineering)/i.test(s)) return 10;
+                if (/(medical|healthcare|hospital|surgery|treatment)/i.test(s)) return 8;
+                if (/(house|home|flat|property|apartment|real\s+estate)/i.test(s)) return 7;
+                if (/(wedding|marriage|shaadi)/i.test(s)) return 7;
+                if (/(car|bike|vehicle)/i.test(s)) return 5;
+                return 6;
+            }
+
             // XIRR: user wants to measure ACTUAL annualized return on real cashflows (backward-looking)
             var xirrIntent = t.includes('xirr') || t.includes('actual return') || t.includes('actual annualized')
                           || t.includes('annualized return') || t.includes('real return')
@@ -775,27 +808,54 @@
                           || (nums.current_value && (nums.monthly || nums.lumpsum));
             if (xirrIntent) {
                 key = 'xirr';
-                // Resolve months: explicit > years*12 > default 36
                 var xMonths = nums.months || (nums.years ? nums.years * 12 : 36);
                 var xMonthly = nums.monthly || 10000;
-                var xValue = nums.current_value || nums.target || (xMonthly * xMonths * 1.3); // default 30% gain
+                var xValue = nums.current_value || nums.target || (xMonthly * xMonths * 1.3);
                 params = { monthly: xMonthly, months: xMonths, value: xValue };
                 console.log('pickCalculator: XIRR', params);
                 return { calculator: key, params: params };
             }
+
+            // Emergency fund: short-horizon liquid fund target = 6× monthly expense
+            var emergencyIntent = /(emergency\s+fund|emergency\s+corpus|rainy\s+day|contingency\s+fund)/i.test(t);
+            if (emergencyIntent) {
+                key = 'goal-sip';
+                var expense = nums.monthly || nums.withdrawal || 50000;
+                var target = nums.target || expense * 6;
+                params = { goal_amount: target, current_savings: nums.lumpsum || 0, time_period: nums.years || 1, expected_return: 7, inflation_rate: 0 };
+                console.log('pickCalculator: EMERGENCY', params); return { calculator: key, params: params };
+            }
+
+            // Tax-saving (80C / ELSS): 3-yr lock, 12% equity
+            var taxSavingIntent = /(elss|80c|tax\s*saving|tax\s*save|save\s+tax|section\s*80)/i.test(t);
+            if (taxSavingIntent) {
+                key = 'sip';
+                params = { monthly_investment: nums.monthly || 12500, expected_return: 12, time_period: nums.years || 3 };
+                console.log('pickCalculator: ELSS', params); return { calculator: key, params: params };
+            }
+
+            // Monthly income / passive income / SWP — even without lumpsum, infer via 25× rule
+            var incomeIntent = /(withdraw|swp|passive\s+income|monthly\s+income|regular\s+income|post[-\s]?retirement\s+income|pension\s+like)/i.test(t);
+            if (incomeIntent) {
+                key = 'swp';
+                var w = nums.withdrawal || nums.monthly || 50000;
+                // 25× annual expense ≈ safe withdrawal corpus (4% rule)
+                var corpus = nums.lumpsum || nums.target || Math.round(w * 12 * 25);
+                params = { initial_investment: corpus, monthly_withdrawal: w, expected_return: 8, time_period: nums.years || 25, inflation_rate: 6 };
+                console.log('pickCalculator: SWP', params); return { calculator: key, params: params };
+            }
+
             if (t.includes('lumpsum') || t.includes('lump sum') || t.includes('one-time') || t.includes('one time') || (nums.lumpsum && !nums.monthly && !t.includes('per month') && !t.includes('/month'))) {
                 key = 'lumpsum';
-                params = { investment_amount: nums.lumpsum || nums.target || 100000, expected_return: 12, time_period: nums.years || 10 };
-            } else if (t.includes('withdraw') || t.includes('swp') || t.includes('passive income') || (t.includes('monthly income') && nums.lumpsum)) {
-                key = 'swp';
-                params = { initial_investment: nums.lumpsum || nums.target || 1000000, monthly_withdrawal: nums.withdrawal || nums.monthly || 10000, expected_return: 8, time_period: nums.years || 20, inflation_rate: 6 };
+                params = { investment_amount: nums.lumpsum || nums.target || 100000, expected_return: returnForHorizon(nums.years), time_period: nums.years || 10 };
             } else if (t.includes('step') || t.includes('increment') || t.includes('step-up')) {
                 key = 'stepup-sip';
-                params = { initial_investment: nums.monthly || 5000, annual_increment: 10, expected_return: 12, time_period: nums.years || 10 };
+                params = { initial_investment: nums.monthly || 5000, annual_increment: 10, expected_return: returnForHorizon(nums.years), time_period: nums.years || 10 };
             } else if (t.includes('retire') && (nums.currentAge || t.includes('age'))) {
                 if (nums.target && nums.target > 0) {
                     key = 'goal-sip';
-                    params = { goal_amount: nums.target, current_savings: 0, time_period: nums.years || (nums.retirementAge ? nums.retirementAge - (nums.currentAge || 30) : 27) };
+                    var ryrs = nums.years || (nums.retirementAge ? nums.retirementAge - (nums.currentAge || 30) : 27);
+                    params = { goal_amount: nums.target, current_savings: 0, time_period: ryrs, expected_return: returnForHorizon(ryrs) };
                     if (nums.monthly) params.monthly_investment = nums.monthly;
                 } else if (nums.currentAge) {
                     key = 'retirement';
@@ -803,18 +863,20 @@
                     if (nums.monthly) params.monthly_expense = nums.monthly;
                 } else {
                     key = 'goal-sip';
-                    params = { goal_amount: nums.target || 10000000, time_period: nums.years || 20 };
+                    params = { goal_amount: nums.target || 10000000, time_period: nums.years || 20, expected_return: returnForHorizon(nums.years || 20) };
                 }
             } else if (nums.target && nums.target > 0) {
                 key = 'goal-sip';
-                params = { goal_amount: nums.target, current_savings: nums.lumpsum || 0, time_period: nums.years || 10, expected_return: 12 };
+                params = { goal_amount: nums.target, current_savings: nums.lumpsum || 0, time_period: nums.years || 10, expected_return: returnForHorizon(nums.years || 10) };
+                // Goal-type inflation override wins unless user explicitly stated a rate
                 if (nums.inflation_rate !== undefined && nums.inflation_rate !== null) params.inflation_rate = nums.inflation_rate;
+                else params.inflation_rate = inflationForGoal(t);
             } else if (nums.monthly && nums.monthly > 0) {
                 key = 'sip';
-                params = { monthly_investment: nums.monthly, expected_return: 12, time_period: nums.years || 10 };
+                params = { monthly_investment: nums.monthly, expected_return: returnForHorizon(nums.years), time_period: nums.years || 10 };
             } else {
                 key = 'sip';
-                params = { monthly_investment: 5000, expected_return: 12, time_period: nums.years || 10 };
+                params = { monthly_investment: 5000, expected_return: returnForHorizon(nums.years), time_period: nums.years || 10 };
             }
             if (nums.years && nums.years > 0) params.time_period = nums.years;
             console.log('pickCalculator:', key, params);
@@ -835,9 +897,19 @@
             var d2 = await r2.json();
             if (r2.ok && d2.result) {
                 var raw = d2.result.trim().replace(/```json|```/gi,'').trim();
-                var match = raw.match(/\{[\s\S]*\}/);
-                if (match) {
-                    var aiJson = JSON.parse(match[0]);
+                // Try from first { to last } (handles AI trailing text); fall back to first balanced object
+                var aiJson = null;
+                var firstBrace = raw.indexOf('{'), lastBrace = raw.lastIndexOf('}');
+                if (firstBrace !== -1 && lastBrace > firstBrace) {
+                    var candidate = raw.substring(firstBrace, lastBrace + 1);
+                    try { aiJson = JSON.parse(candidate); } catch(e1) {
+                        // Fallback: first {...} non-greedy
+                        var m2 = raw.match(/\{[^{}]*\}/);
+                        if (m2) { try { aiJson = JSON.parse(m2[0]); } catch(e2) {} }
+                    }
+                }
+                if (aiJson) {
+                    var match = [JSON.stringify(aiJson)]; // retain legacy var
                     var aiParams = {};
                     ['monthly_investment','investment_amount','goal_amount','current_savings','time_period','expected_return','inflation_rate','current_age','retirement_age','life_expectancy','monthly_expense','monthly_withdrawal','annual_increment','post_retirement_return','post_retirement_inflation','initial_investment','monthly','months','value'].forEach(function(k) {
                         if (extracted[k] === undefined && aiJson[k] !== undefined && aiJson[k] !== null) aiParams[k] = aiJson[k];
